@@ -266,17 +266,17 @@ const HomePage = () => {
             >
               <div className="relative h-64 mb-6 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1644951565774-1b0904943820?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwyfHxjaW5lbWF0aWMlMjB3ZWRkaW5nJTIwY291cGxlJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc2OTg0OTg2OHww&ixlib=rb-4.1.0&q=85"
+                  src={c.wedding_image}
                   alt="Wedding photography"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
               <div className="flex items-center gap-3 mb-4">
                 <Camera className="text-primary" size={24} />
-                <h3 className="font-primary font-bold text-xl">Mariages</h3>
+                <h3 className="font-primary font-bold text-xl">{c.wedding_title}</h3>
               </div>
               <p className="font-secondary text-white/60 text-sm mb-6">
-                Photographie et vidéographie cinématique pour immortaliser votre jour le plus précieux.
+                {c.wedding_description}
               </p>
               <div className="flex gap-2">
                 <Link to="/services/wedding" className="btn-outline px-4 py-3 text-xs flex-1 text-center">
@@ -299,17 +299,17 @@ const HomePage = () => {
             >
               <div className="relative h-64 mb-6 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1659083725992-9d88c12e719c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBwb2RjYXN0JTIwc3R1ZGlvJTIwbWljcm9waG9uZSUyMG5lb258ZW58MHx8fHwxNzY5ODQ5ODczfDA&ixlib=rb-4.1.0&q=85"
+                  src={c.podcast_image}
                   alt="Podcast studio"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
               <div className="flex items-center gap-3 mb-4">
                 <Mic className="text-primary" size={24} />
-                <h3 className="font-primary font-bold text-xl">Podcast</h3>
+                <h3 className="font-primary font-bold text-xl">{c.podcast_title}</h3>
               </div>
               <p className="font-secondary text-white/60 text-sm mb-6">
-                Studio d'enregistrement professionnel équipé pour vos podcasts et interviews.
+                {c.podcast_description}
               </p>
               <Link to="/services/podcast" className="btn-outline px-6 py-3 text-xs w-full inline-block text-center">
                 Voir les formules
@@ -327,7 +327,7 @@ const HomePage = () => {
             >
               <div className="relative h-64 mb-6 overflow-hidden">
                 <img
-                  src="https://images.unsplash.com/photo-1643651342963-d4478284de5d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHx0diUyMHByb2R1Y3Rpb24lMjBzZXQlMjBjYW1lcmElMjBjcmV3fGVufDB8fHx8MTc2OTg0OTg3OHww&ixlib=rb-4.1.0&q=85"
+                  src={c.tv_image}
                   alt="TV production set"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
