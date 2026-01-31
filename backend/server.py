@@ -187,10 +187,15 @@ class Booking(BaseModel):
     service_id: str
     service_name: str
     service_category: str
+    service_price: float = 0
+    deposit_amount: float = 0  # Acompte (30%)
+    deposit_percentage: int = 30
     event_date: str
     event_time: Optional[str] = None
+    event_location: Optional[str] = None
     message: Optional[str] = None
-    status: str = "pending"  # pending, confirmed, cancelled
+    status: str = "pending_payment"  # pending_payment, payment_received, confirmed, cancelled
+    payment_reference: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class BookingCreate(BaseModel):
@@ -200,10 +205,20 @@ class BookingCreate(BaseModel):
     service_id: str
     event_date: str
     event_time: Optional[str] = None
+    event_location: Optional[str] = None
     message: Optional[str] = None
 
 class BookingUpdate(BaseModel):
-    status: str
+    status: Optional[str] = None
+    payment_reference: Optional[str] = None
+
+# Bank Details Model
+class BankDetails(BaseModel):
+    iban: str = "FR7628233000011130178183593"
+    bic: str = "REVOFRP2"
+    account_holder: str = "CREATIVINDUSTRY FRANCE"
+    bank_name: str = "Revolut"
+    deposit_percentage: int = 30
 
 class ContactMessage(BaseModel):
     model_config = ConfigDict(extra="ignore")
