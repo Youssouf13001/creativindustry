@@ -379,6 +379,116 @@ async def mark_contact_read(contact_id: str, admin: dict = Depends(get_current_a
         raise HTTPException(status_code=404, detail="Contact not found")
     return {"message": "Marked as read"}
 
+# ==================== WEDDING OPTIONS ROUTES ====================
+
+@api_router.get("/wedding-options", response_model=List[WeddingOption])
+async def get_wedding_options(category: Optional[str] = None):
+    query = {"is_active": True}
+    if category:
+        query["category"] = category
+    options = await db.wedding_options.find(query, {"_id": 0}).to_list(100)
+    return options
+
+@api_router.post("/wedding-options", response_model=WeddingOption)
+async def create_wedding_option(data: WeddingOptionCreate, admin: dict = Depends(get_current_admin)):
+    option = WeddingOption(**data.model_dump())
+    await db.wedding_options.insert_one(option.model_dump())
+    return option
+
+@api_router.put("/wedding-options/{option_id}", response_model=WeddingOption)
+async def update_wedding_option(option_id: str, data: WeddingOptionUpdate, admin: dict = Depends(get_current_admin)):
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    result = await db.wedding_options.update_one({"id": option_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Option not found")
+    option = await db.wedding_options.find_one({"id": option_id}, {"_id": 0})
+    return option
+
+@api_router.delete("/wedding-options/{option_id}")
+async def delete_wedding_option(option_id: str, admin: dict = Depends(get_current_admin)):
+    result = await db.wedding_options.delete_one({"id": option_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Option not found")
+    return {"message": "Option deleted"}
+
+# ==================== WEDDING QUOTES ROUTES ====================
+
+@api_router.post("/wedding-quotes", response_model=WeddingQuote)
+async def create_wedding_quote(data: WeddingQuoteCreate):
+    options = await db.wedding_options.find({"id": {"$in": data.selected_options}}, {"_id": 0}).to_list(100)
+    options_details = [{"id": o["id"], "name": o["name"], "price": o["price"]} for o in options]
+    total_price = sum(o["price"] for o in options)
+    
+    quote = WeddingQuote(
+        **data.model_dump(),
+        options_details=options_details,
+        total_price=total_price
+    )
+    doc = quote.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.wedding_quotes.insert_one(doc)
+    return quote
+
+@api_router.get("/wedding-quotes", response_model=List[WeddingQuote])
+async def get_wedding_quotes(admin: dict = Depends(get_current_admin)):
+    quotes = await db.wedding_quotes.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    for q in quotes:
+        if isinstance(q.get('created_at'), str):
+            q['created_at'] = datetime.fromisoformat(q['created_at'])
+    return quotes
+
+@api_router.put("/wedding-quotes/{quote_id}/status")
+async def update_wedding_quote_status(quote_id: str, status: str, admin: dict = Depends(get_current_admin)):
+    result = await db.wedding_quotes.update_one({"id": quote_id}, {"$set": {"status": status}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Quote not found")
+    return {"message": "Status updated"}
+
+# ==================== PORTFOLIO ROUTES ====================
+
+@api_router.get("/portfolio", response_model=List[PortfolioItem])
+async def get_portfolio(category: Optional[str] = None, media_type: Optional[str] = None):
+    query = {"is_active": True}
+    if category:
+        query["category"] = category
+    if media_type:
+        query["media_type"] = media_type
+    items = await db.portfolio.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for item in items:
+        if isinstance(item.get('created_at'), str):
+            item['created_at'] = datetime.fromisoformat(item['created_at'])
+    return items
+
+@api_router.post("/portfolio", response_model=PortfolioItem)
+async def create_portfolio_item(data: PortfolioItemCreate, admin: dict = Depends(get_current_admin)):
+    item = PortfolioItem(**data.model_dump())
+    doc = item.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.portfolio.insert_one(doc)
+    return item
+
+@api_router.put("/portfolio/{item_id}", response_model=PortfolioItem)
+async def update_portfolio_item(item_id: str, data: PortfolioItemUpdate, admin: dict = Depends(get_current_admin)):
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    result = await db.portfolio.update_one({"id": item_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    item = await db.portfolio.find_one({"id": item_id}, {"_id": 0})
+    if isinstance(item.get('created_at'), str):
+        item['created_at'] = datetime.fromisoformat(item['created_at'])
+    return item
+
+@api_router.delete("/portfolio/{item_id}")
+async def delete_portfolio_item(item_id: str, admin: dict = Depends(get_current_admin)):
+    result = await db.portfolio.delete_one({"id": item_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"message": "Item deleted"}
+
 # ==================== STATS ROUTE ====================
 
 @api_router.get("/stats")
@@ -388,13 +498,15 @@ async def get_stats(admin: dict = Depends(get_current_admin)):
     confirmed_bookings = await db.bookings.count_documents({"status": "confirmed"})
     unread_messages = await db.contacts.count_documents({"is_read": False})
     total_services = await db.services.count_documents({"is_active": True})
+    pending_quotes = await db.wedding_quotes.count_documents({"status": "pending"})
     
     return {
         "total_bookings": total_bookings,
         "pending_bookings": pending_bookings,
         "confirmed_bookings": confirmed_bookings,
         "unread_messages": unread_messages,
-        "total_services": total_services
+        "total_services": total_services,
+        "pending_quotes": pending_quotes
     }
 
 # ==================== SEED DATA ====================
