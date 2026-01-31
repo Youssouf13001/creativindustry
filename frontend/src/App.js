@@ -1938,6 +1938,410 @@ const AdminDashboard = () => {
           ))}
         </div>
 
+        {/* Site Content Tab */}
+        {activeTab === "content" && siteContent && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">Modifier le contenu du site</h2>
+              <button onClick={updateSiteContent} className="btn-primary px-6 py-2 text-sm">
+                Enregistrer les modifications
+              </button>
+            </div>
+
+            {/* Hero Section */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-primary">Section Hero (Accueil)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titre principal</label>
+                  <input
+                    type="text"
+                    value={editingContent.hero_title || ""}
+                    onChange={(e) => setEditingContent({...editingContent, hero_title: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Sous-titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.hero_subtitle || ""}
+                    onChange={(e) => setEditingContent({...editingContent, hero_subtitle: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Image de fond (URL)</label>
+                  <input
+                    type="url"
+                    value={editingContent.hero_image || ""}
+                    onChange={(e) => setEditingContent({...editingContent, hero_image: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                    placeholder="https://..."
+                  />
+                  {editingContent.hero_image && (
+                    <img src={editingContent.hero_image} alt="Preview" className="mt-2 h-32 object-cover" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Wedding Section */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-pink-400">Service Mariage</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.wedding_title || ""}
+                    onChange={(e) => setEditingContent({...editingContent, wedding_title: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Sous-titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.wedding_subtitle || ""}
+                    onChange={(e) => setEditingContent({...editingContent, wedding_subtitle: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Description</label>
+                  <textarea
+                    value={editingContent.wedding_description || ""}
+                    onChange={(e) => setEditingContent({...editingContent, wedding_description: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                    rows={2}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Image (URL)</label>
+                  <input
+                    type="url"
+                    value={editingContent.wedding_image || ""}
+                    onChange={(e) => setEditingContent({...editingContent, wedding_image: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                  {editingContent.wedding_image && (
+                    <img src={editingContent.wedding_image} alt="Preview" className="mt-2 h-32 object-cover" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Podcast Section */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-blue-400">Service Podcast</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.podcast_title || ""}
+                    onChange={(e) => setEditingContent({...editingContent, podcast_title: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Sous-titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.podcast_subtitle || ""}
+                    onChange={(e) => setEditingContent({...editingContent, podcast_subtitle: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Description</label>
+                  <textarea
+                    value={editingContent.podcast_description || ""}
+                    onChange={(e) => setEditingContent({...editingContent, podcast_description: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                    rows={2}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Image (URL)</label>
+                  <input
+                    type="url"
+                    value={editingContent.podcast_image || ""}
+                    onChange={(e) => setEditingContent({...editingContent, podcast_image: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                  {editingContent.podcast_image && (
+                    <img src={editingContent.podcast_image} alt="Preview" className="mt-2 h-32 object-cover" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* TV Section */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-purple-400">Service Plateau TV</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.tv_title || ""}
+                    onChange={(e) => setEditingContent({...editingContent, tv_title: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Sous-titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.tv_subtitle || ""}
+                    onChange={(e) => setEditingContent({...editingContent, tv_subtitle: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Description</label>
+                  <textarea
+                    value={editingContent.tv_description || ""}
+                    onChange={(e) => setEditingContent({...editingContent, tv_description: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                    rows={2}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Image (URL)</label>
+                  <input
+                    type="url"
+                    value={editingContent.tv_image || ""}
+                    onChange={(e) => setEditingContent({...editingContent, tv_image: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                  {editingContent.tv_image && (
+                    <img src={editingContent.tv_image} alt="Preview" className="mt-2 h-32 object-cover" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Info */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-green-400">Informations de Contact</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Téléphone</label>
+                  <input
+                    type="text"
+                    value={editingContent.phone || ""}
+                    onChange={(e) => setEditingContent({...editingContent, phone: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={editingContent.email || ""}
+                    onChange={(e) => setEditingContent({...editingContent, email: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Adresse</label>
+                  <input
+                    type="text"
+                    value={editingContent.address || ""}
+                    onChange={(e) => setEditingContent({...editingContent, address: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Horaires</label>
+                  <input
+                    type="text"
+                    value={editingContent.hours || ""}
+                    onChange={(e) => setEditingContent({...editingContent, hours: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* CTA Section */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-yellow-400">Section Appel à l'action</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titre CTA</label>
+                  <input
+                    type="text"
+                    value={editingContent.cta_title || ""}
+                    onChange={(e) => setEditingContent({...editingContent, cta_title: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Sous-titre CTA</label>
+                  <input
+                    type="text"
+                    value={editingContent.cta_subtitle || ""}
+                    onChange={(e) => setEditingContent({...editingContent, cta_subtitle: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button onClick={updateSiteContent} className="btn-primary w-full py-4 text-sm">
+              Enregistrer toutes les modifications
+            </button>
+          </div>
+        )}
+
+        {/* Portfolio Tab */}
+        {activeTab === "portfolio" && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">Gérer le Portfolio</h2>
+              <button
+                onClick={() => setShowAddPortfolio(true)}
+                className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
+              >
+                <Plus size={16} /> Ajouter
+              </button>
+            </div>
+
+            {/* Add Portfolio Modal */}
+            {showAddPortfolio && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-card border border-white/10 p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                  <h3 className="font-primary font-bold text-xl mb-4">Ajouter au Portfolio</h3>
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="Titre"
+                      value={newPortfolioItem.title}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, title: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <textarea
+                      placeholder="Description"
+                      value={newPortfolioItem.description}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, description: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                      rows={2}
+                    />
+                    <select
+                      value={newPortfolioItem.media_type}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, media_type: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    >
+                      <option value="photo">Photo</option>
+                      <option value="video">Vidéo</option>
+                    </select>
+                    <select
+                      value={newPortfolioItem.category}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, category: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    >
+                      <option value="wedding">Mariage</option>
+                      <option value="podcast">Podcast</option>
+                      <option value="tv_set">Plateau TV</option>
+                    </select>
+                    <input
+                      type="url"
+                      placeholder="URL de l'image/vidéo"
+                      value={newPortfolioItem.media_url}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, media_url: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <input
+                      type="url"
+                      placeholder="URL miniature (optionnel, pour vidéos)"
+                      value={newPortfolioItem.thumbnail_url}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, thumbnail_url: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={newPortfolioItem.is_featured}
+                        onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, is_featured: e.target.checked })}
+                        className="accent-primary"
+                      />
+                      <span className="text-sm">Mettre en avant</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowAddPortfolio(false)} className="btn-outline flex-1 py-3">
+                        Annuler
+                      </button>
+                      <button onClick={createPortfolioItem} className="btn-primary flex-1 py-3">
+                        Ajouter
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Portfolio Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {portfolio.map((item) => (
+                <div key={item.id} className="bg-card border border-white/10 overflow-hidden" data-testid={`portfolio-admin-${item.id}`}>
+                  <div className="relative aspect-video bg-black/50">
+                    {item.media_type === "photo" ? (
+                      <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={item.thumbnail_url || item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                    )}
+                    {item.is_featured && (
+                      <span className="absolute top-2 right-2 bg-primary text-black text-xs px-2 py-1 font-bold">Featured</span>
+                    )}
+                    <span className={`absolute top-2 left-2 text-xs px-2 py-1 font-bold ${
+                      item.category === "wedding" ? "bg-pink-500" : item.category === "podcast" ? "bg-blue-500" : "bg-purple-500"
+                    }`}>
+                      {item.category === "wedding" ? "Mariage" : item.category === "podcast" ? "Podcast" : "Plateau TV"}
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      {item.media_type === "photo" ? <Image size={16} className="text-primary" /> : <Video size={16} className="text-primary" />}
+                      <h3 className="font-primary font-semibold text-sm truncate">{item.title}</h3>
+                    </div>
+                    {item.description && (
+                      <p className="text-white/60 text-xs mb-3 line-clamp-2">{item.description}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => updatePortfolioItem(item.id, { is_featured: !item.is_featured })}
+                        className={`flex-1 py-2 text-xs ${item.is_featured ? "btn-primary" : "btn-outline"}`}
+                      >
+                        {item.is_featured ? "★ Featured" : "☆ Feature"}
+                      </button>
+                      <button
+                        onClick={() => updatePortfolioItem(item.id, { is_active: !item.is_active })}
+                        className={`flex-1 py-2 text-xs ${item.is_active !== false ? "bg-green-500/20 text-green-500 border border-green-500/50" : "bg-red-500/20 text-red-500 border border-red-500/50"}`}
+                      >
+                        {item.is_active !== false ? "Actif" : "Inactif"}
+                      </button>
+                      <button
+                        onClick={() => deletePortfolioItem(item.id)}
+                        className="px-3 py-2 text-xs bg-red-500/20 text-red-500 border border-red-500/50"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {portfolio.length === 0 && (
+              <p className="text-center text-white/60 py-12">Aucun élément dans le portfolio</p>
+            )}
+          </div>
+        )}
+
         {/* Wedding Quotes Tab */}
         {(activeTab === "overview" || activeTab === "quotes") && (
           <div className="mb-12">
