@@ -1241,6 +1241,185 @@ async def update_bank_details(data: BankDetails, admin: dict = Depends(get_curre
     )
     return data.model_dump()
 
+# ==================== APPOINTMENT ROUTES ====================
+
+@api_router.get("/appointment-types")
+async def get_appointment_types():
+    """Get available appointment types"""
+    return {"types": APPOINTMENT_TYPES, "durations": APPOINTMENT_DURATIONS}
+
+@api_router.post("/appointments", response_model=Appointment)
+async def create_appointment(data: AppointmentCreate):
+    """Create a new appointment request"""
+    # Find type label
+    type_label = next((t["label"] for t in APPOINTMENT_TYPES if t["id"] == data.appointment_type), data.appointment_type)
+    duration_label = next((d["label"] for d in APPOINTMENT_DURATIONS if d["id"] == data.duration), data.duration + " min")
+    
+    appointment = Appointment(
+        **data.model_dump(),
+        appointment_type_label=type_label
+    )
+    doc = appointment.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.appointments.insert_one(doc)
+    
+    # Send confirmation email to client
+    try:
+        send_appointment_request_email(
+            client_email=data.client_email,
+            client_name=data.client_name,
+            appointment_type=type_label,
+            proposed_date=data.proposed_date,
+            proposed_time=data.proposed_time,
+            appointment_id=appointment.id
+        )
+    except Exception as e:
+        logging.error(f"Failed to send appointment request email: {str(e)}")
+    
+    # Send notification to admin
+    try:
+        send_admin_appointment_notification(
+            appointment_id=appointment.id,
+            client_name=data.client_name,
+            client_email=data.client_email,
+            client_phone=data.client_phone,
+            appointment_type=type_label,
+            proposed_date=data.proposed_date,
+            proposed_time=data.proposed_time,
+            duration=duration_label,
+            message=data.message or ""
+        )
+    except Exception as e:
+        logging.error(f"Failed to send admin notification: {str(e)}")
+    
+    return appointment
+
+@api_router.get("/appointments", response_model=List[Appointment])
+async def get_appointments(status: Optional[str] = None, admin: dict = Depends(get_current_admin)):
+    """Get all appointments (admin only)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    appointments = await db.appointments.find(query, {"_id": 0}).sort("created_at", -1).to_list(500)
+    for a in appointments:
+        if isinstance(a.get('created_at'), str):
+            a['created_at'] = datetime.fromisoformat(a['created_at'])
+        if a.get('updated_at') and isinstance(a['updated_at'], str):
+            a['updated_at'] = datetime.fromisoformat(a['updated_at'])
+    return appointments
+
+@api_router.put("/appointments/{appointment_id}", response_model=Appointment)
+async def update_appointment(appointment_id: str, data: AppointmentAdminUpdate, admin: dict = Depends(get_current_admin)):
+    """Update appointment status (admin only)"""
+    appointment = await db.appointments.find_one({"id": appointment_id}, {"_id": 0})
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    update_data = {
+        "status": data.status,
+        "admin_response": data.admin_response,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    type_label = appointment.get("appointment_type_label", appointment.get("appointment_type"))
+    
+    if data.status == "confirmed":
+        # Send confirmation email
+        try:
+            send_appointment_confirmed_email(
+                client_email=appointment["client_email"],
+                client_name=appointment["client_name"],
+                appointment_type=type_label,
+                confirmed_date=appointment["proposed_date"],
+                confirmed_time=appointment["proposed_time"],
+                appointment_id=appointment_id,
+                admin_message=data.admin_response or ""
+            )
+        except Exception as e:
+            logging.error(f"Failed to send confirmation email: {str(e)}")
+    
+    elif data.status == "refused":
+        # Send refusal email
+        try:
+            send_appointment_refused_email(
+                client_email=appointment["client_email"],
+                client_name=appointment["client_name"],
+                appointment_type=type_label,
+                appointment_id=appointment_id,
+                admin_message=data.admin_response or ""
+            )
+        except Exception as e:
+            logging.error(f"Failed to send refusal email: {str(e)}")
+    
+    elif data.status == "rescheduled_pending":
+        if not data.new_proposed_date or not data.new_proposed_time:
+            raise HTTPException(status_code=400, detail="New date and time required for rescheduling")
+        
+        update_data["new_proposed_date"] = data.new_proposed_date
+        update_data["new_proposed_time"] = data.new_proposed_time
+        
+        # Send reschedule email with confirmation link
+        try:
+            send_appointment_reschedule_email(
+                client_email=appointment["client_email"],
+                client_name=appointment["client_name"],
+                appointment_type=type_label,
+                new_date=data.new_proposed_date,
+                new_time=data.new_proposed_time,
+                appointment_id=appointment_id,
+                confirmation_token=appointment["confirmation_token"],
+                admin_message=data.admin_response or ""
+            )
+        except Exception as e:
+            logging.error(f"Failed to send reschedule email: {str(e)}")
+    
+    await db.appointments.update_one({"id": appointment_id}, {"$set": update_data})
+    
+    updated = await db.appointments.find_one({"id": appointment_id}, {"_id": 0})
+    if isinstance(updated.get('created_at'), str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    if updated.get('updated_at') and isinstance(updated['updated_at'], str):
+        updated['updated_at'] = datetime.fromisoformat(updated['updated_at'])
+    return updated
+
+@api_router.get("/appointments/confirm/{appointment_id}/{token}")
+async def confirm_rescheduled_appointment(appointment_id: str, token: str):
+    """Confirm a rescheduled appointment (client clicks link in email)"""
+    appointment = await db.appointments.find_one({"id": appointment_id, "confirmation_token": token}, {"_id": 0})
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found or invalid token")
+    
+    if appointment["status"] != "rescheduled_pending":
+        return {"message": "Ce rendez-vous a déjà été traité", "status": appointment["status"]}
+    
+    # Update status to confirmed with new date
+    update_data = {
+        "status": "confirmed",
+        "proposed_date": appointment["new_proposed_date"],
+        "proposed_time": appointment["new_proposed_time"],
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.appointments.update_one({"id": appointment_id}, {"$set": update_data})
+    
+    # Send final confirmation email
+    type_label = appointment.get("appointment_type_label", appointment.get("appointment_type"))
+    try:
+        send_appointment_confirmed_email(
+            client_email=appointment["client_email"],
+            client_name=appointment["client_name"],
+            appointment_type=type_label,
+            confirmed_date=appointment["new_proposed_date"],
+            confirmed_time=appointment["new_proposed_time"],
+            appointment_id=appointment_id,
+            admin_message=""
+        )
+    except Exception as e:
+        logging.error(f"Failed to send final confirmation email: {str(e)}")
+    
+    return {"message": "Rendez-vous confirmé", "status": "confirmed", "date": appointment["new_proposed_date"], "time": appointment["new_proposed_time"]}
+
 # ==================== CHATBOT ROUTES ====================
 
 @api_router.post("/chat")
