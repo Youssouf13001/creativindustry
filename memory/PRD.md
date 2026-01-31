@@ -53,3 +53,8 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 1. Modifier sur Emergent
 2. "Save to GitHub"
 3. Sur VPS: `git pull` + `npm run build` + `systemctl restart creativindustry`
+
+### V4 - Notifications Email (31 Jan 2026)
+- ✅ Email automatique lors du dépôt d'un fichier client
+- ✅ Template email professionnel avec design CREATIVINDUSTRY
+- ✅ SMTP IONOS configuré (infos@creativindustry.com)
