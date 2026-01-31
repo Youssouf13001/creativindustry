@@ -3345,7 +3345,7 @@ const AdminDashboard = () => {
                                 </>
                               )}
                             </button>
-                            <p className="text-xs text-white/50 mt-2">JPG, PNG, MP4, WEBM, MOV (max 100 Mo)</p>
+                            <p className="text-xs text-white/50 mt-2">JPG, PNG, MP4, WEBM, MOV (max 1 Go)</p>
                             <p className="text-xs text-green-400 mt-1">Le client sera notifié par email !</p>
                           </div>
                           
