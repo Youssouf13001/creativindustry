@@ -475,14 +475,27 @@ async def get_client_files(client: dict = Depends(get_current_client)):
 @api_router.post("/client/files", response_model=ClientFile)
 async def create_client_file(data: ClientFileCreate, admin: dict = Depends(get_current_admin)):
     # Verify client exists
-    client = await db.clients.find_one({"id": data.client_id}, {"_id": 0})
-    if not client:
+    client_data = await db.clients.find_one({"id": data.client_id}, {"_id": 0})
+    if not client_data:
         raise HTTPException(status_code=404, detail="Client not found")
     
     file = ClientFile(**data.model_dump())
     doc = file.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     await db.client_files.insert_one(doc)
+    
+    # Send email notification to client
+    try:
+        send_file_notification_email(
+            client_email=client_data["email"],
+            client_name=client_data["name"],
+            file_title=data.title,
+            file_type=data.file_type,
+            file_url=data.file_url
+        )
+    except Exception as e:
+        logging.error(f"Failed to send notification email: {str(e)}")
+    
     return file
 
 @api_router.delete("/client/files/{file_id}")
