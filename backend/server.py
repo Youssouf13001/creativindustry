@@ -13,6 +13,9 @@ from datetime import datetime, timezone
 import jwt
 import bcrypt
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -28,6 +31,99 @@ security = HTTPBearer()
 SECRET_KEY = os.environ.get('JWT_SECRET', 'creativindustry-secret-key-2024')
 ALGORITHM = "HS256"
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+
+# SMTP Configuration
+SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.ionos.fr')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
+SMTP_EMAIL = os.environ.get('SMTP_EMAIL', '')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+
+# ==================== EMAIL HELPER ====================
+
+def send_email(to_email: str, subject: str, html_content: str):
+    """Send an email using SMTP"""
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = f"CREATIVINDUSTRY <{SMTP_EMAIL}>"
+        msg['To'] = to_email
+        
+        html_part = MIMEText(html_content, 'html')
+        msg.attach(html_part)
+        
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+        
+        logging.info(f"Email sent to {to_email}")
+        return True
+    except Exception as e:
+        logging.error(f"Failed to send email: {str(e)}")
+        return False
+
+def send_file_notification_email(client_email: str, client_name: str, file_title: str, file_type: str, file_url: str):
+    """Send notification email when a file is added to client space"""
+    
+    file_type_fr = {
+        "video": "vidéo",
+        "photo": "photo",
+        "document": "document"
+    }.get(file_type, "fichier")
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 0; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 40px 20px; }}
+            .header {{ text-align: center; margin-bottom: 40px; }}
+            .logo {{ color: #D4AF37; font-size: 24px; font-weight: bold; letter-spacing: -1px; }}
+            .content {{ background-color: #111111; border: 1px solid #222222; padding: 40px; }}
+            h1 {{ color: #D4AF37; font-size: 24px; margin-bottom: 20px; }}
+            p {{ color: #cccccc; line-height: 1.6; margin-bottom: 15px; }}
+            .file-info {{ background-color: #1a1a1a; border-left: 3px solid #D4AF37; padding: 20px; margin: 25px 0; }}
+            .file-title {{ color: #ffffff; font-size: 18px; font-weight: bold; margin-bottom: 5px; }}
+            .file-type {{ color: #D4AF37; font-size: 14px; text-transform: uppercase; }}
+            .btn {{ display: inline-block; background-color: #D4AF37; color: #000000; padding: 15px 30px; text-decoration: none; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-top: 20px; }}
+            .btn:hover {{ background-color: #ffffff; }}
+            .footer {{ text-align: center; margin-top: 40px; color: #666666; font-size: 12px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">CREATIVINDUSTRY</div>
+            </div>
+            <div class="content">
+                <h1>Nouveau fichier disponible !</h1>
+                <p>Bonjour {client_name},</p>
+                <p>Nous avons le plaisir de vous informer qu'un nouveau fichier a été ajouté à votre espace client.</p>
+                
+                <div class="file-info">
+                    <div class="file-title">{file_title}</div>
+                    <div class="file-type">{file_type_fr}</div>
+                </div>
+                
+                <p>Vous pouvez dès maintenant accéder à ce fichier depuis votre espace client ou en cliquant sur le bouton ci-dessous.</p>
+                
+                <a href="{file_url}" class="btn">Télécharger le fichier</a>
+                
+                <p style="margin-top: 30px;">Vous pouvez également retrouver tous vos fichiers dans votre <a href="https://creativindustry.com/client" style="color: #D4AF37;">espace client</a>.</p>
+            </div>
+            <div class="footer">
+                <p>© 2024 CREATIVINDUSTRY France<br>
+                Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"🎬 Nouveau fichier disponible : {file_title}"
+    return send_email(client_email, subject, html_content)
 
 # ==================== MODELS ====================
 
