@@ -1806,6 +1806,52 @@ const AdminDashboard = () => {
     }
   };
 
+  // Site Content Functions
+  const updateSiteContent = async () => {
+    try {
+      await axios.put(`${API}/content`, editingContent, { headers });
+      toast.success("Contenu mis à jour !");
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  // Portfolio Functions
+  const createPortfolioItem = async () => {
+    try {
+      await axios.post(`${API}/admin/portfolio`, newPortfolioItem, { headers });
+      toast.success("Élément ajouté au portfolio");
+      setShowAddPortfolio(false);
+      setNewPortfolioItem({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", is_featured: false });
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const updatePortfolioItem = async (id, data) => {
+    try {
+      await axios.put(`${API}/admin/portfolio/${id}`, data, { headers });
+      toast.success("Portfolio mis à jour");
+      setEditingPortfolio(null);
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const deletePortfolioItem = async (id) => {
+    if (!window.confirm("Supprimer cet élément ?")) return;
+    try {
+      await axios.delete(`${API}/admin/portfolio/${id}`, { headers });
+      toast.success("Élément supprimé");
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem("admin_token");
     localStorage.removeItem("admin_user");
