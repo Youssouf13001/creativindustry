@@ -334,10 +334,10 @@ const HomePage = () => {
               </div>
               <div className="flex items-center gap-3 mb-4">
                 <Tv className="text-primary" size={24} />
-                <h3 className="font-primary font-bold text-xl">Plateau TV</h3>
+                <h3 className="font-primary font-bold text-xl">{c.tv_title}</h3>
               </div>
               <p className="font-secondary text-white/60 text-sm mb-6">
-                Plateaux de tournage équipés pour vos productions télévisées et corporate.
+                {c.tv_description}
               </p>
               <Link to="/services/tv_set" className="btn-outline px-6 py-3 text-xs w-full inline-block text-center">
                 Voir les formules
@@ -356,12 +356,10 @@ const HomePage = () => {
             viewport={{ once: true }}
           >
             <h2 className="font-primary font-bold text-3xl md:text-5xl tracking-tight mb-6">
-              Prêt à créer quelque chose
-              <br />
-              <span className="text-gold-gradient">d'extraordinaire</span> ?
+              {c.cta_title}
             </h2>
             <p className="font-secondary text-white/60 text-lg mb-10">
-              Contactez-nous pour discuter de votre projet et obtenir un devis personnalisé.
+              {c.cta_subtitle}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/devis-mariage" className="btn-primary px-10 py-4 text-sm" data-testid="cta-devis-btn">
