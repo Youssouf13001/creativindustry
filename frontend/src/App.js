@@ -2479,6 +2479,7 @@ const AdminDashboard = () => {
             { id: "services", label: "Services" },
             { id: "options", label: "Options Mariage" },
             { id: "messages", label: "Messages" },
+            { id: "appointments", label: "Rendez-vous" },
             { id: "settings", label: "Paramètres" }
           ].map((tab) => (
             <button
