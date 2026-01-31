@@ -672,6 +672,134 @@ async def delete_portfolio_item(item_id: str, admin: dict = Depends(get_current_
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "Item deleted"}
 
+# ==================== FILE UPLOAD ROUTES ====================
+
+ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"]
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+
+@api_router.post("/upload/portfolio")
+async def upload_portfolio_file(
+    file: UploadFile = File(...),
+    admin: dict = Depends(get_current_admin)
+):
+    """Upload a file for portfolio (images or videos)"""
+    # Check file type
+    content_type = file.content_type
+    if content_type not in ALLOWED_IMAGE_TYPES + ALLOWED_VIDEO_TYPES:
+        raise HTTPException(status_code=400, detail="Type de fichier non supporté. Utilisez JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.")
+    
+    # Generate unique filename
+    file_ext = Path(file.filename).suffix.lower()
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = UPLOADS_DIR / "portfolio" / unique_filename
+    
+    # Save file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload: {str(e)}")
+    
+    # Determine media type
+    media_type = "photo" if content_type in ALLOWED_IMAGE_TYPES else "video"
+    
+    # Return URL
+    file_url = f"/uploads/portfolio/{unique_filename}"
+    return {
+        "url": file_url,
+        "filename": unique_filename,
+        "media_type": media_type,
+        "original_name": file.filename
+    }
+
+@api_router.post("/upload/client/{client_id}")
+async def upload_client_file(
+    client_id: str,
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    description: str = Form(""),
+    admin: dict = Depends(get_current_admin)
+):
+    """Upload a file for a client (images or videos)"""
+    # Verify client exists
+    client_data = await db.clients.find_one({"id": client_id})
+    if not client_data:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Check file type
+    content_type = file.content_type
+    if content_type not in ALLOWED_IMAGE_TYPES + ALLOWED_VIDEO_TYPES:
+        raise HTTPException(status_code=400, detail="Type de fichier non supporté. Utilisez JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.")
+    
+    # Create client folder if not exists
+    client_folder = UPLOADS_DIR / "clients" / client_id
+    client_folder.mkdir(exist_ok=True)
+    
+    # Generate unique filename
+    file_ext = Path(file.filename).suffix.lower()
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = client_folder / unique_filename
+    
+    # Save file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload: {str(e)}")
+    
+    # Determine file type
+    file_type = "photo" if content_type in ALLOWED_IMAGE_TYPES else "video"
+    
+    # Create file record
+    file_url = f"/uploads/clients/{client_id}/{unique_filename}"
+    file_record = ClientFile(
+        client_id=client_id,
+        title=title,
+        description=description,
+        file_type=file_type,
+        file_url=file_url,
+        thumbnail_url=file_url if file_type == "photo" else ""
+    )
+    
+    doc = file_record.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.client_files.insert_one(doc)
+    
+    # Send notification email
+    try:
+        send_file_notification_email(
+            client_email=client_data["email"],
+            client_name=client_data["name"],
+            file_title=title,
+            file_type=file_type,
+            file_url=file_url
+        )
+    except Exception as e:
+        logging.error(f"Failed to send notification email: {str(e)}")
+    
+    return {
+        "id": file_record.id,
+        "url": file_url,
+        "filename": unique_filename,
+        "file_type": file_type,
+        "title": title
+    }
+
+@api_router.delete("/upload/file")
+async def delete_uploaded_file(file_path: str, admin: dict = Depends(get_current_admin)):
+    """Delete an uploaded file from the server"""
+    # Security check - only allow deleting files in uploads directory
+    if not file_path.startswith("/uploads/"):
+        raise HTTPException(status_code=400, detail="Chemin de fichier invalide")
+    
+    full_path = ROOT_DIR / file_path.lstrip("/")
+    if full_path.exists():
+        full_path.unlink()
+        return {"message": "Fichier supprimé"}
+    else:
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+
 # ==================== CHATBOT ROUTES ====================
 
 @api_router.post("/chat")
