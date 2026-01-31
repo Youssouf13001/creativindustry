@@ -1,0 +1,2173 @@
+import { useState, useEffect } from "react";
+import "@/App.css";
+import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
+import { motion, AnimatePresence } from "framer-motion";
+import { Calendar, Phone, Mail, MapPin, Check, Camera, Mic, Tv, Menu, X, ChevronRight, Play, ArrowRight, Clock, Users, FileText, Image, Video, Plus, Minus } from "lucide-react";
+import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+// ==================== HEADER ====================
+const Header = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const navLinks = [
+    { name: "Accueil", path: "/" },
+    { name: "Mariages", path: "/services/wedding" },
+    { name: "Podcast", path: "/services/podcast" },
+    { name: "Plateau TV", path: "/services/tv_set" },
+    { name: "Portfolio", path: "/portfolio" },
+    { name: "Contact", path: "/contact" },
+  ];
+
+  return (
+    <header
+      data-testid="main-header"
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled ? "bg-black/90 backdrop-blur-xl border-b border-white/10" : "bg-transparent"
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-20">
+          <Link to="/" className="font-primary font-black text-xl tracking-tighter" data-testid="logo-link">
+            <span className="text-gold-gradient">CREATIVINDUSTRY</span>
+            <span className="text-white/60 font-light ml-2">France</span>
+          </Link>
+
+          <nav className="hidden md:flex items-center gap-8">
+            {navLinks.map((link) => (
+              <Link
+                key={link.path}
+                to={link.path}
+                data-testid={`nav-${link.name.toLowerCase()}`}
+                className={`font-primary text-sm tracking-wide transition-colors ${
+                  location.pathname === link.path ? "text-primary" : "text-white/70 hover:text-white"
+                }`}
+              >
+                {link.name}
+              </Link>
+            ))}
+            <Link
+              to="/devis-mariage"
+              data-testid="nav-devis-btn"
+              className="btn-primary px-6 py-3 text-sm"
+            >
+              Devis Mariage
+            </Link>
+          </nav>
+
+          <button
+            data-testid="mobile-menu-btn"
+            className="md:hidden text-white"
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="md:hidden bg-black/95 backdrop-blur-xl border-b border-white/10"
+          >
+            <nav className="flex flex-col p-6 gap-4">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="font-primary text-lg text-white/80 hover:text-primary transition-colors"
+                >
+                  {link.name}
+                </Link>
+              ))}
+              <Link
+                to="/devis-mariage"
+                onClick={() => setIsMenuOpen(false)}
+                className="btn-primary px-6 py-3 text-center mt-4"
+              >
+                Devis Mariage
+              </Link>
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </header>
+  );
+};
+
+// ==================== FOOTER ====================
+const Footer = () => (
+  <footer className="bg-black border-t border-white/10 py-16" data-testid="footer">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+        <div>
+          <h3 className="font-primary font-black text-xl mb-4">
+            <span className="text-gold-gradient">CREATIVINDUSTRY</span>
+          </h3>
+          <p className="font-secondary text-white/60 text-sm leading-relaxed">
+            Studio de production créative spécialisé dans la photographie et vidéographie de mariage, les podcasts et les productions télévisées.
+          </p>
+        </div>
+        <div>
+          <h4 className="font-primary font-bold text-sm uppercase tracking-wider mb-4">Services</h4>
+          <ul className="space-y-2">
+            <li><Link to="/services/wedding" className="text-white/60 hover:text-primary transition-colors text-sm">Mariages</Link></li>
+            <li><Link to="/services/podcast" className="text-white/60 hover:text-primary transition-colors text-sm">Podcast</Link></li>
+            <li><Link to="/services/tv_set" className="text-white/60 hover:text-primary transition-colors text-sm">Plateau TV</Link></li>
+            <li><Link to="/portfolio" className="text-white/60 hover:text-primary transition-colors text-sm">Portfolio</Link></li>
+          </ul>
+        </div>
+        <div>
+          <h4 className="font-primary font-bold text-sm uppercase tracking-wider mb-4">Contact</h4>
+          <ul className="space-y-2 text-white/60 text-sm">
+            <li className="flex items-center gap-2"><Phone size={14} /> +33 1 23 45 67 89</li>
+            <li className="flex items-center gap-2"><Mail size={14} /> contact@creativindustry.fr</li>
+            <li className="flex items-center gap-2"><MapPin size={14} /> Paris, France</li>
+          </ul>
+        </div>
+        <div>
+          <h4 className="font-primary font-bold text-sm uppercase tracking-wider mb-4">Légal</h4>
+          <ul className="space-y-2">
+            <li><Link to="/admin" className="text-white/60 hover:text-primary transition-colors text-sm">Admin</Link></li>
+          </ul>
+        </div>
+      </div>
+      <div className="border-t border-white/10 mt-12 pt-8 text-center text-white/40 text-sm">
+        © 2024 CREATIVINDUSTRY France. Tous droits réservés.
+      </div>
+    </div>
+  </footer>
+);
+
+// ==================== HOME PAGE ====================
+const HomePage = () => {
+  const [services, setServices] = useState([]);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const res = await axios.get(`${API}/services`);
+        setServices(res.data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchServices();
+    axios.post(`${API}/seed`).catch(() => {});
+  }, []);
+
+  return (
+    <div data-testid="home-page">
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden" data-testid="hero-section">
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1673195577797-d86fd842ade8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxjaW5lbWF0aWMlMjB3ZWRkaW5nJTIwY291cGxlJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc2OTg0OTg2OHww&ixlib=rb-4.1.0&q=85"
+            alt="Hero background"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/70"></div>
+          <div className="absolute inset-0 hero-gradient"></div>
+        </div>
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <h1 className="font-primary font-black text-5xl md:text-7xl lg:text-8xl tracking-tighter uppercase mb-6">
+              <span className="text-gold-gradient">Créons</span> vos
+              <br />
+              <span className="text-white">moments d'exception</span>
+            </h1>
+            <p className="font-secondary text-white/70 text-lg md:text-xl max-w-2xl mx-auto mb-10">
+              Studio de production créative pour mariages, podcasts et productions télévisées. L'excellence au service de votre vision.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/devis-mariage" className="btn-primary px-10 py-4 text-sm inline-flex items-center justify-center gap-2" data-testid="hero-devis-btn">
+                Demander un devis <FileText size={18} />
+              </Link>
+              <Link to="/portfolio" className="btn-outline px-10 py-4 text-sm inline-flex items-center justify-center gap-2" data-testid="hero-portfolio-btn">
+                Voir nos réalisations <Play size={18} />
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce">
+          <ChevronRight size={32} className="text-white/50 rotate-90" />
+        </div>
+      </section>
+
+      {/* Services Overview */}
+      <section className="py-24 md:py-32 relative" data-testid="services-overview">
+        <div className="spotlight absolute inset-0"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <h2 className="font-primary font-bold text-3xl md:text-5xl tracking-tight mb-4">Nos Services</h2>
+            <p className="font-secondary text-white/60 text-lg max-w-xl mx-auto">
+              Une expertise complète pour tous vos projets créatifs
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Wedding Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.1 }}
+              className="bg-card border border-white/10 p-8 card-hover group"
+              data-testid="service-card-wedding"
+            >
+              <div className="relative h-64 mb-6 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1644951565774-1b0904943820?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwyfHxjaW5lbWF0aWMlMjB3ZWRkaW5nJTIwY291cGxlJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc2OTg0OTg2OHww&ixlib=rb-4.1.0&q=85"
+                  alt="Wedding photography"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <Camera className="text-primary" size={24} />
+                <h3 className="font-primary font-bold text-xl">Mariages</h3>
+              </div>
+              <p className="font-secondary text-white/60 text-sm mb-6">
+                Photographie et vidéographie cinématique pour immortaliser votre jour le plus précieux.
+              </p>
+              <div className="flex gap-2">
+                <Link to="/services/wedding" className="btn-outline px-4 py-3 text-xs flex-1 text-center">
+                  Formules
+                </Link>
+                <Link to="/devis-mariage" className="btn-primary px-4 py-3 text-xs flex-1 text-center">
+                  Devis
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Podcast Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="bg-card border border-white/10 p-8 card-hover group"
+              data-testid="service-card-podcast"
+            >
+              <div className="relative h-64 mb-6 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1659083725992-9d88c12e719c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBwb2RjYXN0JTIwc3R1ZGlvJTIwbWljcm9waG9uZSUyMG5lb258ZW58MHx8fHwxNzY5ODQ5ODczfDA&ixlib=rb-4.1.0&q=85"
+                  alt="Podcast studio"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <Mic className="text-primary" size={24} />
+                <h3 className="font-primary font-bold text-xl">Podcast</h3>
+              </div>
+              <p className="font-secondary text-white/60 text-sm mb-6">
+                Studio d'enregistrement professionnel équipé pour vos podcasts et interviews.
+              </p>
+              <Link to="/services/podcast" className="btn-outline px-6 py-3 text-xs w-full inline-block text-center">
+                Voir les formules
+              </Link>
+            </motion.div>
+
+            {/* TV Set Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              className="bg-card border border-white/10 p-8 card-hover group"
+              data-testid="service-card-tv"
+            >
+              <div className="relative h-64 mb-6 overflow-hidden">
+                <img
+                  src="https://images.unsplash.com/photo-1643651342963-d4478284de5d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHx0diUyMHByb2R1Y3Rpb24lMjBzZXQlMjBjYW1lcmElMjBjcmV3fGVufDB8fHx8MTc2OTg0OTg3OHww&ixlib=rb-4.1.0&q=85"
+                  alt="TV production set"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <Tv className="text-primary" size={24} />
+                <h3 className="font-primary font-bold text-xl">Plateau TV</h3>
+              </div>
+              <p className="font-secondary text-white/60 text-sm mb-6">
+                Plateaux de tournage équipés pour vos productions télévisées et corporate.
+              </p>
+              <Link to="/services/tv_set" className="btn-outline px-6 py-3 text-xs w-full inline-block text-center">
+                Voir les formules
+              </Link>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-24 md:py-32 bg-card border-y border-white/10" data-testid="cta-section">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="font-primary font-bold text-3xl md:text-5xl tracking-tight mb-6">
+              Prêt à créer quelque chose
+              <br />
+              <span className="text-gold-gradient">d'extraordinaire</span> ?
+            </h2>
+            <p className="font-secondary text-white/60 text-lg mb-10">
+              Contactez-nous pour discuter de votre projet et obtenir un devis personnalisé.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/devis-mariage" className="btn-primary px-10 py-4 text-sm" data-testid="cta-devis-btn">
+                Devis Mariage Personnalisé
+              </Link>
+              <Link to="/contact" className="btn-outline px-10 py-4 text-sm" data-testid="cta-contact-btn">
+                Nous contacter
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+    </div>
+  );
+};
+
+// ==================== SERVICE PAGE ====================
+const ServicePage = ({ category }) => {
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const categoryInfo = {
+    wedding: {
+      title: "Mariages",
+      subtitle: "Immortalisez votre amour",
+      description: "Nos forfaits mariage combinent photographie et vidéographie pour créer des souvenirs intemporels de votre journée spéciale.",
+      icon: Camera,
+      image: "https://images.unsplash.com/photo-1673195577797-d86fd842ade8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxjaW5lbWF0aWMlMjB3ZWRkaW5nJTIwY291cGxlJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc2OTg0OTg2OHww&ixlib=rb-4.1.0&q=85",
+      showQuoteButton: true
+    },
+    podcast: {
+      title: "Studio Podcast",
+      subtitle: "Votre voix, notre expertise",
+      description: "Un studio d'enregistrement professionnel avec équipement haut de gamme pour des podcasts de qualité broadcast.",
+      icon: Mic,
+      image: "https://images.unsplash.com/photo-1659083725992-9d88c12e719c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NzV8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBwb2RjYXN0JTIwc3R1ZGlvJTIwbWljcm9waG9uZSUyMG5lb258ZW58MHx8fHwxNzY5ODQ5ODczfDA&ixlib=rb-4.1.0&q=85"
+    },
+    tv_set: {
+      title: "Plateau TV",
+      subtitle: "Production professionnelle",
+      description: "Des plateaux de tournage entièrement équipés pour vos productions télévisées, émissions et contenus corporate.",
+      icon: Tv,
+      image: "https://images.unsplash.com/photo-1643651342963-d4478284de5d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHx0diUyMHByb2R1Y3Rpb24lMjBzZXQlMjBjYW1lcmElMjBjcmV3fGVufDB8fHx8MTc2OTg0OTg3OHww&ixlib=rb-4.1.0&q=85"
+    }
+  };
+
+  const info = categoryInfo[category];
+  const Icon = info.icon;
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const res = await axios.get(`${API}/services?category=${category}`);
+        setServices(res.data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchServices();
+  }, [category]);
+
+  return (
+    <div className="pt-20" data-testid={`service-page-${category}`}>
+      {/* Hero */}
+      <section className="relative py-24 md:py-32 overflow-hidden">
+        <div className="absolute inset-0">
+          <img src={info.image} alt={info.title} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/80"></div>
+        </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="max-w-2xl"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <Icon className="text-primary" size={32} />
+              <span className="font-primary text-sm uppercase tracking-wider text-primary">{info.subtitle}</span>
+            </div>
+            <h1 className="font-primary font-black text-4xl md:text-6xl tracking-tighter uppercase mb-6">{info.title}</h1>
+            <p className="font-secondary text-white/70 text-lg mb-8">{info.description}</p>
+            {info.showQuoteButton && (
+              <Link to="/devis-mariage" className="btn-primary px-8 py-4 text-sm inline-flex items-center gap-2">
+                Créer mon devis personnalisé <ArrowRight size={18} />
+              </Link>
+            )}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="py-24 md:py-32">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="font-primary font-bold text-3xl md:text-4xl tracking-tight mb-12 text-center">Nos Formules</h2>
+          
+          {loading ? (
+            <div className="text-center text-white/60">Chargement...</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {services.map((service, index) => (
+                <motion.div
+                  key={service.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`bg-card border p-8 card-hover ${
+                    index === 1 ? "border-primary" : "border-white/10"
+                  }`}
+                  data-testid={`pricing-card-${service.id}`}
+                >
+                  {index === 1 && (
+                    <div className="bg-primary text-black font-primary font-bold text-xs uppercase tracking-wider px-4 py-1 inline-block mb-4">
+                      Populaire
+                    </div>
+                  )}
+                  <h3 className="font-primary font-bold text-xl mb-2">{service.name}</h3>
+                  <p className="font-secondary text-white/60 text-sm mb-6">{service.description}</p>
+                  
+                  <div className="mb-6">
+                    <span className="font-primary font-black text-4xl text-gold-gradient">{service.price}€</span>
+                    {service.duration && (
+                      <span className="text-white/40 text-sm ml-2">/ {service.duration}</span>
+                    )}
+                  </div>
+
+                  <ul className="space-y-3 mb-8">
+                    {service.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm">
+                        <Check size={16} className="text-primary mt-0.5 shrink-0" />
+                        <span className="text-white/70">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link
+                    to={category === "wedding" ? "/devis-mariage" : `/booking?service=${service.id}`}
+                    className={`w-full inline-block text-center py-3 text-sm ${
+                      index === 1 ? "btn-primary" : "btn-outline"
+                    }`}
+                    data-testid={`book-service-${service.id}`}
+                  >
+                    {category === "wedding" ? "Créer mon devis" : "Réserver"}
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Portfolio Preview for Wedding */}
+      {category === "wedding" && (
+        <section className="py-24 md:py-32 bg-card border-t border-white/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="font-primary font-bold text-3xl md:text-4xl tracking-tight mb-4">Nos Réalisations</h2>
+              <p className="font-secondary text-white/60">Découvrez nos plus beaux mariages</p>
+            </div>
+            <div className="flex justify-center gap-4">
+              <Link to="/portfolio?type=photo&category=wedding" className="btn-outline px-8 py-3 text-sm inline-flex items-center gap-2">
+                <Image size={18} /> Photos
+              </Link>
+              <Link to="/portfolio?type=video&category=wedding" className="btn-outline px-8 py-3 text-sm inline-flex items-center gap-2">
+                <Video size={18} /> Vidéos
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+};
+
+// ==================== WEDDING QUOTE BUILDER ====================
+const WeddingQuotePage = () => {
+  const [options, setOptions] = useState([]);
+  const [selectedOptions, setSelectedOptions] = useState([]);
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({
+    client_name: "",
+    client_email: "",
+    client_phone: "",
+    event_date: "",
+    event_location: "",
+    message: ""
+  });
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const res = await axios.get(`${API}/wedding-options`);
+        setOptions(res.data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchOptions();
+  }, []);
+
+  const toggleOption = (optionId) => {
+    setSelectedOptions(prev => 
+      prev.includes(optionId) 
+        ? prev.filter(id => id !== optionId)
+        : [...prev, optionId]
+    );
+  };
+
+  const getSelectedOptionsData = () => {
+    return options.filter(o => selectedOptions.includes(o.id));
+  };
+
+  const getTotalPrice = () => {
+    return getSelectedOptionsData().reduce((sum, o) => sum + o.price, 0);
+  };
+
+  const groupedOptions = {
+    coverage: options.filter(o => o.category === "coverage"),
+    extras: options.filter(o => o.category === "extras"),
+    editing: options.filter(o => o.category === "editing")
+  };
+
+  const categoryLabels = {
+    coverage: { label: "Couverture", description: "Sélectionnez les moments à capturer" },
+    extras: { label: "Options", description: "Ajoutez des prestations supplémentaires" },
+    editing: { label: "Livrables", description: "Choisissez vos formats de livraison" }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (selectedOptions.length === 0) {
+      toast.error("Veuillez sélectionner au moins une option");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await axios.post(`${API}/wedding-quotes`, {
+        ...formData,
+        selected_options: selectedOptions
+      });
+      toast.success("Demande de devis envoyée ! Nous vous contacterons sous 24h.");
+      navigate("/");
+    } catch (e) {
+      toast.error("Erreur lors de l'envoi. Veuillez réessayer.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="pt-20 min-h-screen" data-testid="wedding-quote-page">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h1 className="font-primary font-black text-4xl md:text-5xl tracking-tighter uppercase mb-4">
+            <span className="text-gold-gradient">Devis Mariage</span>
+          </h1>
+          <p className="font-secondary text-white/60">Créez votre formule sur-mesure en 3 étapes</p>
+        </motion.div>
+
+        {/* Progress Steps */}
+        <div className="flex items-center justify-center gap-4 mb-12">
+          {[
+            { num: 1, label: "Options" },
+            { num: 2, label: "Date" },
+            { num: 3, label: "Coordonnées" }
+          ].map((s, i) => (
+            <div key={s.num} className="flex items-center">
+              <div 
+                className={`flex flex-col items-center cursor-pointer`}
+                onClick={() => s.num < step && setStep(s.num)}
+              >
+                <div className={`w-12 h-12 flex items-center justify-center font-primary font-bold text-lg ${
+                  step >= s.num ? "bg-primary text-black" : "bg-card border border-white/20 text-white/40"
+                }`}>
+                  {s.num}
+                </div>
+                <span className={`text-xs mt-2 ${step >= s.num ? "text-primary" : "text-white/40"}`}>{s.label}</span>
+              </div>
+              {i < 2 && <div className={`w-16 h-px mx-2 ${step > s.num ? "bg-primary" : "bg-white/20"}`}></div>}
+            </div>
+          ))}
+        </div>
+
+        {/* Floating Total */}
+        {selectedOptions.length > 0 && (
+          <div className="fixed bottom-6 right-6 bg-card border border-primary p-4 shadow-2xl z-40" data-testid="quote-total">
+            <p className="text-white/60 text-sm">Total estimé</p>
+            <p className="font-primary font-black text-3xl text-gold-gradient">{getTotalPrice()}€</p>
+            <p className="text-white/40 text-xs">{selectedOptions.length} option(s)</p>
+          </div>
+        )}
+
+        {/* Step 1: Select Options */}
+        {step === 1 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            data-testid="quote-step-1"
+          >
+            {Object.entries(groupedOptions).map(([cat, opts]) => (
+              <div key={cat} className="mb-12">
+                <div className="mb-6">
+                  <h2 className="font-primary font-bold text-xl mb-1">{categoryLabels[cat].label}</h2>
+                  <p className="text-white/60 text-sm">{categoryLabels[cat].description}</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {opts.map((option) => {
+                    const isSelected = selectedOptions.includes(option.id);
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => toggleOption(option.id)}
+                        className={`p-6 text-left transition-all border ${
+                          isSelected 
+                            ? "bg-primary/10 border-primary" 
+                            : "bg-card border-white/10 hover:border-white/30"
+                        }`}
+                        data-testid={`option-${option.id}`}
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <h3 className="font-primary font-semibold">{option.name}</h3>
+                          <div className={`w-6 h-6 flex items-center justify-center ${
+                            isSelected ? "bg-primary text-black" : "border border-white/30"
+                          }`}>
+                            {isSelected && <Check size={14} />}
+                          </div>
+                        </div>
+                        <p className="text-white/60 text-sm mb-3">{option.description}</p>
+                        <p className="font-primary font-bold text-primary">{option.price}€</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div className="flex justify-end mt-8">
+              <button
+                onClick={() => setStep(2)}
+                disabled={selectedOptions.length === 0}
+                className="btn-primary px-10 py-4 text-sm disabled:opacity-50"
+                data-testid="quote-next-1"
+              >
+                Continuer
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 2: Date & Location */}
+        {step === 2 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            data-testid="quote-step-2"
+          >
+            {/* Summary */}
+            <div className="bg-card border border-white/10 p-6 mb-8">
+              <h3 className="font-primary font-bold mb-4">Récapitulatif</h3>
+              <div className="space-y-2 mb-4">
+                {getSelectedOptionsData().map(opt => (
+                  <div key={opt.id} className="flex justify-between text-sm">
+                    <span className="text-white/70">{opt.name}</span>
+                    <span className="text-primary">{opt.price}€</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-white/10 pt-4 flex justify-between">
+                <span className="font-primary font-bold">Total</span>
+                <span className="font-primary font-bold text-gold-gradient text-xl">{getTotalPrice()}€</span>
+              </div>
+            </div>
+
+            <h2 className="font-primary font-bold text-xl mb-6">Date et lieu de l'événement</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div>
+                <label className="block font-primary text-sm mb-2">Date du mariage *</label>
+                <input
+                  type="date"
+                  required
+                  value={formData.event_date}
+                  onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="quote-date-input"
+                />
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Lieu (ville)</label>
+                <input
+                  type="text"
+                  value={formData.event_location}
+                  onChange={(e) => setFormData({ ...formData, event_location: e.target.value })}
+                  placeholder="Ex: Paris, Lyon, Marseille..."
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="quote-location-input"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button onClick={() => setStep(1)} className="btn-outline px-8 py-3 text-sm">
+                Retour
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={!formData.event_date}
+                className="btn-primary px-8 py-3 text-sm flex-1 disabled:opacity-50"
+                data-testid="quote-next-2"
+              >
+                Continuer
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 3: Contact Details */}
+        {step === 3 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            data-testid="quote-step-3"
+          >
+            {/* Summary */}
+            <div className="bg-card border border-primary p-6 mb-8">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="font-primary font-bold">Votre devis</h3>
+                  <p className="text-white/60 text-sm">{formData.event_date} {formData.event_location && `• ${formData.event_location}`}</p>
+                </div>
+                <p className="font-primary font-black text-2xl text-gold-gradient">{getTotalPrice()}€</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {getSelectedOptionsData().map(opt => (
+                  <span key={opt.id} className="bg-white/10 px-3 py-1 text-xs">{opt.name}</span>
+                ))}
+              </div>
+            </div>
+
+            <h2 className="font-primary font-bold text-xl mb-6">Vos coordonnées</h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block font-primary text-sm mb-2">Nom complet *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.client_name}
+                    onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                    data-testid="quote-name-input"
+                  />
+                </div>
+                <div>
+                  <label className="block font-primary text-sm mb-2">Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.client_email}
+                    onChange={(e) => setFormData({ ...formData, client_email: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                    data-testid="quote-email-input"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Téléphone *</label>
+                <input
+                  type="tel"
+                  required
+                  value={formData.client_phone}
+                  onChange={(e) => setFormData({ ...formData, client_phone: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="quote-phone-input"
+                />
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Message (optionnel)</label>
+                <textarea
+                  rows={4}
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none resize-none"
+                  placeholder="Décrivez votre mariage, vos attentes particulières..."
+                  data-testid="quote-message-input"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button type="button" onClick={() => setStep(2)} className="btn-outline px-8 py-3 text-sm">
+                  Retour
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary px-8 py-3 text-sm flex-1 disabled:opacity-50"
+                  data-testid="quote-submit-btn"
+                >
+                  {loading ? "Envoi..." : `Envoyer ma demande (${getTotalPrice()}€)`}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ==================== PORTFOLIO PAGE ====================
+const PortfolioPage = () => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState({ type: "all", category: "all" });
+  const [selectedItem, setSelectedItem] = useState(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const type = params.get("type");
+    const category = params.get("category");
+    if (type) setFilter(f => ({ ...f, type }));
+    if (category) setFilter(f => ({ ...f, category }));
+  }, [location]);
+
+  useEffect(() => {
+    const fetchPortfolio = async () => {
+      try {
+        let url = `${API}/portfolio`;
+        const params = [];
+        if (filter.category !== "all") params.push(`category=${filter.category}`);
+        if (filter.type !== "all") params.push(`media_type=${filter.type}`);
+        if (params.length) url += `?${params.join("&")}`;
+        
+        const res = await axios.get(url);
+        setItems(res.data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPortfolio();
+  }, [filter]);
+
+  const photos = items.filter(i => i.media_type === "photo");
+  const videos = items.filter(i => i.media_type === "video");
+
+  return (
+    <div className="pt-20 min-h-screen" data-testid="portfolio-page">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h1 className="font-primary font-black text-4xl md:text-5xl tracking-tighter uppercase mb-4">
+            <span className="text-gold-gradient">Portfolio</span>
+          </h1>
+          <p className="font-secondary text-white/60">Découvrez nos réalisations</p>
+        </motion.div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap justify-center gap-4 mb-12">
+          <div className="flex gap-2">
+            {[
+              { value: "all", label: "Tout" },
+              { value: "photo", label: "Photos" },
+              { value: "video", label: "Vidéos" }
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setFilter(f => ({ ...f, type: opt.value }))}
+                className={`px-6 py-2 text-sm font-primary transition-colors ${
+                  filter.type === opt.value 
+                    ? "bg-primary text-black" 
+                    : "bg-card border border-white/20 text-white/70 hover:border-primary"
+                }`}
+                data-testid={`filter-type-${opt.value}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {[
+              { value: "all", label: "Tous" },
+              { value: "wedding", label: "Mariages" },
+              { value: "podcast", label: "Podcast" },
+              { value: "tv_set", label: "Plateau TV" }
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setFilter(f => ({ ...f, category: opt.value }))}
+                className={`px-6 py-2 text-sm font-primary transition-colors ${
+                  filter.category === opt.value 
+                    ? "bg-primary text-black" 
+                    : "bg-card border border-white/20 text-white/70 hover:border-primary"
+                }`}
+                data-testid={`filter-cat-${opt.value}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center text-white/60">Chargement...</div>
+        ) : items.length === 0 ? (
+          <div className="text-center text-white/60 py-20">Aucun élément trouvé</div>
+        ) : (
+          <>
+            {/* Photos Section */}
+            {(filter.type === "all" || filter.type === "photo") && photos.length > 0 && (
+              <section className="mb-16">
+                {filter.type === "all" && (
+                  <h2 className="font-primary font-bold text-2xl mb-8 flex items-center gap-3">
+                    <Image className="text-primary" size={24} /> Photos
+                  </h2>
+                )}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {photos.map((item, index) => (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="relative group cursor-pointer overflow-hidden aspect-square"
+                      onClick={() => setSelectedItem(item)}
+                      data-testid={`portfolio-photo-${item.id}`}
+                    >
+                      <img
+                        src={item.media_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                        <div>
+                          <h3 className="font-primary font-semibold text-sm">{item.title}</h3>
+                          {item.description && (
+                            <p className="text-white/70 text-xs">{item.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      {item.is_featured && (
+                        <div className="absolute top-2 right-2 bg-primary text-black text-xs px-2 py-1 font-primary font-bold">
+                          Featured
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Videos Section */}
+            {(filter.type === "all" || filter.type === "video") && videos.length > 0 && (
+              <section>
+                {filter.type === "all" && (
+                  <h2 className="font-primary font-bold text-2xl mb-8 flex items-center gap-3">
+                    <Video className="text-primary" size={24} /> Vidéos
+                  </h2>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {videos.map((item, index) => (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-card border border-white/10 overflow-hidden card-hover"
+                      data-testid={`portfolio-video-${item.id}`}
+                    >
+                      <div className="relative aspect-video">
+                        {item.thumbnail_url ? (
+                          <img
+                            src={item.thumbnail_url}
+                            alt={item.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-black/50 flex items-center justify-center">
+                            <Play size={48} className="text-primary" />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setSelectedItem(item)}
+                          className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
+                        >
+                          <div className="w-16 h-16 bg-primary flex items-center justify-center">
+                            <Play size={32} className="text-black ml-1" />
+                          </div>
+                        </button>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-primary font-semibold">{item.title}</h3>
+                        {item.description && (
+                          <p className="text-white/60 text-sm mt-1">{item.description}</p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {selectedItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+            onClick={() => setSelectedItem(null)}
+            data-testid="portfolio-lightbox"
+          >
+            <button
+              className="absolute top-6 right-6 text-white/70 hover:text-white"
+              onClick={() => setSelectedItem(null)}
+            >
+              <X size={32} />
+            </button>
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              className="max-w-5xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {selectedItem.media_type === "photo" ? (
+                <img
+                  src={selectedItem.media_url}
+                  alt={selectedItem.title}
+                  className="w-full max-h-[80vh] object-contain"
+                />
+              ) : (
+                <div className="aspect-video">
+                  <iframe
+                    src={selectedItem.media_url}
+                    title={selectedItem.title}
+                    className="w-full h-full"
+                    allowFullScreen
+                  />
+                </div>
+              )}
+              <div className="mt-4 text-center">
+                <h3 className="font-primary font-bold text-xl">{selectedItem.title}</h3>
+                {selectedItem.description && (
+                  <p className="text-white/60 mt-2">{selectedItem.description}</p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ==================== BOOKING PAGE ====================
+const BookingPage = () => {
+  const [services, setServices] = useState([]);
+  const [selectedService, setSelectedService] = useState(null);
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({
+    client_name: "",
+    client_email: "",
+    client_phone: "",
+    event_date: "",
+    event_time: "",
+    message: ""
+  });
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const res = await axios.get(`${API}/services`);
+        // Filter out wedding services (they use quote builder)
+        const nonWeddingServices = res.data.filter(s => s.category !== "wedding");
+        setServices(nonWeddingServices);
+        
+        const params = new URLSearchParams(window.location.search);
+        const serviceId = params.get("service");
+        if (serviceId) {
+          const found = res.data.find(s => s.id === serviceId);
+          if (found && found.category !== "wedding") {
+            setSelectedService(found);
+            setStep(2);
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchServices();
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedService) return;
+    
+    setLoading(true);
+    try {
+      await axios.post(`${API}/bookings`, {
+        ...formData,
+        service_id: selectedService.id
+      });
+      toast.success("Réservation envoyée ! Nous vous contacterons bientôt.");
+      navigate("/");
+    } catch (e) {
+      toast.error("Erreur lors de l'envoi. Veuillez réessayer.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const groupedServices = {
+    podcast: services.filter(s => s.category === "podcast"),
+    tv_set: services.filter(s => s.category === "tv_set")
+  };
+
+  const categoryLabels = {
+    podcast: { label: "Podcast", icon: Mic },
+    tv_set: { label: "Plateau TV", icon: Tv }
+  };
+
+  return (
+    <div className="pt-20 min-h-screen" data-testid="booking-page">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <h1 className="font-primary font-black text-4xl md:text-5xl tracking-tighter uppercase mb-4 text-center">
+          <span className="text-gold-gradient">Réservation</span>
+        </h1>
+        <p className="font-secondary text-white/60 text-center mb-12">Réservez votre créneau en quelques clics</p>
+
+        {/* Note for Wedding */}
+        <div className="bg-card border border-primary/30 p-4 mb-8 text-center">
+          <p className="text-sm text-white/70">
+            Pour un <span className="text-primary font-semibold">mariage</span>, utilisez notre{" "}
+            <Link to="/devis-mariage" className="text-primary underline hover:no-underline">
+              configurateur de devis personnalisé
+            </Link>
+          </p>
+        </div>
+
+        {/* Steps */}
+        <div className="flex items-center justify-center gap-4 mb-12">
+          {[1, 2, 3].map((s) => (
+            <div key={s} className="flex items-center">
+              <div className={`w-10 h-10 flex items-center justify-center font-primary font-bold ${
+                step >= s ? "bg-primary text-black" : "bg-card border border-white/20 text-white/40"
+              }`}>
+                {s}
+              </div>
+              {s < 3 && <div className={`w-12 h-px ${step > s ? "bg-primary" : "bg-white/20"}`}></div>}
+            </div>
+          ))}
+        </div>
+
+        {/* Step 1: Service Selection */}
+        {step === 1 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            data-testid="booking-step-1"
+          >
+            <h2 className="font-primary font-bold text-xl mb-6">Choisissez votre service</h2>
+            
+            {Object.entries(groupedServices).map(([cat, svcs]) => {
+              if (svcs.length === 0) return null;
+              const { label, icon: Icon } = categoryLabels[cat];
+              return (
+                <div key={cat} className="mb-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Icon size={20} className="text-primary" />
+                    <h3 className="font-primary font-semibold text-lg">{label}</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {svcs.map((service) => (
+                      <button
+                        key={service.id}
+                        onClick={() => { setSelectedService(service); setStep(2); }}
+                        className={`bg-card border p-4 text-left transition-all hover:border-primary ${
+                          selectedService?.id === service.id ? "border-primary" : "border-white/10"
+                        }`}
+                        data-testid={`select-service-${service.id}`}
+                      >
+                        <h4 className="font-primary font-semibold mb-1">{service.name}</h4>
+                        <p className="text-primary font-bold">{service.price}€</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+
+        {/* Step 2: Date Selection */}
+        {step === 2 && selectedService && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            data-testid="booking-step-2"
+          >
+            <div className="bg-card border border-white/10 p-6 mb-8">
+              <p className="text-white/60 text-sm">Service sélectionné</p>
+              <h3 className="font-primary font-bold text-xl">{selectedService.name}</h3>
+              <p className="text-primary font-bold">{selectedService.price}€</p>
+            </div>
+
+            <h2 className="font-primary font-bold text-xl mb-6">Choisissez une date</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div>
+                <label className="block font-primary text-sm mb-2">Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={formData.event_date}
+                  onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="booking-date-input"
+                />
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Heure souhaitée</label>
+                <input
+                  type="time"
+                  value={formData.event_time}
+                  onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="booking-time-input"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button onClick={() => setStep(1)} className="btn-outline px-8 py-3 text-sm">
+                Retour
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={!formData.event_date}
+                className="btn-primary px-8 py-3 text-sm flex-1 disabled:opacity-50"
+                data-testid="booking-next-step-btn"
+              >
+                Continuer
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 3: Contact Details */}
+        {step === 3 && selectedService && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            data-testid="booking-step-3"
+          >
+            <div className="bg-card border border-white/10 p-6 mb-8">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-white/60 text-sm">Service sélectionné</p>
+                  <h3 className="font-primary font-bold text-xl">{selectedService.name}</h3>
+                </div>
+                <div className="text-right">
+                  <p className="text-white/60 text-sm">Date</p>
+                  <p className="font-primary font-bold">{formData.event_date}</p>
+                </div>
+              </div>
+            </div>
+
+            <h2 className="font-primary font-bold text-xl mb-6">Vos coordonnées</h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block font-primary text-sm mb-2">Nom complet *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.client_name}
+                    onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                    data-testid="booking-name-input"
+                  />
+                </div>
+                <div>
+                  <label className="block font-primary text-sm mb-2">Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.client_email}
+                    onChange={(e) => setFormData({ ...formData, client_email: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                    data-testid="booking-email-input"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Téléphone *</label>
+                <input
+                  type="tel"
+                  required
+                  value={formData.client_phone}
+                  onChange={(e) => setFormData({ ...formData, client_phone: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="booking-phone-input"
+                />
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Message (optionnel)</label>
+                <textarea
+                  rows={4}
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none resize-none"
+                  placeholder="Décrivez votre projet ou vos besoins spécifiques..."
+                  data-testid="booking-message-input"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button type="button" onClick={() => setStep(2)} className="btn-outline px-8 py-3 text-sm">
+                  Retour
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary px-8 py-3 text-sm flex-1 disabled:opacity-50"
+                  data-testid="booking-submit-btn"
+                >
+                  {loading ? "Envoi..." : "Confirmer la réservation"}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ==================== CONTACT PAGE ====================
+const ContactPage = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    subject: "",
+    message: ""
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      await axios.post(`${API}/contact`, formData);
+      toast.success("Message envoyé ! Nous vous répondrons rapidement.");
+      setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
+    } catch (e) {
+      toast.error("Erreur lors de l'envoi. Veuillez réessayer.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="pt-20 min-h-screen" data-testid="contact-page">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <h1 className="font-primary font-black text-4xl md:text-5xl tracking-tighter uppercase mb-4 text-center">
+          <span className="text-gold-gradient">Contact</span>
+        </h1>
+        <p className="font-secondary text-white/60 text-center mb-12">Une question ? Un projet ? Parlons-en !</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div>
+            <h2 className="font-primary font-bold text-xl mb-6">Nos coordonnées</h2>
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <Phone className="text-primary mt-1" size={20} />
+                <div>
+                  <p className="font-primary font-semibold">Téléphone</p>
+                  <p className="text-white/60">+33 1 23 45 67 89</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <Mail className="text-primary mt-1" size={20} />
+                <div>
+                  <p className="font-primary font-semibold">Email</p>
+                  <p className="text-white/60">contact@creativindustry.fr</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <MapPin className="text-primary mt-1" size={20} />
+                <div>
+                  <p className="font-primary font-semibold">Adresse</p>
+                  <p className="text-white/60">123 Rue de la Création<br />75001 Paris, France</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <Clock className="text-primary mt-1" size={20} />
+                <div>
+                  <p className="font-primary font-semibold">Horaires</p>
+                  <p className="text-white/60">Lun - Ven: 9h - 19h<br />Sam: Sur rendez-vous</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6" data-testid="contact-form">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block font-primary text-sm mb-2">Nom *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="contact-name-input"
+                />
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="contact-email-input"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block font-primary text-sm mb-2">Téléphone</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                data-testid="contact-phone-input"
+              />
+            </div>
+            <div>
+              <label className="block font-primary text-sm mb-2">Sujet *</label>
+              <input
+                type="text"
+                required
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                data-testid="contact-subject-input"
+              />
+            </div>
+            <div>
+              <label className="block font-primary text-sm mb-2">Message *</label>
+              <textarea
+                rows={5}
+                required
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none resize-none"
+                data-testid="contact-message-input"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary w-full py-4 text-sm disabled:opacity-50"
+              data-testid="contact-submit-btn"
+            >
+              {loading ? "Envoi..." : "Envoyer le message"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== ADMIN LOGIN ====================
+const AdminLogin = () => {
+  const [isRegister, setIsRegister] = useState(false);
+  const [formData, setFormData] = useState({ email: "", password: "", name: "" });
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const endpoint = isRegister ? "/auth/register" : "/auth/login";
+      const payload = isRegister ? formData : { email: formData.email, password: formData.password };
+      const res = await axios.post(`${API}${endpoint}`, payload);
+      localStorage.setItem("admin_token", res.data.token);
+      localStorage.setItem("admin_user", JSON.stringify(res.data.admin));
+      toast.success(isRegister ? "Compte créé !" : "Connexion réussie !");
+      navigate("/admin/dashboard");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur de connexion");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="pt-20 min-h-screen flex items-center justify-center" data-testid="admin-login-page">
+      <div className="w-full max-w-md p-8">
+        <h1 className="font-primary font-black text-3xl tracking-tighter uppercase mb-2 text-center">
+          <span className="text-gold-gradient">Admin</span>
+        </h1>
+        <p className="font-secondary text-white/60 text-center mb-8">
+          {isRegister ? "Créer un compte administrateur" : "Connectez-vous pour gérer votre site"}
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {isRegister && (
+            <div>
+              <label className="block font-primary text-sm mb-2">Nom</label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                data-testid="admin-name-input"
+              />
+            </div>
+          )}
+          <div>
+            <label className="block font-primary text-sm mb-2">Email</label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+              data-testid="admin-email-input"
+            />
+          </div>
+          <div>
+            <label className="block font-primary text-sm mb-2">Mot de passe</label>
+            <input
+              type="password"
+              required
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+              data-testid="admin-password-input"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary w-full py-4 text-sm disabled:opacity-50"
+            data-testid="admin-submit-btn"
+          >
+            {loading ? "Chargement..." : isRegister ? "Créer le compte" : "Se connecter"}
+          </button>
+        </form>
+
+        <p className="text-center text-white/60 text-sm mt-6">
+          {isRegister ? "Déjà un compte ?" : "Pas encore de compte ?"}{" "}
+          <button
+            onClick={() => setIsRegister(!isRegister)}
+            className="text-primary hover:underline"
+            data-testid="admin-toggle-auth"
+          >
+            {isRegister ? "Se connecter" : "Créer un compte"}
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ==================== ADMIN DASHBOARD ====================
+const AdminDashboard = () => {
+  const [stats, setStats] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [quotes, setQuotes] = useState([]);
+  const [services, setServices] = useState([]);
+  const [weddingOptions, setWeddingOptions] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [portfolio, setPortfolio] = useState([]);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [editingService, setEditingService] = useState(null);
+  const [editingOption, setEditingOption] = useState(null);
+  const navigate = useNavigate();
+
+  const token = localStorage.getItem("admin_token");
+  const headers = { Authorization: `Bearer ${token}` };
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/admin");
+      return;
+    }
+    fetchData();
+  }, [token]);
+
+  const fetchData = async () => {
+    try {
+      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes] = await Promise.all([
+        axios.get(`${API}/stats`, { headers }),
+        axios.get(`${API}/bookings`, { headers }),
+        axios.get(`${API}/wedding-quotes`, { headers }),
+        axios.get(`${API}/services?active_only=false`),
+        axios.get(`${API}/wedding-options`),
+        axios.get(`${API}/contact`, { headers }),
+        axios.get(`${API}/portfolio`)
+      ]);
+      setStats(statsRes.data);
+      setBookings(bookingsRes.data);
+      setQuotes(quotesRes.data);
+      setServices(servicesRes.data);
+      setWeddingOptions(optionsRes.data);
+      setMessages(messagesRes.data);
+      setPortfolio(portfolioRes.data);
+    } catch (e) {
+      if (e.response?.status === 401) {
+        localStorage.removeItem("admin_token");
+        navigate("/admin");
+      }
+    }
+  };
+
+  const updateBookingStatus = async (id, status) => {
+    try {
+      await axios.put(`${API}/bookings/${id}`, { status }, { headers });
+      toast.success("Statut mis à jour");
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const updateQuoteStatus = async (id, status) => {
+    try {
+      await axios.put(`${API}/wedding-quotes/${id}/status?status=${status}`, {}, { headers });
+      toast.success("Statut mis à jour");
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const updateService = async (id, data) => {
+    try {
+      await axios.put(`${API}/services/${id}`, data, { headers });
+      toast.success("Service mis à jour");
+      setEditingService(null);
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const updateWeddingOption = async (id, data) => {
+    try {
+      await axios.put(`${API}/wedding-options/${id}`, data, { headers });
+      toast.success("Option mise à jour");
+      setEditingOption(null);
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_user");
+    navigate("/admin");
+  };
+
+  const statusColors = {
+    pending: "bg-yellow-500/20 text-yellow-500",
+    confirmed: "bg-green-500/20 text-green-500",
+    cancelled: "bg-red-500/20 text-red-500"
+  };
+
+  const statusLabels = {
+    pending: "En attente",
+    confirmed: "Confirmé",
+    cancelled: "Annulé"
+  };
+
+  return (
+    <div className="pt-20 min-h-screen" data-testid="admin-dashboard">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="font-primary font-black text-3xl tracking-tighter uppercase">
+            <span className="text-gold-gradient">Dashboard</span>
+          </h1>
+          <button onClick={logout} className="btn-outline px-6 py-2 text-sm" data-testid="admin-logout-btn">
+            Déconnexion
+          </button>
+        </div>
+
+        {/* Stats */}
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">Réservations</p>
+              <p className="font-primary font-black text-3xl text-gold-gradient">{stats.total_bookings}</p>
+            </div>
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">Devis Mariage</p>
+              <p className="font-primary font-black text-3xl text-pink-500">{stats.pending_quotes || 0}</p>
+            </div>
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">En attente</p>
+              <p className="font-primary font-black text-3xl text-yellow-500">{stats.pending_bookings}</p>
+            </div>
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">Confirmées</p>
+              <p className="font-primary font-black text-3xl text-green-500">{stats.confirmed_bookings}</p>
+            </div>
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">Messages</p>
+              <p className="font-primary font-black text-3xl text-blue-500">{stats.unread_messages}</p>
+            </div>
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">Services</p>
+              <p className="font-primary font-black text-3xl">{stats.total_services}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8 border-b border-white/10 pb-4 overflow-x-auto">
+          {[
+            { id: "overview", label: "Aperçu" },
+            { id: "quotes", label: "Devis Mariage" },
+            { id: "bookings", label: "Réservations" },
+            { id: "services", label: "Services" },
+            { id: "options", label: "Options Mariage" },
+            { id: "messages", label: "Messages" }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`font-primary text-sm uppercase tracking-wider pb-2 border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"
+              }`}
+              data-testid={`admin-tab-${tab.id}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Wedding Quotes Tab */}
+        {(activeTab === "overview" || activeTab === "quotes") && (
+          <div className="mb-12">
+            <h2 className="font-primary font-bold text-xl mb-4">Demandes de devis mariage</h2>
+            <div className="bg-card border border-white/10 overflow-hidden overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead className="bg-black/50">
+                  <tr>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Client</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Date</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Options</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Total</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Statut</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quotes.slice(0, activeTab === "overview" ? 5 : 50).map((quote) => (
+                    <tr key={quote.id} className="border-t border-white/10" data-testid={`quote-row-${quote.id}`}>
+                      <td className="p-4">
+                        <p className="font-semibold">{quote.client_name}</p>
+                        <p className="text-white/60 text-sm">{quote.client_email}</p>
+                        <p className="text-white/40 text-xs">{quote.client_phone}</p>
+                      </td>
+                      <td className="p-4">
+                        <p>{quote.event_date}</p>
+                        {quote.event_location && <p className="text-white/60 text-sm">{quote.event_location}</p>}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-1">
+                          {quote.options_details?.slice(0, 3).map((opt, i) => (
+                            <span key={i} className="bg-white/10 px-2 py-0.5 text-xs">{opt.name}</span>
+                          ))}
+                          {quote.options_details?.length > 3 && (
+                            <span className="text-white/40 text-xs">+{quote.options_details.length - 3}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="font-primary font-bold text-gold-gradient">{quote.total_price}€</span>
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-3 py-1 text-xs font-semibold ${statusColors[quote.status]}`}>
+                          {statusLabels[quote.status]}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <select
+                          value={quote.status}
+                          onChange={(e) => updateQuoteStatus(quote.id, e.target.value)}
+                          className="bg-background border border-white/20 px-2 py-1 text-sm"
+                          data-testid={`quote-status-select-${quote.id}`}
+                        >
+                          <option value="pending">En attente</option>
+                          <option value="confirmed">Confirmé</option>
+                          <option value="cancelled">Annulé</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {quotes.length === 0 && (
+                <p className="text-center text-white/60 py-8">Aucun devis</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Bookings Tab */}
+        {(activeTab === "overview" || activeTab === "bookings") && (
+          <div className="mb-12">
+            <h2 className="font-primary font-bold text-xl mb-4">Réservations (Podcast/TV)</h2>
+            <div className="bg-card border border-white/10 overflow-hidden overflow-x-auto">
+              <table className="w-full min-w-[700px]">
+                <thead className="bg-black/50">
+                  <tr>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Client</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Service</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Date</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Statut</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.slice(0, activeTab === "overview" ? 5 : 50).map((booking) => (
+                    <tr key={booking.id} className="border-t border-white/10" data-testid={`booking-row-${booking.id}`}>
+                      <td className="p-4">
+                        <p className="font-semibold">{booking.client_name}</p>
+                        <p className="text-white/60 text-sm">{booking.client_email}</p>
+                      </td>
+                      <td className="p-4">
+                        <p>{booking.service_name}</p>
+                        <p className="text-white/60 text-sm capitalize">{booking.service_category === "tv_set" ? "Plateau TV" : booking.service_category}</p>
+                      </td>
+                      <td className="p-4">{booking.event_date}</td>
+                      <td className="p-4">
+                        <span className={`px-3 py-1 text-xs font-semibold ${statusColors[booking.status]}`}>
+                          {statusLabels[booking.status]}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <select
+                          value={booking.status}
+                          onChange={(e) => updateBookingStatus(booking.id, e.target.value)}
+                          className="bg-background border border-white/20 px-2 py-1 text-sm"
+                          data-testid={`booking-status-select-${booking.id}`}
+                        >
+                          <option value="pending">En attente</option>
+                          <option value="confirmed">Confirmé</option>
+                          <option value="cancelled">Annulé</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {bookings.length === 0 && (
+                <p className="text-center text-white/60 py-8">Aucune réservation</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Services Tab */}
+        {activeTab === "services" && (
+          <div>
+            <h2 className="font-primary font-bold text-xl mb-4">Gestion des services</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {services.map((service) => (
+                <div key={service.id} className="bg-card border border-white/10 p-6" data-testid={`service-card-admin-${service.id}`}>
+                  {editingService === service.id ? (
+                    <EditServiceForm
+                      service={service}
+                      onSave={(data) => updateService(service.id, data)}
+                      onCancel={() => setEditingService(null)}
+                    />
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <span className={`text-xs uppercase tracking-wider ${
+                            service.category === "wedding" ? "text-pink-400" :
+                            service.category === "podcast" ? "text-blue-400" : "text-purple-400"
+                          }`}>
+                            {service.category === "wedding" ? "Mariage" :
+                             service.category === "podcast" ? "Podcast" : "Plateau TV"}
+                          </span>
+                          <h3 className="font-primary font-bold text-lg">{service.name}</h3>
+                        </div>
+                        <span className={`text-xs px-2 py-1 ${service.is_active ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"}`}>
+                          {service.is_active ? "Actif" : "Inactif"}
+                        </span>
+                      </div>
+                      <p className="text-white/60 text-sm mb-4">{service.description}</p>
+                      <p className="font-primary font-black text-2xl text-gold-gradient mb-4">{service.price}€</p>
+                      <button
+                        onClick={() => setEditingService(service.id)}
+                        className="btn-outline w-full py-2 text-xs"
+                        data-testid={`edit-service-${service.id}`}
+                      >
+                        Modifier
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Wedding Options Tab */}
+        {activeTab === "options" && (
+          <div>
+            <h2 className="font-primary font-bold text-xl mb-4">Options du devis mariage</h2>
+            {["coverage", "extras", "editing"].map(cat => {
+              const catOptions = weddingOptions.filter(o => o.category === cat);
+              const labels = { coverage: "Couverture", extras: "Options", editing: "Livrables" };
+              return (
+                <div key={cat} className="mb-8">
+                  <h3 className="font-primary font-semibold text-lg mb-4">{labels[cat]}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {catOptions.map(option => (
+                      <div key={option.id} className="bg-card border border-white/10 p-4" data-testid={`option-admin-${option.id}`}>
+                        {editingOption === option.id ? (
+                          <div className="space-y-3">
+                            <input
+                              type="text"
+                              defaultValue={option.name}
+                              className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+                              id={`edit-name-${option.id}`}
+                            />
+                            <input
+                              type="number"
+                              defaultValue={option.price}
+                              className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+                              id={`edit-price-${option.id}`}
+                            />
+                            <div className="flex gap-2">
+                              <button onClick={() => setEditingOption(null)} className="btn-outline flex-1 py-2 text-xs">
+                                Annuler
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  const name = document.getElementById(`edit-name-${option.id}`).value;
+                                  const price = parseFloat(document.getElementById(`edit-price-${option.id}`).value);
+                                  updateWeddingOption(option.id, { name, price });
+                                }}
+                                className="btn-primary flex-1 py-2 text-xs"
+                              >
+                                Sauver
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-start">
+                              <h4 className="font-primary font-semibold">{option.name}</h4>
+                              <span className="font-primary font-bold text-primary">{option.price}€</span>
+                            </div>
+                            <p className="text-white/60 text-sm mt-1 mb-3">{option.description}</p>
+                            <button
+                              onClick={() => setEditingOption(option.id)}
+                              className="text-primary text-xs hover:underline"
+                            >
+                              Modifier
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Messages Tab */}
+        {activeTab === "messages" && (
+          <div>
+            <h2 className="font-primary font-bold text-xl mb-4">Messages reçus</h2>
+            <div className="space-y-4">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`bg-card border p-6 ${msg.is_read ? "border-white/10" : "border-primary"}`} data-testid={`message-${msg.id}`}>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-primary font-bold">{msg.name}</h3>
+                      <p className="text-white/60 text-sm">{msg.email} {msg.phone && `• ${msg.phone}`}</p>
+                    </div>
+                    <span className="text-white/40 text-sm">
+                      {new Date(msg.created_at).toLocaleDateString("fr-FR")}
+                    </span>
+                  </div>
+                  <p className="font-semibold mb-2">{msg.subject}</p>
+                  <p className="text-white/70 text-sm">{msg.message}</p>
+                </div>
+              ))}
+              {messages.length === 0 && (
+                <p className="text-center text-white/60 py-8">Aucun message</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Edit Service Form Component
+const EditServiceForm = ({ service, onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    name: service.name,
+    description: service.description,
+    price: service.price,
+    duration: service.duration || "",
+    is_active: service.is_active
+  });
+
+  return (
+    <div className="space-y-4">
+      <input
+        type="text"
+        value={formData.name}
+        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+        placeholder="Nom"
+        data-testid="edit-service-name"
+      />
+      <textarea
+        value={formData.description}
+        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+        className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+        rows={2}
+        placeholder="Description"
+        data-testid="edit-service-description"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          type="number"
+          value={formData.price}
+          onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+          className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+          placeholder="Prix"
+          data-testid="edit-service-price"
+        />
+        <input
+          type="text"
+          value={formData.duration}
+          onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+          className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+          placeholder="Durée"
+          data-testid="edit-service-duration"
+        />
+      </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={formData.is_active}
+          onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+          className="accent-primary"
+          data-testid="edit-service-active"
+        />
+        Service actif
+      </label>
+      <div className="flex gap-2">
+        <button onClick={onCancel} className="btn-outline flex-1 py-2 text-xs">
+          Annuler
+        </button>
+        <button onClick={() => onSave(formData)} className="btn-primary flex-1 py-2 text-xs" data-testid="save-service-btn">
+          Sauvegarder
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// ==================== APP ====================
+function App() {
+  return (
+    <div className="App">
+      <div className="noise-overlay"></div>
+      <BrowserRouter>
+        <Header />
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/services/wedding" element={<ServicePage category="wedding" />} />
+          <Route path="/services/podcast" element={<ServicePage category="podcast" />} />
+          <Route path="/services/tv_set" element={<ServicePage category="tv_set" />} />
+          <Route path="/devis-mariage" element={<WeddingQuotePage />} />
+          <Route path="/portfolio" element={<PortfolioPage />} />
+          <Route path="/booking" element={<BookingPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        </Routes>
+        <Footer />
+        <Toaster position="top-right" />
+      </BrowserRouter>
+    </div>
+  );
+}
+
+export default App;
