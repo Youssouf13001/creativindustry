@@ -1675,6 +1675,10 @@ const AdminDashboard = () => {
   const [editingService, setEditingService] = useState(null);
   const [editingOption, setEditingOption] = useState(null);
   const [editingPortfolio, setEditingPortfolio] = useState(null);
+  const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
+  const [uploadingClientFile, setUploadingClientFile] = useState(false);
+  const portfolioFileRef = useRef(null);
+  const clientFileRef = useRef(null);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
