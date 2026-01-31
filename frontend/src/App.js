@@ -3,7 +3,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Phone, Mail, MapPin, Check, Camera, Mic, Tv, Menu, X, ChevronRight, Play, ArrowRight, Clock, Users } from "lucide-react";
+import { Calendar, Phone, Mail, MapPin, Check, Camera, Mic, Tv, Menu, X, ChevronRight, Play, ArrowRight, Clock, Users, FileText, Image, Video, Plus, Minus } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 
@@ -27,6 +27,7 @@ const Header = () => {
     { name: "Mariages", path: "/services/wedding" },
     { name: "Podcast", path: "/services/podcast" },
     { name: "Plateau TV", path: "/services/tv_set" },
+    { name: "Portfolio", path: "/portfolio" },
     { name: "Contact", path: "/contact" },
   ];
 
@@ -58,11 +59,11 @@ const Header = () => {
               </Link>
             ))}
             <Link
-              to="/booking"
-              data-testid="nav-booking-btn"
+              to="/devis-mariage"
+              data-testid="nav-devis-btn"
               className="btn-primary px-6 py-3 text-sm"
             >
-              Réserver
+              Devis Mariage
             </Link>
           </nav>
 
@@ -96,11 +97,11 @@ const Header = () => {
                 </Link>
               ))}
               <Link
-                to="/booking"
+                to="/devis-mariage"
                 onClick={() => setIsMenuOpen(false)}
                 className="btn-primary px-6 py-3 text-center mt-4"
               >
-                Réserver
+                Devis Mariage
               </Link>
             </nav>
           </motion.div>
@@ -129,6 +130,7 @@ const Footer = () => (
             <li><Link to="/services/wedding" className="text-white/60 hover:text-primary transition-colors text-sm">Mariages</Link></li>
             <li><Link to="/services/podcast" className="text-white/60 hover:text-primary transition-colors text-sm">Podcast</Link></li>
             <li><Link to="/services/tv_set" className="text-white/60 hover:text-primary transition-colors text-sm">Plateau TV</Link></li>
+            <li><Link to="/portfolio" className="text-white/60 hover:text-primary transition-colors text-sm">Portfolio</Link></li>
           </ul>
         </div>
         <div>
@@ -170,10 +172,6 @@ const HomePage = () => {
     axios.post(`${API}/seed`).catch(() => {});
   }, []);
 
-  const weddingServices = services.filter(s => s.category === "wedding");
-  const podcastServices = services.filter(s => s.category === "podcast");
-  const tvServices = services.filter(s => s.category === "tv_set");
-
   return (
     <div data-testid="home-page">
       {/* Hero Section */}
@@ -203,11 +201,11 @@ const HomePage = () => {
               Studio de production créative pour mariages, podcasts et productions télévisées. L'excellence au service de votre vision.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/booking" className="btn-primary px-10 py-4 text-sm inline-flex items-center justify-center gap-2" data-testid="hero-booking-btn">
-                Réserver maintenant <ArrowRight size={18} />
+              <Link to="/devis-mariage" className="btn-primary px-10 py-4 text-sm inline-flex items-center justify-center gap-2" data-testid="hero-devis-btn">
+                Demander un devis <FileText size={18} />
               </Link>
-              <Link to="/services/wedding" className="btn-outline px-10 py-4 text-sm inline-flex items-center justify-center gap-2" data-testid="hero-discover-btn">
-                Découvrir nos services
+              <Link to="/portfolio" className="btn-outline px-10 py-4 text-sm inline-flex items-center justify-center gap-2" data-testid="hero-portfolio-btn">
+                Voir nos réalisations <Play size={18} />
               </Link>
             </div>
           </motion.div>
@@ -258,9 +256,14 @@ const HomePage = () => {
               <p className="font-secondary text-white/60 text-sm mb-6">
                 Photographie et vidéographie cinématique pour immortaliser votre jour le plus précieux.
               </p>
-              <Link to="/services/wedding" className="btn-outline px-6 py-3 text-xs w-full inline-block text-center">
-                Voir les formules
-              </Link>
+              <div className="flex gap-2">
+                <Link to="/services/wedding" className="btn-outline px-4 py-3 text-xs flex-1 text-center">
+                  Formules
+                </Link>
+                <Link to="/devis-mariage" className="btn-primary px-4 py-3 text-xs flex-1 text-center">
+                  Devis
+                </Link>
+              </div>
             </motion.div>
 
             {/* Podcast Card */}
@@ -339,8 +342,8 @@ const HomePage = () => {
               Contactez-nous pour discuter de votre projet et obtenir un devis personnalisé.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/booking" className="btn-primary px-10 py-4 text-sm" data-testid="cta-booking-btn">
-                Réserver une date
+              <Link to="/devis-mariage" className="btn-primary px-10 py-4 text-sm" data-testid="cta-devis-btn">
+                Devis Mariage Personnalisé
               </Link>
               <Link to="/contact" className="btn-outline px-10 py-4 text-sm" data-testid="cta-contact-btn">
                 Nous contacter
@@ -364,7 +367,8 @@ const ServicePage = ({ category }) => {
       subtitle: "Immortalisez votre amour",
       description: "Nos forfaits mariage combinent photographie et vidéographie pour créer des souvenirs intemporels de votre journée spéciale.",
       icon: Camera,
-      image: "https://images.unsplash.com/photo-1673195577797-d86fd842ade8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxjaW5lbWF0aWMlMjB3ZWRkaW5nJTIwY291cGxlJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc2OTg0OTg2OHww&ixlib=rb-4.1.0&q=85"
+      image: "https://images.unsplash.com/photo-1673195577797-d86fd842ade8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxjaW5lbWF0aWMlMjB3ZWRkaW5nJTIwY291cGxlJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc2OTg0OTg2OHww&ixlib=rb-4.1.0&q=85",
+      showQuoteButton: true
     },
     podcast: {
       title: "Studio Podcast",
@@ -418,7 +422,12 @@ const ServicePage = ({ category }) => {
               <span className="font-primary text-sm uppercase tracking-wider text-primary">{info.subtitle}</span>
             </div>
             <h1 className="font-primary font-black text-4xl md:text-6xl tracking-tighter uppercase mb-6">{info.title}</h1>
-            <p className="font-secondary text-white/70 text-lg">{info.description}</p>
+            <p className="font-secondary text-white/70 text-lg mb-8">{info.description}</p>
+            {info.showQuoteButton && (
+              <Link to="/devis-mariage" className="btn-primary px-8 py-4 text-sm inline-flex items-center gap-2">
+                Créer mon devis personnalisé <ArrowRight size={18} />
+              </Link>
+            )}
           </motion.div>
         </div>
       </section>
@@ -468,13 +477,13 @@ const ServicePage = ({ category }) => {
                   </ul>
 
                   <Link
-                    to={`/booking?service=${service.id}`}
+                    to={category === "wedding" ? "/devis-mariage" : `/booking?service=${service.id}`}
                     className={`w-full inline-block text-center py-3 text-sm ${
                       index === 1 ? "btn-primary" : "btn-outline"
                     }`}
                     data-testid={`book-service-${service.id}`}
                   >
-                    Réserver
+                    {category === "wedding" ? "Créer mon devis" : "Réserver"}
                   </Link>
                 </motion.div>
               ))}
@@ -482,6 +491,622 @@ const ServicePage = ({ category }) => {
           )}
         </div>
       </section>
+
+      {/* Portfolio Preview for Wedding */}
+      {category === "wedding" && (
+        <section className="py-24 md:py-32 bg-card border-t border-white/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="font-primary font-bold text-3xl md:text-4xl tracking-tight mb-4">Nos Réalisations</h2>
+              <p className="font-secondary text-white/60">Découvrez nos plus beaux mariages</p>
+            </div>
+            <div className="flex justify-center gap-4">
+              <Link to="/portfolio?type=photo&category=wedding" className="btn-outline px-8 py-3 text-sm inline-flex items-center gap-2">
+                <Image size={18} /> Photos
+              </Link>
+              <Link to="/portfolio?type=video&category=wedding" className="btn-outline px-8 py-3 text-sm inline-flex items-center gap-2">
+                <Video size={18} /> Vidéos
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+};
+
+// ==================== WEDDING QUOTE BUILDER ====================
+const WeddingQuotePage = () => {
+  const [options, setOptions] = useState([]);
+  const [selectedOptions, setSelectedOptions] = useState([]);
+  const [step, setStep] = useState(1);
+  const [formData, setFormData] = useState({
+    client_name: "",
+    client_email: "",
+    client_phone: "",
+    event_date: "",
+    event_location: "",
+    message: ""
+  });
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const res = await axios.get(`${API}/wedding-options`);
+        setOptions(res.data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchOptions();
+  }, []);
+
+  const toggleOption = (optionId) => {
+    setSelectedOptions(prev => 
+      prev.includes(optionId) 
+        ? prev.filter(id => id !== optionId)
+        : [...prev, optionId]
+    );
+  };
+
+  const getSelectedOptionsData = () => {
+    return options.filter(o => selectedOptions.includes(o.id));
+  };
+
+  const getTotalPrice = () => {
+    return getSelectedOptionsData().reduce((sum, o) => sum + o.price, 0);
+  };
+
+  const groupedOptions = {
+    coverage: options.filter(o => o.category === "coverage"),
+    extras: options.filter(o => o.category === "extras"),
+    editing: options.filter(o => o.category === "editing")
+  };
+
+  const categoryLabels = {
+    coverage: { label: "Couverture", description: "Sélectionnez les moments à capturer" },
+    extras: { label: "Options", description: "Ajoutez des prestations supplémentaires" },
+    editing: { label: "Livrables", description: "Choisissez vos formats de livraison" }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (selectedOptions.length === 0) {
+      toast.error("Veuillez sélectionner au moins une option");
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await axios.post(`${API}/wedding-quotes`, {
+        ...formData,
+        selected_options: selectedOptions
+      });
+      toast.success("Demande de devis envoyée ! Nous vous contacterons sous 24h.");
+      navigate("/");
+    } catch (e) {
+      toast.error("Erreur lors de l'envoi. Veuillez réessayer.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="pt-20 min-h-screen" data-testid="wedding-quote-page">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h1 className="font-primary font-black text-4xl md:text-5xl tracking-tighter uppercase mb-4">
+            <span className="text-gold-gradient">Devis Mariage</span>
+          </h1>
+          <p className="font-secondary text-white/60">Créez votre formule sur-mesure en 3 étapes</p>
+        </motion.div>
+
+        {/* Progress Steps */}
+        <div className="flex items-center justify-center gap-4 mb-12">
+          {[
+            { num: 1, label: "Options" },
+            { num: 2, label: "Date" },
+            { num: 3, label: "Coordonnées" }
+          ].map((s, i) => (
+            <div key={s.num} className="flex items-center">
+              <div 
+                className={`flex flex-col items-center cursor-pointer`}
+                onClick={() => s.num < step && setStep(s.num)}
+              >
+                <div className={`w-12 h-12 flex items-center justify-center font-primary font-bold text-lg ${
+                  step >= s.num ? "bg-primary text-black" : "bg-card border border-white/20 text-white/40"
+                }`}>
+                  {s.num}
+                </div>
+                <span className={`text-xs mt-2 ${step >= s.num ? "text-primary" : "text-white/40"}`}>{s.label}</span>
+              </div>
+              {i < 2 && <div className={`w-16 h-px mx-2 ${step > s.num ? "bg-primary" : "bg-white/20"}`}></div>}
+            </div>
+          ))}
+        </div>
+
+        {/* Floating Total */}
+        {selectedOptions.length > 0 && (
+          <div className="fixed bottom-6 right-6 bg-card border border-primary p-4 shadow-2xl z-40" data-testid="quote-total">
+            <p className="text-white/60 text-sm">Total estimé</p>
+            <p className="font-primary font-black text-3xl text-gold-gradient">{getTotalPrice()}€</p>
+            <p className="text-white/40 text-xs">{selectedOptions.length} option(s)</p>
+          </div>
+        )}
+
+        {/* Step 1: Select Options */}
+        {step === 1 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            data-testid="quote-step-1"
+          >
+            {Object.entries(groupedOptions).map(([cat, opts]) => (
+              <div key={cat} className="mb-12">
+                <div className="mb-6">
+                  <h2 className="font-primary font-bold text-xl mb-1">{categoryLabels[cat].label}</h2>
+                  <p className="text-white/60 text-sm">{categoryLabels[cat].description}</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {opts.map((option) => {
+                    const isSelected = selectedOptions.includes(option.id);
+                    return (
+                      <button
+                        key={option.id}
+                        onClick={() => toggleOption(option.id)}
+                        className={`p-6 text-left transition-all border ${
+                          isSelected 
+                            ? "bg-primary/10 border-primary" 
+                            : "bg-card border-white/10 hover:border-white/30"
+                        }`}
+                        data-testid={`option-${option.id}`}
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <h3 className="font-primary font-semibold">{option.name}</h3>
+                          <div className={`w-6 h-6 flex items-center justify-center ${
+                            isSelected ? "bg-primary text-black" : "border border-white/30"
+                          }`}>
+                            {isSelected && <Check size={14} />}
+                          </div>
+                        </div>
+                        <p className="text-white/60 text-sm mb-3">{option.description}</p>
+                        <p className="font-primary font-bold text-primary">{option.price}€</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div className="flex justify-end mt-8">
+              <button
+                onClick={() => setStep(2)}
+                disabled={selectedOptions.length === 0}
+                className="btn-primary px-10 py-4 text-sm disabled:opacity-50"
+                data-testid="quote-next-1"
+              >
+                Continuer
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 2: Date & Location */}
+        {step === 2 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            data-testid="quote-step-2"
+          >
+            {/* Summary */}
+            <div className="bg-card border border-white/10 p-6 mb-8">
+              <h3 className="font-primary font-bold mb-4">Récapitulatif</h3>
+              <div className="space-y-2 mb-4">
+                {getSelectedOptionsData().map(opt => (
+                  <div key={opt.id} className="flex justify-between text-sm">
+                    <span className="text-white/70">{opt.name}</span>
+                    <span className="text-primary">{opt.price}€</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-white/10 pt-4 flex justify-between">
+                <span className="font-primary font-bold">Total</span>
+                <span className="font-primary font-bold text-gold-gradient text-xl">{getTotalPrice()}€</span>
+              </div>
+            </div>
+
+            <h2 className="font-primary font-bold text-xl mb-6">Date et lieu de l'événement</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div>
+                <label className="block font-primary text-sm mb-2">Date du mariage *</label>
+                <input
+                  type="date"
+                  required
+                  value={formData.event_date}
+                  onChange={(e) => setFormData({ ...formData, event_date: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="quote-date-input"
+                />
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Lieu (ville)</label>
+                <input
+                  type="text"
+                  value={formData.event_location}
+                  onChange={(e) => setFormData({ ...formData, event_location: e.target.value })}
+                  placeholder="Ex: Paris, Lyon, Marseille..."
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="quote-location-input"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button onClick={() => setStep(1)} className="btn-outline px-8 py-3 text-sm">
+                Retour
+              </button>
+              <button
+                onClick={() => setStep(3)}
+                disabled={!formData.event_date}
+                className="btn-primary px-8 py-3 text-sm flex-1 disabled:opacity-50"
+                data-testid="quote-next-2"
+              >
+                Continuer
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Step 3: Contact Details */}
+        {step === 3 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            data-testid="quote-step-3"
+          >
+            {/* Summary */}
+            <div className="bg-card border border-primary p-6 mb-8">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="font-primary font-bold">Votre devis</h3>
+                  <p className="text-white/60 text-sm">{formData.event_date} {formData.event_location && `• ${formData.event_location}`}</p>
+                </div>
+                <p className="font-primary font-black text-2xl text-gold-gradient">{getTotalPrice()}€</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {getSelectedOptionsData().map(opt => (
+                  <span key={opt.id} className="bg-white/10 px-3 py-1 text-xs">{opt.name}</span>
+                ))}
+              </div>
+            </div>
+
+            <h2 className="font-primary font-bold text-xl mb-6">Vos coordonnées</h2>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block font-primary text-sm mb-2">Nom complet *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.client_name}
+                    onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                    data-testid="quote-name-input"
+                  />
+                </div>
+                <div>
+                  <label className="block font-primary text-sm mb-2">Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.client_email}
+                    onChange={(e) => setFormData({ ...formData, client_email: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                    data-testid="quote-email-input"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Téléphone *</label>
+                <input
+                  type="tel"
+                  required
+                  value={formData.client_phone}
+                  onChange={(e) => setFormData({ ...formData, client_phone: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="quote-phone-input"
+                />
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Message (optionnel)</label>
+                <textarea
+                  rows={4}
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none resize-none"
+                  placeholder="Décrivez votre mariage, vos attentes particulières..."
+                  data-testid="quote-message-input"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button type="button" onClick={() => setStep(2)} className="btn-outline px-8 py-3 text-sm">
+                  Retour
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary px-8 py-3 text-sm flex-1 disabled:opacity-50"
+                  data-testid="quote-submit-btn"
+                >
+                  {loading ? "Envoi..." : `Envoyer ma demande (${getTotalPrice()}€)`}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ==================== PORTFOLIO PAGE ====================
+const PortfolioPage = () => {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState({ type: "all", category: "all" });
+  const [selectedItem, setSelectedItem] = useState(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const type = params.get("type");
+    const category = params.get("category");
+    if (type) setFilter(f => ({ ...f, type }));
+    if (category) setFilter(f => ({ ...f, category }));
+  }, [location]);
+
+  useEffect(() => {
+    const fetchPortfolio = async () => {
+      try {
+        let url = `${API}/portfolio`;
+        const params = [];
+        if (filter.category !== "all") params.push(`category=${filter.category}`);
+        if (filter.type !== "all") params.push(`media_type=${filter.type}`);
+        if (params.length) url += `?${params.join("&")}`;
+        
+        const res = await axios.get(url);
+        setItems(res.data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPortfolio();
+  }, [filter]);
+
+  const photos = items.filter(i => i.media_type === "photo");
+  const videos = items.filter(i => i.media_type === "video");
+
+  return (
+    <div className="pt-20 min-h-screen" data-testid="portfolio-page">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-12"
+        >
+          <h1 className="font-primary font-black text-4xl md:text-5xl tracking-tighter uppercase mb-4">
+            <span className="text-gold-gradient">Portfolio</span>
+          </h1>
+          <p className="font-secondary text-white/60">Découvrez nos réalisations</p>
+        </motion.div>
+
+        {/* Filters */}
+        <div className="flex flex-wrap justify-center gap-4 mb-12">
+          <div className="flex gap-2">
+            {[
+              { value: "all", label: "Tout" },
+              { value: "photo", label: "Photos" },
+              { value: "video", label: "Vidéos" }
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setFilter(f => ({ ...f, type: opt.value }))}
+                className={`px-6 py-2 text-sm font-primary transition-colors ${
+                  filter.type === opt.value 
+                    ? "bg-primary text-black" 
+                    : "bg-card border border-white/20 text-white/70 hover:border-primary"
+                }`}
+                data-testid={`filter-type-${opt.value}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            {[
+              { value: "all", label: "Tous" },
+              { value: "wedding", label: "Mariages" },
+              { value: "podcast", label: "Podcast" },
+              { value: "tv_set", label: "Plateau TV" }
+            ].map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setFilter(f => ({ ...f, category: opt.value }))}
+                className={`px-6 py-2 text-sm font-primary transition-colors ${
+                  filter.category === opt.value 
+                    ? "bg-primary text-black" 
+                    : "bg-card border border-white/20 text-white/70 hover:border-primary"
+                }`}
+                data-testid={`filter-cat-${opt.value}`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center text-white/60">Chargement...</div>
+        ) : items.length === 0 ? (
+          <div className="text-center text-white/60 py-20">Aucun élément trouvé</div>
+        ) : (
+          <>
+            {/* Photos Section */}
+            {(filter.type === "all" || filter.type === "photo") && photos.length > 0 && (
+              <section className="mb-16">
+                {filter.type === "all" && (
+                  <h2 className="font-primary font-bold text-2xl mb-8 flex items-center gap-3">
+                    <Image className="text-primary" size={24} /> Photos
+                  </h2>
+                )}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {photos.map((item, index) => (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="relative group cursor-pointer overflow-hidden aspect-square"
+                      onClick={() => setSelectedItem(item)}
+                      data-testid={`portfolio-photo-${item.id}`}
+                    >
+                      <img
+                        src={item.media_url}
+                        alt={item.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                        <div>
+                          <h3 className="font-primary font-semibold text-sm">{item.title}</h3>
+                          {item.description && (
+                            <p className="text-white/70 text-xs">{item.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      {item.is_featured && (
+                        <div className="absolute top-2 right-2 bg-primary text-black text-xs px-2 py-1 font-primary font-bold">
+                          Featured
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Videos Section */}
+            {(filter.type === "all" || filter.type === "video") && videos.length > 0 && (
+              <section>
+                {filter.type === "all" && (
+                  <h2 className="font-primary font-bold text-2xl mb-8 flex items-center gap-3">
+                    <Video className="text-primary" size={24} /> Vidéos
+                  </h2>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {videos.map((item, index) => (
+                    <motion.div
+                      key={item.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-card border border-white/10 overflow-hidden card-hover"
+                      data-testid={`portfolio-video-${item.id}`}
+                    >
+                      <div className="relative aspect-video">
+                        {item.thumbnail_url ? (
+                          <img
+                            src={item.thumbnail_url}
+                            alt={item.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-black/50 flex items-center justify-center">
+                            <Play size={48} className="text-primary" />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => setSelectedItem(item)}
+                          className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity"
+                        >
+                          <div className="w-16 h-16 bg-primary flex items-center justify-center">
+                            <Play size={32} className="text-black ml-1" />
+                          </div>
+                        </button>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-primary font-semibold">{item.title}</h3>
+                        {item.description && (
+                          <p className="text-white/60 text-sm mt-1">{item.description}</p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {selectedItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4"
+            onClick={() => setSelectedItem(null)}
+            data-testid="portfolio-lightbox"
+          >
+            <button
+              className="absolute top-6 right-6 text-white/70 hover:text-white"
+              onClick={() => setSelectedItem(null)}
+            >
+              <X size={32} />
+            </button>
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              className="max-w-5xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {selectedItem.media_type === "photo" ? (
+                <img
+                  src={selectedItem.media_url}
+                  alt={selectedItem.title}
+                  className="w-full max-h-[80vh] object-contain"
+                />
+              ) : (
+                <div className="aspect-video">
+                  <iframe
+                    src={selectedItem.media_url}
+                    title={selectedItem.title}
+                    className="w-full h-full"
+                    allowFullScreen
+                  />
+                </div>
+              )}
+              <div className="mt-4 text-center">
+                <h3 className="font-primary font-bold text-xl">{selectedItem.title}</h3>
+                {selectedItem.description && (
+                  <p className="text-white/60 mt-2">{selectedItem.description}</p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -506,13 +1131,15 @@ const BookingPage = () => {
     const fetchServices = async () => {
       try {
         const res = await axios.get(`${API}/services`);
-        setServices(res.data);
+        // Filter out wedding services (they use quote builder)
+        const nonWeddingServices = res.data.filter(s => s.category !== "wedding");
+        setServices(nonWeddingServices);
         
         const params = new URLSearchParams(window.location.search);
         const serviceId = params.get("service");
         if (serviceId) {
           const found = res.data.find(s => s.id === serviceId);
-          if (found) {
+          if (found && found.category !== "wedding") {
             setSelectedService(found);
             setStep(2);
           }
@@ -544,13 +1171,11 @@ const BookingPage = () => {
   };
 
   const groupedServices = {
-    wedding: services.filter(s => s.category === "wedding"),
     podcast: services.filter(s => s.category === "podcast"),
     tv_set: services.filter(s => s.category === "tv_set")
   };
 
   const categoryLabels = {
-    wedding: { label: "Mariages", icon: Camera },
     podcast: { label: "Podcast", icon: Mic },
     tv_set: { label: "Plateau TV", icon: Tv }
   };
@@ -561,7 +1186,17 @@ const BookingPage = () => {
         <h1 className="font-primary font-black text-4xl md:text-5xl tracking-tighter uppercase mb-4 text-center">
           <span className="text-gold-gradient">Réservation</span>
         </h1>
-        <p className="font-secondary text-white/60 text-center mb-12">Sélectionnez votre service et réservez en quelques clics</p>
+        <p className="font-secondary text-white/60 text-center mb-12">Réservez votre créneau en quelques clics</p>
+
+        {/* Note for Wedding */}
+        <div className="bg-card border border-primary/30 p-4 mb-8 text-center">
+          <p className="text-sm text-white/70">
+            Pour un <span className="text-primary font-semibold">mariage</span>, utilisez notre{" "}
+            <Link to="/devis-mariage" className="text-primary underline hover:no-underline">
+              configurateur de devis personnalisé
+            </Link>
+          </p>
+        </div>
 
         {/* Steps */}
         <div className="flex items-center justify-center gap-4 mb-12">
@@ -587,6 +1222,7 @@ const BookingPage = () => {
             <h2 className="font-primary font-bold text-xl mb-6">Choisissez votre service</h2>
             
             {Object.entries(groupedServices).map(([cat, svcs]) => {
+              if (svcs.length === 0) return null;
               const { label, icon: Icon } = categoryLabels[cat];
               return (
                 <div key={cat} className="mb-8">
@@ -631,7 +1267,7 @@ const BookingPage = () => {
             <h2 className="font-primary font-bold text-xl mb-6">Choisissez une date</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div>
-                <label className="block font-primary text-sm mb-2">Date de l'événement *</label>
+                <label className="block font-primary text-sm mb-2">Date *</label>
                 <input
                   type="date"
                   required
@@ -999,10 +1635,14 @@ const AdminLogin = () => {
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [bookings, setBookings] = useState([]);
+  const [quotes, setQuotes] = useState([]);
   const [services, setServices] = useState([]);
+  const [weddingOptions, setWeddingOptions] = useState([]);
   const [messages, setMessages] = useState([]);
+  const [portfolio, setPortfolio] = useState([]);
   const [activeTab, setActiveTab] = useState("overview");
   const [editingService, setEditingService] = useState(null);
+  const [editingOption, setEditingOption] = useState(null);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
@@ -1018,16 +1658,22 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, bookingsRes, servicesRes, messagesRes] = await Promise.all([
+      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes] = await Promise.all([
         axios.get(`${API}/stats`, { headers }),
         axios.get(`${API}/bookings`, { headers }),
+        axios.get(`${API}/wedding-quotes`, { headers }),
         axios.get(`${API}/services?active_only=false`),
-        axios.get(`${API}/contact`, { headers })
+        axios.get(`${API}/wedding-options`),
+        axios.get(`${API}/contact`, { headers }),
+        axios.get(`${API}/portfolio`)
       ]);
       setStats(statsRes.data);
       setBookings(bookingsRes.data);
+      setQuotes(quotesRes.data);
       setServices(servicesRes.data);
+      setWeddingOptions(optionsRes.data);
       setMessages(messagesRes.data);
+      setPortfolio(portfolioRes.data);
     } catch (e) {
       if (e.response?.status === 401) {
         localStorage.removeItem("admin_token");
@@ -1046,11 +1692,32 @@ const AdminDashboard = () => {
     }
   };
 
+  const updateQuoteStatus = async (id, status) => {
+    try {
+      await axios.put(`${API}/wedding-quotes/${id}/status?status=${status}`, {}, { headers });
+      toast.success("Statut mis à jour");
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
   const updateService = async (id, data) => {
     try {
       await axios.put(`${API}/services/${id}`, data, { headers });
       toast.success("Service mis à jour");
       setEditingService(null);
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const updateWeddingOption = async (id, data) => {
+    try {
+      await axios.put(`${API}/wedding-options/${id}`, data, { headers });
+      toast.success("Option mise à jour");
+      setEditingOption(null);
       fetchData();
     } catch (e) {
       toast.error("Erreur");
@@ -1089,10 +1756,14 @@ const AdminDashboard = () => {
 
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
             <div className="bg-card border border-white/10 p-6">
               <p className="text-white/60 text-sm">Réservations</p>
               <p className="font-primary font-black text-3xl text-gold-gradient">{stats.total_bookings}</p>
+            </div>
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">Devis Mariage</p>
+              <p className="font-primary font-black text-3xl text-pink-500">{stats.pending_quotes || 0}</p>
             </div>
             <div className="bg-card border border-white/10 p-6">
               <p className="text-white/60 text-sm">En attente</p>
@@ -1114,27 +1785,103 @@ const AdminDashboard = () => {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-4 mb-8 border-b border-white/10 pb-4">
-          {["overview", "bookings", "services", "messages"].map((tab) => (
+        <div className="flex gap-4 mb-8 border-b border-white/10 pb-4 overflow-x-auto">
+          {[
+            { id: "overview", label: "Aperçu" },
+            { id: "quotes", label: "Devis Mariage" },
+            { id: "bookings", label: "Réservations" },
+            { id: "services", label: "Services" },
+            { id: "options", label: "Options Mariage" },
+            { id: "messages", label: "Messages" }
+          ].map((tab) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`font-primary text-sm uppercase tracking-wider pb-2 border-b-2 transition-colors ${
-                activeTab === tab ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`font-primary text-sm uppercase tracking-wider pb-2 border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"
               }`}
-              data-testid={`admin-tab-${tab}`}
+              data-testid={`admin-tab-${tab.id}`}
             >
-              {tab === "overview" ? "Aperçu" : tab === "bookings" ? "Réservations" : tab === "services" ? "Services" : "Messages"}
+              {tab.label}
             </button>
           ))}
         </div>
 
+        {/* Wedding Quotes Tab */}
+        {(activeTab === "overview" || activeTab === "quotes") && (
+          <div className="mb-12">
+            <h2 className="font-primary font-bold text-xl mb-4">Demandes de devis mariage</h2>
+            <div className="bg-card border border-white/10 overflow-hidden overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead className="bg-black/50">
+                  <tr>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Client</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Date</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Options</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Total</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Statut</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quotes.slice(0, activeTab === "overview" ? 5 : 50).map((quote) => (
+                    <tr key={quote.id} className="border-t border-white/10" data-testid={`quote-row-${quote.id}`}>
+                      <td className="p-4">
+                        <p className="font-semibold">{quote.client_name}</p>
+                        <p className="text-white/60 text-sm">{quote.client_email}</p>
+                        <p className="text-white/40 text-xs">{quote.client_phone}</p>
+                      </td>
+                      <td className="p-4">
+                        <p>{quote.event_date}</p>
+                        {quote.event_location && <p className="text-white/60 text-sm">{quote.event_location}</p>}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-1">
+                          {quote.options_details?.slice(0, 3).map((opt, i) => (
+                            <span key={i} className="bg-white/10 px-2 py-0.5 text-xs">{opt.name}</span>
+                          ))}
+                          {quote.options_details?.length > 3 && (
+                            <span className="text-white/40 text-xs">+{quote.options_details.length - 3}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="font-primary font-bold text-gold-gradient">{quote.total_price}€</span>
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-3 py-1 text-xs font-semibold ${statusColors[quote.status]}`}>
+                          {statusLabels[quote.status]}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <select
+                          value={quote.status}
+                          onChange={(e) => updateQuoteStatus(quote.id, e.target.value)}
+                          className="bg-background border border-white/20 px-2 py-1 text-sm"
+                          data-testid={`quote-status-select-${quote.id}`}
+                        >
+                          <option value="pending">En attente</option>
+                          <option value="confirmed">Confirmé</option>
+                          <option value="cancelled">Annulé</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {quotes.length === 0 && (
+                <p className="text-center text-white/60 py-8">Aucun devis</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Bookings Tab */}
         {(activeTab === "overview" || activeTab === "bookings") && (
           <div className="mb-12">
-            <h2 className="font-primary font-bold text-xl mb-4">Réservations récentes</h2>
-            <div className="bg-card border border-white/10 overflow-hidden">
-              <table className="w-full">
+            <h2 className="font-primary font-bold text-xl mb-4">Réservations (Podcast/TV)</h2>
+            <div className="bg-card border border-white/10 overflow-hidden overflow-x-auto">
+              <table className="w-full min-w-[700px]">
                 <thead className="bg-black/50">
                   <tr>
                     <th className="text-left p-4 font-primary text-sm text-white/60">Client</th>
@@ -1153,7 +1900,7 @@ const AdminDashboard = () => {
                       </td>
                       <td className="p-4">
                         <p>{booking.service_name}</p>
-                        <p className="text-white/60 text-sm capitalize">{booking.service_category}</p>
+                        <p className="text-white/60 text-sm capitalize">{booking.service_category === "tv_set" ? "Plateau TV" : booking.service_category}</p>
                       </td>
                       <td className="p-4">{booking.event_date}</td>
                       <td className="p-4">
@@ -1228,6 +1975,73 @@ const AdminDashboard = () => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Wedding Options Tab */}
+        {activeTab === "options" && (
+          <div>
+            <h2 className="font-primary font-bold text-xl mb-4">Options du devis mariage</h2>
+            {["coverage", "extras", "editing"].map(cat => {
+              const catOptions = weddingOptions.filter(o => o.category === cat);
+              const labels = { coverage: "Couverture", extras: "Options", editing: "Livrables" };
+              return (
+                <div key={cat} className="mb-8">
+                  <h3 className="font-primary font-semibold text-lg mb-4">{labels[cat]}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {catOptions.map(option => (
+                      <div key={option.id} className="bg-card border border-white/10 p-4" data-testid={`option-admin-${option.id}`}>
+                        {editingOption === option.id ? (
+                          <div className="space-y-3">
+                            <input
+                              type="text"
+                              defaultValue={option.name}
+                              className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+                              id={`edit-name-${option.id}`}
+                            />
+                            <input
+                              type="number"
+                              defaultValue={option.price}
+                              className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+                              id={`edit-price-${option.id}`}
+                            />
+                            <div className="flex gap-2">
+                              <button onClick={() => setEditingOption(null)} className="btn-outline flex-1 py-2 text-xs">
+                                Annuler
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  const name = document.getElementById(`edit-name-${option.id}`).value;
+                                  const price = parseFloat(document.getElementById(`edit-price-${option.id}`).value);
+                                  updateWeddingOption(option.id, { name, price });
+                                }}
+                                className="btn-primary flex-1 py-2 text-xs"
+                              >
+                                Sauver
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-start">
+                              <h4 className="font-primary font-semibold">{option.name}</h4>
+                              <span className="font-primary font-bold text-primary">{option.price}€</span>
+                            </div>
+                            <p className="text-white/60 text-sm mt-1 mb-3">{option.description}</p>
+                            <button
+                              onClick={() => setEditingOption(option.id)}
+                              className="text-primary text-xs hover:underline"
+                            >
+                              Modifier
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -1342,6 +2156,8 @@ function App() {
           <Route path="/services/wedding" element={<ServicePage category="wedding" />} />
           <Route path="/services/podcast" element={<ServicePage category="podcast" />} />
           <Route path="/services/tv_set" element={<ServicePage category="tv_set" />} />
+          <Route path="/devis-mariage" element={<WeddingQuotePage />} />
+          <Route path="/portfolio" element={<PortfolioPage />} />
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/admin" element={<AdminLogin />} />
