@@ -1641,6 +1641,13 @@ const AdminDashboard = () => {
   const [weddingOptions, setWeddingOptions] = useState([]);
   const [messages, setMessages] = useState([]);
   const [portfolio, setPortfolio] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [clientFiles, setClientFiles] = useState([]);
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [showAddFile, setShowAddFile] = useState(false);
+  const [newClient, setNewClient] = useState({ name: "", email: "", password: "", phone: "" });
+  const [newFile, setNewFile] = useState({ title: "", description: "", file_type: "video", file_url: "", thumbnail_url: "" });
   const [activeTab, setActiveTab] = useState("overview");
   const [editingService, setEditingService] = useState(null);
   const [editingOption, setEditingOption] = useState(null);
@@ -1659,14 +1666,15 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes] = await Promise.all([
+      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes, clientsRes] = await Promise.all([
         axios.get(`${API}/stats`, { headers }),
         axios.get(`${API}/bookings`, { headers }),
         axios.get(`${API}/wedding-quotes`, { headers }),
         axios.get(`${API}/services?active_only=false`),
         axios.get(`${API}/wedding-options`),
         axios.get(`${API}/contact`, { headers }),
-        axios.get(`${API}/portfolio`)
+        axios.get(`${API}/portfolio`),
+        axios.get(`${API}/admin/clients`, { headers })
       ]);
       setStats(statsRes.data);
       setBookings(bookingsRes.data);
@@ -1675,6 +1683,7 @@ const AdminDashboard = () => {
       setWeddingOptions(optionsRes.data);
       setMessages(messagesRes.data);
       setPortfolio(portfolioRes.data);
+      setClients(clientsRes.data);
     } catch (e) {
       if (e.response?.status === 401) {
         localStorage.removeItem("admin_token");
