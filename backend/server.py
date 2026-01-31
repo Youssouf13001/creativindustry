@@ -279,6 +279,214 @@ def send_admin_booking_notification(
     subject = f"🔔 Nouvelle réservation - {client_name} - {service_name}"
     return send_email(SMTP_EMAIL, subject, html_content)
 
+# ==================== APPOINTMENT EMAIL FUNCTIONS ====================
+
+def send_appointment_request_email(client_email: str, client_name: str, appointment_type: str, proposed_date: str, proposed_time: str, appointment_id: str):
+    """Send email to client confirming their appointment request"""
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="color: #D4AF37; font-size: 24px; font-weight: bold;">CREATIVINDUSTRY</div>
+            </div>
+            <div style="background-color: #111111; border: 1px solid #222222; padding: 40px;">
+                <h1 style="color: #D4AF37; font-size: 24px; margin-bottom: 20px;">📅 Demande de rendez-vous reçue</h1>
+                <p style="color: #cccccc; line-height: 1.6;">Bonjour {client_name},</p>
+                <p style="color: #cccccc; line-height: 1.6;">Nous avons bien reçu votre demande de rendez-vous. Notre équipe va l'examiner et vous répondra dans les plus brefs délais.</p>
+                
+                <div style="background-color: #1a1a1a; border-left: 3px solid #D4AF37; padding: 20px; margin: 25px 0;">
+                    <p style="margin: 5px 0;"><strong style="color: #888;">Motif :</strong> <span style="color: #fff;">{appointment_type}</span></p>
+                    <p style="margin: 5px 0;"><strong style="color: #888;">Date souhaitée :</strong> <span style="color: #fff;">{proposed_date}</span></p>
+                    <p style="margin: 5px 0;"><strong style="color: #888;">Heure :</strong> <span style="color: #fff;">{proposed_time}</span></p>
+                    <p style="margin: 5px 0;"><strong style="color: #888;">Référence :</strong> <span style="color: #D4AF37;">RDV-{appointment_id[:8].upper()}</span></p>
+                </div>
+                
+                <p style="color: #888; font-size: 13px;">Vous recevrez un email de confirmation dès que votre rendez-vous sera validé.</p>
+            </div>
+            <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
+                <p>© 2024 CREATIVINDUSTRY France</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"📅 Demande de rendez-vous reçue - RDV-{appointment_id[:8].upper()}"
+    return send_email(client_email, subject, html_content)
+
+def send_appointment_confirmed_email(client_email: str, client_name: str, appointment_type: str, confirmed_date: str, confirmed_time: str, appointment_id: str, admin_message: str = ""):
+    """Send email to client confirming their appointment"""
+    
+    admin_msg_html = f'<p style="color: #cccccc; line-height: 1.6; background: #1a1a1a; padding: 15px; margin: 20px 0;"><strong>Message :</strong> {admin_message}</p>' if admin_message else ''
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="color: #D4AF37; font-size: 24px; font-weight: bold;">CREATIVINDUSTRY</div>
+            </div>
+            <div style="background-color: #111111; border: 1px solid #222222; padding: 40px;">
+                <h1 style="color: #22c55e; font-size: 24px; margin-bottom: 20px;">✅ Rendez-vous confirmé !</h1>
+                <p style="color: #cccccc; line-height: 1.6;">Bonjour {client_name},</p>
+                <p style="color: #cccccc; line-height: 1.6;">Votre rendez-vous a été confirmé. Nous vous attendons à nos locaux.</p>
+                
+                <div style="background-color: #22c55e; color: #000; padding: 20px; text-align: center; margin: 25px 0;">
+                    <p style="margin: 0; font-size: 14px;">Rendez-vous confirmé</p>
+                    <p style="margin: 10px 0 5px 0; font-size: 28px; font-weight: bold;">{confirmed_date}</p>
+                    <p style="margin: 0; font-size: 20px;">{confirmed_time}</p>
+                </div>
+                
+                <div style="background-color: #1a1a1a; border-left: 3px solid #D4AF37; padding: 20px; margin: 25px 0;">
+                    <p style="margin: 5px 0;"><strong style="color: #888;">Motif :</strong> <span style="color: #fff;">{appointment_type}</span></p>
+                    <p style="margin: 5px 0;"><strong style="color: #888;">Lieu :</strong> <span style="color: #fff;">Nos locaux CREATIVINDUSTRY</span></p>
+                    <p style="margin: 5px 0;"><strong style="color: #888;">Référence :</strong> <span style="color: #D4AF37;">RDV-{appointment_id[:8].upper()}</span></p>
+                </div>
+                
+                {admin_msg_html}
+                
+                <p style="color: #888; font-size: 13px;">En cas d'empêchement, merci de nous prévenir au plus tôt.</p>
+            </div>
+            <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
+                <p>© 2024 CREATIVINDUSTRY France</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"✅ Rendez-vous confirmé le {confirmed_date} - RDV-{appointment_id[:8].upper()}"
+    return send_email(client_email, subject, html_content)
+
+def send_appointment_refused_email(client_email: str, client_name: str, appointment_type: str, appointment_id: str, admin_message: str = ""):
+    """Send email to client about refused appointment"""
+    
+    admin_msg_html = f'<p style="color: #cccccc; line-height: 1.6; background: #1a1a1a; padding: 15px; margin: 20px 0;"><strong>Motif :</strong> {admin_message}</p>' if admin_message else ''
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="color: #D4AF37; font-size: 24px; font-weight: bold;">CREATIVINDUSTRY</div>
+            </div>
+            <div style="background-color: #111111; border: 1px solid #222222; padding: 40px;">
+                <h1 style="color: #ef4444; font-size: 24px; margin-bottom: 20px;">❌ Rendez-vous non disponible</h1>
+                <p style="color: #cccccc; line-height: 1.6;">Bonjour {client_name},</p>
+                <p style="color: #cccccc; line-height: 1.6;">Nous sommes désolés, mais nous ne sommes pas en mesure de vous recevoir à la date demandée.</p>
+                
+                {admin_msg_html}
+                
+                <p style="color: #cccccc; line-height: 1.6;">N'hésitez pas à faire une nouvelle demande avec une autre date.</p>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="https://creativindustry.com/rendez-vous" style="display: inline-block; background-color: #D4AF37; color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold;">Proposer une autre date</a>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
+                <p>© 2024 CREATIVINDUSTRY France</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"❌ Rendez-vous non disponible - RDV-{appointment_id[:8].upper()}"
+    return send_email(client_email, subject, html_content)
+
+def send_appointment_reschedule_email(client_email: str, client_name: str, appointment_type: str, new_date: str, new_time: str, appointment_id: str, confirmation_token: str, admin_message: str = ""):
+    """Send email to client proposing a new date"""
+    
+    confirm_url = f"https://creativindustry.com/rendez-vous/confirmer/{appointment_id}/{confirmation_token}"
+    admin_msg_html = f'<p style="color: #cccccc; line-height: 1.6; background: #1a1a1a; padding: 15px; margin: 20px 0;"><strong>Message :</strong> {admin_message}</p>' if admin_message else ''
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 0;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="color: #D4AF37; font-size: 24px; font-weight: bold;">CREATIVINDUSTRY</div>
+            </div>
+            <div style="background-color: #111111; border: 1px solid #222222; padding: 40px;">
+                <h1 style="color: #f59e0b; font-size: 24px; margin-bottom: 20px;">📅 Nouvelle date proposée</h1>
+                <p style="color: #cccccc; line-height: 1.6;">Bonjour {client_name},</p>
+                <p style="color: #cccccc; line-height: 1.6;">La date que vous avez demandée n'est pas disponible. Nous vous proposons le créneau suivant :</p>
+                
+                <div style="background-color: #f59e0b; color: #000; padding: 20px; text-align: center; margin: 25px 0;">
+                    <p style="margin: 0; font-size: 14px;">Nouvelle date proposée</p>
+                    <p style="margin: 10px 0 5px 0; font-size: 28px; font-weight: bold;">{new_date}</p>
+                    <p style="margin: 0; font-size: 20px;">{new_time}</p>
+                </div>
+                
+                {admin_msg_html}
+                
+                <p style="color: #cccccc; line-height: 1.6; text-align: center;"><strong>Cette date vous convient-elle ?</strong></p>
+                
+                <div style="text-align: center; margin-top: 30px;">
+                    <a href="{confirm_url}" style="display: inline-block; background-color: #22c55e; color: #fff; padding: 15px 30px; text-decoration: none; font-weight: bold; margin: 5px;">✓ Accepter cette date</a>
+                </div>
+                
+                <p style="color: #888; font-size: 13px; text-align: center; margin-top: 20px;">Si cette date ne vous convient pas, vous pouvez faire une nouvelle demande sur notre site.</p>
+            </div>
+            <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
+                <p>© 2024 CREATIVINDUSTRY France</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"📅 Nouvelle date proposée pour votre RDV - {new_date}"
+    return send_email(client_email, subject, html_content)
+
+def send_admin_appointment_notification(appointment_id: str, client_name: str, client_email: str, client_phone: str, appointment_type: str, proposed_date: str, proposed_time: str, duration: str, message: str = ""):
+    """Send notification to admin about new appointment request"""
+    
+    msg_html = f'<p><strong>Message du client :</strong> {message}</p>' if message else ''
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"></head>
+    <body style="font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 20px;">
+        <div style="max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
+            <h1 style="color: #D4AF37;">📅 Nouvelle demande de RDV</h1>
+            
+            <h3>Client</h3>
+            <p><strong>Nom :</strong> {client_name}</p>
+            <p><strong>Email :</strong> {client_email}</p>
+            <p><strong>Téléphone :</strong> {client_phone}</p>
+            
+            <h3>Rendez-vous demandé</h3>
+            <p><strong>Motif :</strong> {appointment_type}</p>
+            <p><strong>Date souhaitée :</strong> {proposed_date}</p>
+            <p><strong>Heure :</strong> {proposed_time}</p>
+            <p><strong>Durée :</strong> {duration}</p>
+            <p><strong>Référence :</strong> RDV-{appointment_id[:8].upper()}</p>
+            
+            {msg_html}
+            
+            <p style="margin-top: 30px; padding: 15px; background: #fff3cd; border-radius: 5px;">
+                ⏳ En attente de votre validation. Connectez-vous à l'admin pour répondre.
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"📅 Nouvelle demande de RDV - {client_name} - {proposed_date}"
+    return send_email(SMTP_EMAIL, subject, html_content)
+
 # ==================== MODELS ====================
 
 class AdminCreate(BaseModel):
