@@ -2009,7 +2009,8 @@ const AdminDashboard = () => {
             { id: "clients", label: "Clients" },
             { id: "services", label: "Services" },
             { id: "options", label: "Options Mariage" },
-            { id: "messages", label: "Messages" }
+            { id: "messages", label: "Messages" },
+            { id: "settings", label: "Paramètres" }
           ].map((tab) => (
             <button
               key={tab.id}
