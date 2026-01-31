@@ -33,6 +33,27 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - ✅ Gestion des clients dans l'admin
 - ✅ Ajout de fichiers aux clients
 
+### V4 - Notifications Email (31 Jan 2026)
+- ✅ Email automatique lors du dépôt d'un fichier client
+- ✅ Template email professionnel avec design CREATIVINDUSTRY
+- ✅ SMTP IONOS configuré (via variables d'environnement .env)
+
+### V5 - Gestion Complète du Contenu (31 Jan 2026)
+- ✅ Onglet "Contenu Site" dans l'admin
+  - Modification du titre/sous-titre Hero
+  - Modification des images de fond (URL)
+  - Édition des textes et images pour Mariage, Podcast, Plateau TV
+  - Modification des informations de contact
+  - Section CTA personnalisable
+- ✅ Onglet "Portfolio" dans l'admin
+  - Ajout/modification/suppression d'éléments
+  - Support photo et vidéo
+  - Catégorisation (Mariage, Podcast, Plateau TV)
+  - Option "Featured" pour mise en avant
+  - Activation/désactivation des éléments
+- ✅ APIs Backend complètes (GET/PUT /api/content, CRUD /api/admin/portfolio)
+- ✅ Tests validés : 100% backend, 100% frontend
+
 ## Tarifs de Base
 ### Mariages : 1500€ - 4500€
 ### Podcast : 150€/h - 700€/jour
@@ -43,18 +64,21 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Admin : /admin
 - Espace Client : /client
 
+## APIs Clés
+- `/api/content` - GET/PUT contenu du site
+- `/api/admin/portfolio` - CRUD portfolio (admin)
+- `/api/portfolio` - GET portfolio public
+- `/api/auth/*` - Authentification admin
+- `/api/client/*` - Authentification et gestion client
+- `/api/chatbot` - Chatbot IA
+
 ## Backlog
 - P1: Upload direct de fichiers (Cloudinary)
-- P1: Notifications email automatiques
 - P2: Calendrier disponibilités
 - P2: Paiement en ligne (Stripe)
+- P2: Refactoring du frontend (décomposer App.js en composants)
 
 ## Mise à jour du site
 1. Modifier sur Emergent
 2. "Save to GitHub"
-3. Sur VPS: `git pull` + `npm run build` + `systemctl restart creativindustry`
-
-### V4 - Notifications Email (31 Jan 2026)
-- ✅ Email automatique lors du dépôt d'un fichier client
-- ✅ Template email professionnel avec design CREATIVINDUSTRY
-- ✅ SMTP IONOS configuré (infos@creativindustry.com)
+3. Sur VPS IONOS: `git pull` + `npm run build` + `systemctl restart creativindustry`
