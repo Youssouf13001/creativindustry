@@ -2101,6 +2101,188 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Clients Tab */}
+        {activeTab === "clients" && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">Gestion des Clients</h2>
+              <button
+                onClick={() => setShowAddClient(true)}
+                className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
+              >
+                <Plus size={16} /> Nouveau Client
+              </button>
+            </div>
+
+            {/* Add Client Modal */}
+            {showAddClient && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-card border border-white/10 p-6 w-full max-w-md">
+                  <h3 className="font-primary font-bold text-xl mb-4">Nouveau Client</h3>
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="Nom complet"
+                      value={newClient.name}
+                      onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={newClient.email}
+                      onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Mot de passe"
+                      value={newClient.password}
+                      onChange={(e) => setNewClient({ ...newClient, password: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Téléphone"
+                      value={newClient.phone}
+                      onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowAddClient(false)} className="btn-outline flex-1 py-3">
+                        Annuler
+                      </button>
+                      <button onClick={createClient} className="btn-primary flex-1 py-3">
+                        Créer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Client List */}
+              <div>
+                <h3 className="font-primary font-semibold mb-4">Liste des clients ({clients.length})</h3>
+                <div className="space-y-2">
+                  {clients.map((client) => (
+                    <button
+                      key={client.id}
+                      onClick={() => selectClient(client)}
+                      className={`w-full text-left bg-card border p-4 transition-colors ${
+                        selectedClient?.id === client.id ? "border-primary" : "border-white/10 hover:border-white/30"
+                      }`}
+                    >
+                      <p className="font-primary font-semibold">{client.name}</p>
+                      <p className="text-white/60 text-sm">{client.email}</p>
+                    </button>
+                  ))}
+                  {clients.length === 0 && (
+                    <p className="text-center text-white/60 py-8">Aucun client</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Client Files */}
+              {selectedClient && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-primary font-semibold">Fichiers de {selectedClient.name}</h3>
+                    <button
+                      onClick={() => setShowAddFile(true)}
+                      className="btn-outline px-4 py-2 text-xs flex items-center gap-2"
+                    >
+                      <Plus size={14} /> Ajouter
+                    </button>
+                  </div>
+
+                  {/* Add File Modal */}
+                  {showAddFile && (
+                    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                      <div className="bg-card border border-white/10 p-6 w-full max-w-md">
+                        <h3 className="font-primary font-bold text-xl mb-4">Ajouter un fichier</h3>
+                        <div className="space-y-4">
+                          <input
+                            type="text"
+                            placeholder="Titre"
+                            value={newFile.title}
+                            onChange={(e) => setNewFile({ ...newFile, title: e.target.value })}
+                            className="w-full bg-background border border-white/20 px-4 py-3"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Description (optionnel)"
+                            value={newFile.description}
+                            onChange={(e) => setNewFile({ ...newFile, description: e.target.value })}
+                            className="w-full bg-background border border-white/20 px-4 py-3"
+                          />
+                          <select
+                            value={newFile.file_type}
+                            onChange={(e) => setNewFile({ ...newFile, file_type: e.target.value })}
+                            className="w-full bg-background border border-white/20 px-4 py-3"
+                          >
+                            <option value="video">Vidéo</option>
+                            <option value="photo">Photo</option>
+                            <option value="document">Document</option>
+                          </select>
+                          <input
+                            type="url"
+                            placeholder="URL du fichier (Google Drive, Dropbox...)"
+                            value={newFile.file_url}
+                            onChange={(e) => setNewFile({ ...newFile, file_url: e.target.value })}
+                            className="w-full bg-background border border-white/20 px-4 py-3"
+                          />
+                          <input
+                            type="url"
+                            placeholder="URL miniature (optionnel)"
+                            value={newFile.thumbnail_url}
+                            onChange={(e) => setNewFile({ ...newFile, thumbnail_url: e.target.value })}
+                            className="w-full bg-background border border-white/20 px-4 py-3"
+                          />
+                          <div className="flex gap-2">
+                            <button onClick={() => setShowAddFile(false)} className="btn-outline flex-1 py-3">
+                              Annuler
+                            </button>
+                            <button onClick={addFileToClient} className="btn-primary flex-1 py-3">
+                              Ajouter
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {clientFiles.map((file) => (
+                      <div key={file.id} className="bg-card border border-white/10 p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {file.file_type === "video" && <Video size={20} className="text-primary" />}
+                          {file.file_type === "photo" && <Image size={20} className="text-primary" />}
+                          {file.file_type === "document" && <FileText size={20} className="text-primary" />}
+                          <div>
+                            <p className="font-semibold text-sm">{file.title}</p>
+                            <p className="text-white/40 text-xs truncate max-w-[200px]">{file.file_url}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => deleteFile(file.id)}
+                          className="text-red-500 hover:text-red-400 text-xs"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    ))}
+                    {clientFiles.length === 0 && (
+                      <p className="text-center text-white/60 py-8">Aucun fichier</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Messages Tab */}
         {activeTab === "messages" && (
           <div>
