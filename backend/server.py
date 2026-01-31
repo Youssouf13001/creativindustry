@@ -961,6 +961,27 @@ async def delete_uploaded_file(file_path: str, admin: dict = Depends(get_current
     else:
         raise HTTPException(status_code=404, detail="Fichier non trouvé")
 
+# ==================== BANK DETAILS ROUTES ====================
+
+@api_router.get("/bank-details")
+async def get_bank_details():
+    """Get bank details for payment"""
+    details = await db.settings.find_one({"key": "bank_details"}, {"_id": 0})
+    if not details:
+        # Return default bank details
+        return BankDetails().model_dump()
+    return details.get("value", BankDetails().model_dump())
+
+@api_router.put("/bank-details")
+async def update_bank_details(data: BankDetails, admin: dict = Depends(get_current_admin)):
+    """Update bank details (admin only)"""
+    await db.settings.update_one(
+        {"key": "bank_details"},
+        {"$set": {"key": "bank_details", "value": data.model_dump()}},
+        upsert=True
+    )
+    return data.model_dump()
+
 # ==================== CHATBOT ROUTES ====================
 
 @api_router.post("/chat")
