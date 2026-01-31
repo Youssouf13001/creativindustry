@@ -1116,14 +1116,60 @@ async def create_booking(data: BookingCreate):
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
     
+    # Get bank details for deposit calculation
+    bank_settings = await db.settings.find_one({"key": "bank_details"}, {"_id": 0})
+    if bank_settings:
+        bank_details = bank_settings.get("value", BankDetails().model_dump())
+    else:
+        bank_details = BankDetails().model_dump()
+    
+    deposit_percentage = bank_details.get("deposit_percentage", 30)
+    service_price = service["price"]
+    deposit_amount = service_price * deposit_percentage / 100
+    
     booking = Booking(
         **data.model_dump(),
         service_name=service["name"],
-        service_category=service["category"]
+        service_category=service["category"],
+        service_price=service_price,
+        deposit_amount=deposit_amount,
+        deposit_percentage=deposit_percentage,
+        status="pending_payment"
     )
     doc = booking.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     await db.bookings.insert_one(doc)
+    
+    # Send confirmation email to client with bank details
+    try:
+        send_booking_confirmation_email(
+            client_email=data.client_email,
+            client_name=data.client_name,
+            service_name=service["name"],
+            service_price=service_price,
+            deposit_amount=deposit_amount,
+            event_date=data.event_date,
+            booking_id=booking.id,
+            bank_details=bank_details
+        )
+    except Exception as e:
+        logging.error(f"Failed to send booking confirmation email: {str(e)}")
+    
+    # Send notification to admin
+    try:
+        send_admin_booking_notification(
+            booking_id=booking.id,
+            client_name=data.client_name,
+            client_email=data.client_email,
+            client_phone=data.client_phone,
+            service_name=service["name"],
+            service_price=service_price,
+            deposit_amount=deposit_amount,
+            event_date=data.event_date
+        )
+    except Exception as e:
+        logging.error(f"Failed to send admin notification: {str(e)}")
+    
     return booking
 
 @api_router.get("/bookings", response_model=List[Booking])
@@ -1140,7 +1186,11 @@ async def get_bookings(status: Optional[str] = None, admin: dict = Depends(get_c
 
 @api_router.put("/bookings/{booking_id}", response_model=Booking)
 async def update_booking(booking_id: str, data: BookingUpdate, admin: dict = Depends(get_current_admin)):
-    result = await db.bookings.update_one({"id": booking_id}, {"$set": {"status": data.status}})
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    
+    result = await db.bookings.update_one({"id": booking_id}, {"$set": update_data})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Booking not found")
     
