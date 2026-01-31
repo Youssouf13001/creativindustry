@@ -1791,6 +1791,7 @@ const AdminDashboard = () => {
             { id: "overview", label: "Aperçu" },
             { id: "quotes", label: "Devis Mariage" },
             { id: "bookings", label: "Réservations" },
+            { id: "clients", label: "Clients" },
             { id: "services", label: "Services" },
             { id: "options", label: "Options Mariage" },
             { id: "messages", label: "Messages" }
