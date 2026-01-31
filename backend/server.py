@@ -1096,7 +1096,7 @@ async def delete_portfolio_item(item_id: str, admin: dict = Depends(get_current_
 
 ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
 ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"]
-MAX_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+MAX_FILE_SIZE = 1024 * 1024 * 1024  # 1 GB
 
 @api_router.post("/upload/portfolio")
 async def upload_portfolio_file(
