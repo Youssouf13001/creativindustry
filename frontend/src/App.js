@@ -1406,10 +1406,75 @@ const BookingPage = () => {
                   className="btn-primary px-8 py-3 text-sm flex-1 disabled:opacity-50"
                   data-testid="booking-submit-btn"
                 >
-                  {loading ? "Envoi..." : "Confirmer la réservation"}
+                  {loading ? "Envoi..." : "Valider et recevoir les instructions de paiement"}
                 </button>
               </div>
+              
+              {/* Price Info */}
+              <div className="bg-primary/10 border border-primary/30 p-4 mt-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-white/70">Prix total</span>
+                  <span className="font-primary font-bold text-xl">{selectedService.price}€</span>
+                </div>
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-white/70">Acompte à régler (30%)</span>
+                  <span className="font-primary font-bold text-2xl text-primary">{(selectedService.price * 0.3).toFixed(0)}€</span>
+                </div>
+                <p className="text-xs text-white/50 mt-3">
+                  Vous recevrez un email avec les coordonnées bancaires pour effectuer le virement de l'acompte.
+                </p>
+              </div>
             </form>
+          </motion.div>
+        )}
+
+        {/* Step 4: Confirmation */}
+        {step === 4 && selectedService && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center"
+            data-testid="booking-step-4"
+          >
+            <div className="bg-card border border-primary p-8 mb-8">
+              <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Check size={40} className="text-primary" />
+              </div>
+              <h2 className="font-primary font-bold text-2xl mb-4">Réservation confirmée !</h2>
+              <p className="text-white/70 mb-6">
+                Un email a été envoyé à <span className="text-primary">{formData.client_email}</span> avec les instructions de paiement.
+              </p>
+              
+              <div className="bg-background p-6 text-left mb-6">
+                <h3 className="font-primary font-bold text-lg mb-4">Récapitulatif</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Service</span>
+                    <span>{selectedService.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Date</span>
+                    <span>{formData.event_date}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Prix total</span>
+                    <span>{selectedService.price}€</span>
+                  </div>
+                  <div className="flex justify-between text-primary font-bold">
+                    <span>Acompte à régler</span>
+                    <span>{(selectedService.price * 0.3).toFixed(0)}€</span>
+                  </div>
+                </div>
+              </div>
+              
+              <p className="text-white/50 text-sm mb-6">
+                Dès réception de votre virement, nous vous contacterons pour finaliser les détails.
+              </p>
+              
+              <Link to="/" className="btn-primary px-8 py-3 text-sm inline-block">
+                Retour à l'accueil
+              </Link>
+            </div>
           </motion.div>
         )}
       </div>
