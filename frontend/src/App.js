@@ -2811,6 +2811,38 @@ const AdminDashboard = () => {
                       <div className="bg-card border border-white/10 p-6 w-full max-w-md">
                         <h3 className="font-primary font-bold text-xl mb-4">Ajouter un fichier</h3>
                         <div className="space-y-4">
+                          
+                          {/* Upload Section */}
+                          <div className="border-2 border-dashed border-primary/50 p-4 text-center bg-primary/5">
+                            <input
+                              type="file"
+                              ref={clientFileRef}
+                              onChange={handleClientFileUpload}
+                              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                              className="hidden"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => clientFileRef.current?.click()}
+                              disabled={uploadingClientFile}
+                              className="btn-primary px-6 py-3 w-full flex items-center justify-center gap-2"
+                            >
+                              {uploadingClientFile ? (
+                                <>
+                                  <Loader size={16} className="animate-spin" /> Upload en cours...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload size={16} /> Uploader un fichier
+                                </>
+                              )}
+                            </button>
+                            <p className="text-xs text-white/50 mt-2">JPG, PNG, MP4, WEBM, MOV (max 100 Mo)</p>
+                            <p className="text-xs text-green-400 mt-1">Le client sera notifié par email !</p>
+                          </div>
+                          
+                          <div className="text-white/40 text-center text-sm">— ou lien externe —</div>
+                          
                           <input
                             type="text"
                             placeholder="Titre"
@@ -2853,7 +2885,7 @@ const AdminDashboard = () => {
                               Annuler
                             </button>
                             <button onClick={addFileToClient} className="btn-primary flex-1 py-3">
-                              Ajouter
+                              Ajouter via lien
                             </button>
                           </div>
                         </div>
