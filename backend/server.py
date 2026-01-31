@@ -133,6 +133,152 @@ def send_file_notification_email(client_email: str, client_name: str, file_title
     subject = f"🎬 Nouveau fichier disponible : {file_title}"
     return send_email(client_email, subject, html_content)
 
+def send_booking_confirmation_email(
+    client_email: str, 
+    client_name: str, 
+    service_name: str,
+    service_price: float,
+    deposit_amount: float,
+    event_date: str,
+    booking_id: str,
+    bank_details: dict
+):
+    """Send booking confirmation email with bank transfer details"""
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a; color: #ffffff; margin: 0; padding: 0; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 40px 20px; }}
+            .header {{ text-align: center; margin-bottom: 40px; }}
+            .logo {{ color: #D4AF37; font-size: 24px; font-weight: bold; letter-spacing: -1px; }}
+            .content {{ background-color: #111111; border: 1px solid #222222; padding: 40px; }}
+            h1 {{ color: #D4AF37; font-size: 24px; margin-bottom: 20px; }}
+            h2 {{ color: #ffffff; font-size: 18px; margin-top: 30px; margin-bottom: 15px; }}
+            p {{ color: #cccccc; line-height: 1.6; margin-bottom: 15px; }}
+            .booking-info {{ background-color: #1a1a1a; border-left: 3px solid #D4AF37; padding: 20px; margin: 25px 0; }}
+            .price-box {{ background-color: #D4AF37; color: #000000; padding: 20px; text-align: center; margin: 25px 0; }}
+            .price-total {{ font-size: 14px; color: #666; }}
+            .price-deposit {{ font-size: 28px; font-weight: bold; }}
+            .bank-details {{ background-color: #1a1a1a; padding: 20px; margin: 25px 0; border: 1px solid #333; }}
+            .bank-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }}
+            .bank-label {{ color: #888; }}
+            .bank-value {{ color: #fff; font-weight: bold; font-family: monospace; }}
+            .reference {{ background-color: #D4AF37; color: #000; padding: 10px 15px; font-weight: bold; display: inline-block; margin-top: 10px; }}
+            .footer {{ text-align: center; margin-top: 40px; color: #666666; font-size: 12px; }}
+            .warning {{ background-color: #332200; border: 1px solid #D4AF37; padding: 15px; margin-top: 20px; color: #ffcc00; font-size: 13px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">CREATIVINDUSTRY</div>
+            </div>
+            <div class="content">
+                <h1>🎉 Réservation confirmée !</h1>
+                <p>Bonjour {client_name},</p>
+                <p>Nous avons bien reçu votre demande de réservation. Voici le récapitulatif :</p>
+                
+                <div class="booking-info">
+                    <p><strong>Formule :</strong> {service_name}</p>
+                    <p><strong>Date de l'événement :</strong> {event_date}</p>
+                    <p><strong>Référence :</strong> #{booking_id[:8].upper()}</p>
+                </div>
+                
+                <div class="price-box">
+                    <div class="price-total">Prix total : {service_price:.0f}€</div>
+                    <div class="price-deposit">Acompte à régler : {deposit_amount:.0f}€</div>
+                    <div style="font-size: 12px; margin-top: 5px;">(30% du montant total)</div>
+                </div>
+                
+                <h2>💳 Coordonnées bancaires pour le virement</h2>
+                <div class="bank-details">
+                    <div class="bank-row">
+                        <span class="bank-label">Titulaire</span>
+                        <span class="bank-value">{bank_details['account_holder']}</span>
+                    </div>
+                    <div class="bank-row">
+                        <span class="bank-label">IBAN</span>
+                        <span class="bank-value">{bank_details['iban']}</span>
+                    </div>
+                    <div class="bank-row">
+                        <span class="bank-label">BIC</span>
+                        <span class="bank-value">{bank_details['bic']}</span>
+                    </div>
+                    <div class="bank-row" style="border-bottom: none;">
+                        <span class="bank-label">Référence à indiquer</span>
+                        <span class="reference">CREATIVINDUSTRY-{booking_id[:8].upper()}</span>
+                    </div>
+                </div>
+                
+                <div class="warning">
+                    ⚠️ <strong>Important :</strong> Merci d'indiquer la référence ci-dessus dans le motif de votre virement pour faciliter le traitement de votre réservation.
+                </div>
+                
+                <p style="margin-top: 30px;">Dès réception de votre acompte, nous vous enverrons une confirmation définitive et prendrons contact avec vous pour finaliser les détails de votre événement.</p>
+                
+                <p>Pour toute question, n'hésitez pas à nous contacter.</p>
+            </div>
+            <div class="footer">
+                <p>© 2024 CREATIVINDUSTRY France<br>
+                contact@creativindustry.fr</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"✅ Réservation #{booking_id[:8].upper()} - {service_name}"
+    return send_email(client_email, subject, html_content)
+
+def send_admin_booking_notification(
+    booking_id: str,
+    client_name: str,
+    client_email: str,
+    client_phone: str,
+    service_name: str,
+    service_price: float,
+    deposit_amount: float,
+    event_date: str
+):
+    """Send notification to admin about new booking"""
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+    </head>
+    <body style="font-family: Arial, sans-serif; background-color: #f5f5f5; padding: 20px;">
+        <div style="max-width: 500px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
+            <h1 style="color: #D4AF37;">🎉 Nouvelle réservation !</h1>
+            
+            <h3>Client</h3>
+            <p><strong>Nom :</strong> {client_name}</p>
+            <p><strong>Email :</strong> {client_email}</p>
+            <p><strong>Téléphone :</strong> {client_phone}</p>
+            
+            <h3>Réservation</h3>
+            <p><strong>Formule :</strong> {service_name}</p>
+            <p><strong>Date :</strong> {event_date}</p>
+            <p><strong>Prix total :</strong> {service_price:.0f}€</p>
+            <p><strong>Acompte attendu :</strong> {deposit_amount:.0f}€</p>
+            <p><strong>Référence :</strong> CREATIVINDUSTRY-{booking_id[:8].upper()}</p>
+            
+            <p style="margin-top: 30px; padding: 15px; background: #fff3cd; border-radius: 5px;">
+                ⏳ En attente du virement de l'acompte. Surveillez votre compte bancaire !
+            </p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"🔔 Nouvelle réservation - {client_name} - {service_name}"
+    return send_email(SMTP_EMAIL, subject, html_content)
+
 # ==================== MODELS ====================
 
 class AdminCreate(BaseModel):
