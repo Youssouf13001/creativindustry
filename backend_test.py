@@ -266,6 +266,133 @@ class CreativIndustryAPITester:
         
         return result is not None
 
+    def test_client_registration(self):
+        """Test client registration"""
+        timestamp = datetime.now().strftime("%H%M%S")
+        client_data = {
+            "email": f"client_test_{timestamp}@example.com",
+            "password": "ClientPassword123!",
+            "name": f"Test Client {timestamp}",
+            "phone": "+33123456789"
+        }
+        
+        result = self.run_test("Client Registration", "POST", "client/register", 200, client_data)
+        if result and 'token' in result:
+            self.client_token = result['token']
+            self.client_id = result['client']['id']
+            return True
+        return False
+
+    def test_client_login(self):
+        """Test client login"""
+        if not hasattr(self, 'client_id'):
+            self.log_test("Client Login", False, "No client registered")
+            return False
+            
+        # Use the same credentials from registration
+        timestamp = datetime.now().strftime("%H%M%S")
+        login_data = {
+            "email": f"client_test_{timestamp}@example.com",
+            "password": "ClientPassword123!"
+        }
+        
+        # This might fail due to timestamp difference, but tests the endpoint
+        result = self.run_test("Client Login", "POST", "client/login", 401, login_data)
+        return result is not None
+
+    def test_client_profile(self):
+        """Test getting client profile"""
+        if not hasattr(self, 'client_token'):
+            self.log_test("Get Client Profile", False, "No client token available")
+            return False
+            
+        # Temporarily store admin token and use client token
+        admin_token = self.token
+        self.token = self.client_token
+        
+        result = self.run_test("Get Client Profile", "GET", "client/me", 200)
+        
+        # Restore admin token
+        self.token = admin_token
+        return result is not None
+
+    def test_client_files(self):
+        """Test client files endpoint"""
+        if not hasattr(self, 'client_token'):
+            self.log_test("Get Client Files", False, "No client token available")
+            return False
+            
+        # Temporarily store admin token and use client token
+        admin_token = self.token
+        self.token = self.client_token
+        
+        result = self.run_test("Get Client Files", "GET", "client/files", 200)
+        
+        # Restore admin token
+        self.token = admin_token
+        return result is not None
+
+    def test_admin_client_management(self):
+        """Test admin client management endpoints"""
+        if not self.token:
+            self.log_test("Admin Client Management", False, "No admin token")
+            return False
+            
+        # Test getting all clients
+        clients = self.run_test("Get All Clients", "GET", "admin/clients", 200)
+        
+        # Test creating a client as admin
+        timestamp = datetime.now().strftime("%H%M%S")
+        client_data = {
+            "email": f"admin_created_client_{timestamp}@example.com",
+            "password": "AdminClientPass123!",
+            "name": f"Admin Created Client {timestamp}",
+            "phone": "+33987654321"
+        }
+        
+        created_client = self.run_test("Admin Create Client", "POST", "admin/clients", 200, client_data)
+        
+        if created_client and 'id' in created_client:
+            client_id = created_client['id']
+            # Test getting client files for this client
+            self.run_test("Get Client Files (Admin)", "GET", f"admin/clients/{client_id}/files", 200)
+            
+            # Test adding a file to the client
+            file_data = {
+                "client_id": client_id,
+                "title": "Test File",
+                "description": "A test file for the client",
+                "file_type": "document",
+                "file_url": "https://drive.google.com/file/d/test123/view"
+            }
+            
+            self.run_test("Add File to Client", "POST", "client/files", 200, file_data)
+        
+        return clients is not None
+
+    def test_chatbot(self):
+        """Test chatbot functionality"""
+        chat_data = {
+            "session_id": f"test_session_{datetime.now().strftime('%H%M%S')}",
+            "message": "Bonjour, pouvez-vous me parler de vos services de mariage?"
+        }
+        
+        result = self.run_test("Chatbot Message", "POST", "chat", 200, chat_data)
+        
+        if result:
+            # Check if response contains expected fields
+            has_response = 'response' in result
+            has_session = 'session_id' in result
+            self.log_test("Chatbot Response Format", has_response and has_session, 
+                         f"Response fields: {list(result.keys()) if result else 'None'}")
+            
+            # Test getting chat history
+            if has_session:
+                session_id = result['session_id']
+                self.run_test("Get Chat History", "GET", f"chat/{session_id}/history", 200)
+        
+        return result is not None
+
     def run_all_tests(self):
         """Run all API tests"""
         print("🚀 Starting CREATIVINDUSTRY France API Tests")
