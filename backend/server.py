@@ -599,6 +599,71 @@ async def get_client_files_admin(client_id: str, admin: dict = Depends(get_curre
             f['created_at'] = datetime.fromisoformat(f['created_at'])
     return files
 
+# ==================== SITE CONTENT ROUTES ====================
+
+@api_router.get("/content")
+async def get_site_content():
+    content = await db.site_content.find_one({"id": "main"}, {"_id": 0})
+    if not content:
+        # Return default content
+        default = SiteContent()
+        return default.model_dump()
+    return content
+
+@api_router.put("/content")
+async def update_site_content(data: SiteContentUpdate, admin: dict = Depends(get_current_admin)):
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    
+    # Upsert the content
+    await db.site_content.update_one(
+        {"id": "main"},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    content = await db.site_content.find_one({"id": "main"}, {"_id": 0})
+    return content
+
+# ==================== PORTFOLIO ADMIN ROUTES ====================
+
+@api_router.get("/admin/portfolio", response_model=List[PortfolioItem])
+async def get_all_portfolio(admin: dict = Depends(get_current_admin)):
+    items = await db.portfolio.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for item in items:
+        if isinstance(item.get('created_at'), str):
+            item['created_at'] = datetime.fromisoformat(item['created_at'])
+    return items
+
+@api_router.post("/admin/portfolio", response_model=PortfolioItem)
+async def create_portfolio_item(data: PortfolioItemCreate, admin: dict = Depends(get_current_admin)):
+    item = PortfolioItem(**data.model_dump())
+    doc = item.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.portfolio.insert_one(doc)
+    return item
+
+@api_router.put("/admin/portfolio/{item_id}", response_model=PortfolioItem)
+async def update_portfolio_item(item_id: str, data: PortfolioItemUpdate, admin: dict = Depends(get_current_admin)):
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data to update")
+    result = await db.portfolio.update_one({"id": item_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    item = await db.portfolio.find_one({"id": item_id}, {"_id": 0})
+    if isinstance(item.get('created_at'), str):
+        item['created_at'] = datetime.fromisoformat(item['created_at'])
+    return item
+
+@api_router.delete("/admin/portfolio/{item_id}")
+async def delete_portfolio_item(item_id: str, admin: dict = Depends(get_current_admin)):
+    result = await db.portfolio.delete_one({"id": item_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"message": "Item deleted"}
+
 # ==================== CHATBOT ROUTES ====================
 
 @api_router.post("/chat")
