@@ -623,6 +623,54 @@ async def seed_data():
     ]
     
     await db.services.insert_many(services)
+    
+    # Seed wedding options for quote builder
+    existing_options = await db.wedding_options.count_documents({})
+    if existing_options == 0:
+        wedding_options = [
+            # Coverage options
+            {"id": str(uuid.uuid4()), "name": "Préparatifs Mariée", "description": "Couverture des préparatifs de la mariée", "price": 300, "category": "coverage", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Préparatifs Marié", "description": "Couverture des préparatifs du marié", "price": 250, "category": "coverage", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Cérémonie Civile", "description": "Couverture de la mairie", "price": 400, "category": "coverage", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Cérémonie Religieuse", "description": "Couverture de la cérémonie religieuse", "price": 500, "category": "coverage", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Cérémonie Laïque", "description": "Couverture de la cérémonie laïque", "price": 450, "category": "coverage", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Vin d'honneur", "description": "Couverture du cocktail", "price": 350, "category": "coverage", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Soirée & Réception", "description": "Couverture de la soirée dansante", "price": 600, "category": "coverage", "is_active": True},
+            # Extras
+            {"id": str(uuid.uuid4()), "name": "Drone", "description": "Prises de vue aériennes par drone", "price": 400, "category": "extras", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Second Photographe", "description": "Un photographe supplémentaire", "price": 500, "category": "extras", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Séance Couple", "description": "Séance photo en extérieur le jour J", "price": 300, "category": "extras", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Séance Engagement", "description": "Séance photo avant le mariage", "price": 350, "category": "extras", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Photobooth", "description": "Installation photobooth pour vos invités", "price": 450, "category": "extras", "is_active": True},
+            # Editing/Deliverables
+            {"id": str(uuid.uuid4()), "name": "Film Teaser 3min", "description": "Montage vidéo court et dynamique", "price": 600, "category": "editing", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Film Cinématique 10min", "description": "Film complet de votre journée", "price": 1200, "category": "editing", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Album Photo 30 pages", "description": "Album premium personnalisé", "price": 400, "category": "editing", "is_active": True},
+            {"id": str(uuid.uuid4()), "name": "Album Photo 50 pages", "description": "Album luxe grand format", "price": 650, "category": "editing", "is_active": True},
+        ]
+        await db.wedding_options.insert_many(wedding_options)
+    
+    # Seed portfolio items
+    existing_portfolio = await db.portfolio.count_documents({})
+    if existing_portfolio == 0:
+        portfolio_items = [
+            # Wedding photos
+            {"id": str(uuid.uuid4()), "title": "Mariage Élégant à Paris", "description": "Un mariage intime dans un château parisien", "media_type": "photo", "media_url": "https://images.unsplash.com/photo-1519741497674-611481863552?w=800", "category": "wedding", "is_featured": True, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()},
+            {"id": str(uuid.uuid4()), "title": "Mariage Champêtre", "description": "Célébration en pleine nature", "media_type": "photo", "media_url": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800", "category": "wedding", "is_featured": True, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()},
+            {"id": str(uuid.uuid4()), "title": "Préparatifs de la Mariée", "description": "Moments intimes avant la cérémonie", "media_type": "photo", "media_url": "https://images.unsplash.com/photo-1594552072238-5c4cebd833d7?w=800", "category": "wedding", "is_featured": False, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()},
+            {"id": str(uuid.uuid4()), "title": "Échange des Vœux", "description": "L'émotion de la cérémonie", "media_type": "photo", "media_url": "https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=800", "category": "wedding", "is_featured": False, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()},
+            {"id": str(uuid.uuid4()), "title": "Première Danse", "description": "Un moment magique", "media_type": "photo", "media_url": "https://images.unsplash.com/photo-1545232979-8bf68ee9b1af?w=800", "category": "wedding", "is_featured": True, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()},
+            {"id": str(uuid.uuid4()), "title": "Détails & Décoration", "description": "L'art dans les détails", "media_type": "photo", "media_url": "https://images.unsplash.com/photo-1478146896981-b80fe463b330?w=800", "category": "wedding", "is_featured": False, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()},
+            # Wedding videos (YouTube embeds as examples)
+            {"id": str(uuid.uuid4()), "title": "Film de Mariage - Sophie & Thomas", "description": "Un mariage romantique en Provence", "media_type": "video", "media_url": "https://www.youtube.com/embed/dQw4w9WgXcQ", "thumbnail_url": "https://images.unsplash.com/photo-1519741497674-611481863552?w=400", "category": "wedding", "is_featured": True, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()},
+            {"id": str(uuid.uuid4()), "title": "Teaser - Marie & Jean", "description": "3 minutes d'émotion pure", "media_type": "video", "media_url": "https://www.youtube.com/embed/dQw4w9WgXcQ", "thumbnail_url": "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400", "category": "wedding", "is_featured": False, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()},
+            # Podcast photos
+            {"id": str(uuid.uuid4()), "title": "Notre Studio Podcast", "description": "Équipement professionnel", "media_type": "photo", "media_url": "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=800", "category": "podcast", "is_featured": True, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()},
+            # TV Set photos
+            {"id": str(uuid.uuid4()), "title": "Plateau TV Principal", "description": "Notre espace de tournage", "media_type": "photo", "media_url": "https://images.unsplash.com/photo-1598387993441-a364f854c3e1?w=800", "category": "tv_set", "is_featured": True, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()},
+        ]
+        await db.portfolio.insert_many(portfolio_items)
+    
     return {"message": "Data seeded successfully", "services_created": len(services)}
 
 @api_router.get("/")
