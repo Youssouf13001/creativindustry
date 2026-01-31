@@ -1734,6 +1734,51 @@ const AdminDashboard = () => {
     }
   };
 
+  const createClient = async () => {
+    try {
+      await axios.post(`${API}/admin/clients`, newClient, { headers });
+      toast.success("Client créé");
+      setShowAddClient(false);
+      setNewClient({ name: "", email: "", password: "", phone: "" });
+      fetchData();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur");
+    }
+  };
+
+  const selectClient = async (client) => {
+    setSelectedClient(client);
+    try {
+      const res = await axios.get(`${API}/admin/clients/${client.id}/files`, { headers });
+      setClientFiles(res.data);
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const addFileToClient = async () => {
+    if (!selectedClient) return;
+    try {
+      await axios.post(`${API}/client/files`, { ...newFile, client_id: selectedClient.id }, { headers });
+      toast.success("Fichier ajouté");
+      setShowAddFile(false);
+      setNewFile({ title: "", description: "", file_type: "video", file_url: "", thumbnail_url: "" });
+      selectClient(selectedClient);
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const deleteFile = async (fileId) => {
+    try {
+      await axios.delete(`${API}/client/files/${fileId}`, { headers });
+      toast.success("Fichier supprimé");
+      selectClient(selectedClient);
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem("admin_token");
     localStorage.removeItem("admin_user");
