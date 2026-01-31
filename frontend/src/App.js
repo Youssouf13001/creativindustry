@@ -1665,11 +1665,16 @@ const AdminDashboard = () => {
   const [clientFiles, setClientFiles] = useState([]);
   const [showAddClient, setShowAddClient] = useState(false);
   const [showAddFile, setShowAddFile] = useState(false);
+  const [showAddPortfolio, setShowAddPortfolio] = useState(false);
   const [newClient, setNewClient] = useState({ name: "", email: "", password: "", phone: "" });
   const [newFile, setNewFile] = useState({ title: "", description: "", file_type: "video", file_url: "", thumbnail_url: "" });
+  const [newPortfolioItem, setNewPortfolioItem] = useState({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", is_featured: false });
+  const [siteContent, setSiteContent] = useState(null);
+  const [editingContent, setEditingContent] = useState({});
   const [activeTab, setActiveTab] = useState("overview");
   const [editingService, setEditingService] = useState(null);
   const [editingOption, setEditingOption] = useState(null);
+  const [editingPortfolio, setEditingPortfolio] = useState(null);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
@@ -1685,15 +1690,16 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes, clientsRes] = await Promise.all([
+      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes, clientsRes, contentRes] = await Promise.all([
         axios.get(`${API}/stats`, { headers }),
         axios.get(`${API}/bookings`, { headers }),
         axios.get(`${API}/wedding-quotes`, { headers }),
         axios.get(`${API}/services?active_only=false`),
         axios.get(`${API}/wedding-options`),
         axios.get(`${API}/contact`, { headers }),
-        axios.get(`${API}/portfolio`),
-        axios.get(`${API}/admin/clients`, { headers })
+        axios.get(`${API}/admin/portfolio`, { headers }),
+        axios.get(`${API}/admin/clients`, { headers }),
+        axios.get(`${API}/content`)
       ]);
       setStats(statsRes.data);
       setBookings(bookingsRes.data);
@@ -1703,6 +1709,8 @@ const AdminDashboard = () => {
       setMessages(messagesRes.data);
       setPortfolio(portfolioRes.data);
       setClients(clientsRes.data);
+      setSiteContent(contentRes.data);
+      setEditingContent(contentRes.data);
     } catch (e) {
       if (e.response?.status === 401) {
         localStorage.removeItem("admin_token");
