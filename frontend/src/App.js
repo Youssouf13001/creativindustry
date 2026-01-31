@@ -159,19 +159,42 @@ const Footer = () => (
 // ==================== HOME PAGE ====================
 const HomePage = () => {
   const [services, setServices] = useState([]);
+  const [content, setContent] = useState(null);
 
   useEffect(() => {
-    const fetchServices = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get(`${API}/services`);
-        setServices(res.data);
+        const [servicesRes, contentRes] = await Promise.all([
+          axios.get(`${API}/services`),
+          axios.get(`${API}/content`)
+        ]);
+        setServices(servicesRes.data);
+        setContent(contentRes.data);
       } catch (e) {
         console.error(e);
       }
     };
-    fetchServices();
+    fetchData();
     axios.post(`${API}/seed`).catch(() => {});
   }, []);
+
+  // Default content while loading
+  const c = content || {
+    hero_title: "Créons vos moments d'exception",
+    hero_subtitle: "Studio de production créative pour mariages, podcasts et productions télévisées.",
+    hero_image: "https://images.unsplash.com/photo-1673195577797-d86fd842ade8?w=1920",
+    wedding_title: "Mariages",
+    wedding_description: "Photographie et vidéographie cinématique pour immortaliser votre jour le plus précieux.",
+    wedding_image: "https://images.unsplash.com/photo-1644951565774-1b0904943820?w=800",
+    podcast_title: "Podcast",
+    podcast_description: "Studio d'enregistrement professionnel équipé pour vos podcasts et interviews.",
+    podcast_image: "https://images.unsplash.com/photo-1659083725992-9d88c12e719c?w=800",
+    tv_title: "Plateau TV",
+    tv_description: "Plateaux de tournage équipés pour vos productions télévisées et corporate.",
+    tv_image: "https://images.unsplash.com/photo-1643651342963-d4478284de5d?w=800",
+    cta_title: "Prêt à créer quelque chose d'extraordinaire ?",
+    cta_subtitle: "Contactez-nous pour discuter de votre projet et obtenir un devis personnalisé."
+  };
 
   return (
     <div data-testid="home-page">
@@ -179,7 +202,7 @@ const HomePage = () => {
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden" data-testid="hero-section">
         <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1673195577797-d86fd842ade8?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxjaW5lbWF0aWMlMjB3ZWRkaW5nJTIwY291cGxlJTIwZGFyayUyMG1vb2R5fGVufDB8fHx8MTc2OTg0OTg2OHww&ixlib=rb-4.1.0&q=85"
+            src={c.hero_image}
             alt="Hero background"
             className="w-full h-full object-cover"
           />
@@ -194,12 +217,10 @@ const HomePage = () => {
             transition={{ duration: 0.8 }}
           >
             <h1 className="font-primary font-black text-5xl md:text-7xl lg:text-8xl tracking-tighter uppercase mb-6">
-              <span className="text-gold-gradient">Créons</span> vos
-              <br />
-              <span className="text-white">moments d'exception</span>
+              <span className="text-gold-gradient">{c.hero_title?.split(' ')[0]}</span> {c.hero_title?.split(' ').slice(1).join(' ')}
             </h1>
             <p className="font-secondary text-white/70 text-lg md:text-xl max-w-2xl mx-auto mb-10">
-              Studio de production créative pour mariages, podcasts et productions télévisées. L'excellence au service de votre vision.
+              {c.hero_subtitle}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/devis-mariage" className="btn-primary px-10 py-4 text-sm inline-flex items-center justify-center gap-2" data-testid="hero-devis-btn">
