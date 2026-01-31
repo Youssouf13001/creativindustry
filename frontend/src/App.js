@@ -2318,14 +2318,6 @@ const AdminDashboard = () => {
                       rows={2}
                     />
                     <select
-                      value={newPortfolioItem.media_type}
-                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, media_type: e.target.value })}
-                      className="w-full bg-background border border-white/20 px-4 py-3"
-                    >
-                      <option value="photo">Photo</option>
-                      <option value="video">Vidéo</option>
-                    </select>
-                    <select
                       value={newPortfolioItem.category}
                       onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, category: e.target.value })}
                       className="w-full bg-background border border-white/20 px-4 py-3"
@@ -2334,9 +2326,52 @@ const AdminDashboard = () => {
                       <option value="podcast">Podcast</option>
                       <option value="tv_set">Plateau TV</option>
                     </select>
+                    
+                    {/* Upload Section */}
+                    <div className="border-2 border-dashed border-primary/50 p-4 text-center bg-primary/5">
+                      <input
+                        type="file"
+                        ref={portfolioFileRef}
+                        onChange={handlePortfolioFileUpload}
+                        accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => portfolioFileRef.current?.click()}
+                        disabled={uploadingPortfolio}
+                        className="btn-primary px-6 py-3 w-full flex items-center justify-center gap-2"
+                      >
+                        {uploadingPortfolio ? (
+                          <>
+                            <Loader size={16} className="animate-spin" /> Upload en cours...
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={16} /> Uploader une photo/vidéo
+                          </>
+                        )}
+                      </button>
+                      <p className="text-xs text-white/50 mt-2">JPG, PNG, WEBP, GIF, MP4, WEBM, MOV (max 100 Mo)</p>
+                    </div>
+                    
+                    {/* Preview uploaded file */}
+                    {newPortfolioItem.media_url && (
+                      <div className="relative">
+                        <p className="text-sm text-white/60 mb-2">Aperçu :</p>
+                        {newPortfolioItem.media_type === 'photo' ? (
+                          <img src={newPortfolioItem.media_url} alt="Preview" className="w-full h-40 object-cover" />
+                        ) : (
+                          <video src={newPortfolioItem.media_url} className="w-full h-40 object-cover" controls />
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="text-white/40 text-center text-sm">— ou —</div>
+                    
                     <input
                       type="url"
-                      placeholder="URL de l'image/vidéo"
+                      placeholder="URL externe (YouTube, Vimeo, etc.)"
                       value={newPortfolioItem.media_url}
                       onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, media_url: e.target.value })}
                       className="w-full bg-background border border-white/20 px-4 py-3"
@@ -2348,6 +2383,14 @@ const AdminDashboard = () => {
                       onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, thumbnail_url: e.target.value })}
                       className="w-full bg-background border border-white/20 px-4 py-3"
                     />
+                    <select
+                      value={newPortfolioItem.media_type}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, media_type: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    >
+                      <option value="photo">Photo</option>
+                      <option value="video">Vidéo</option>
+                    </select>
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
