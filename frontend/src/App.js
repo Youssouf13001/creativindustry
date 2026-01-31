@@ -1862,6 +1862,8 @@ const AdminDashboard = () => {
         <div className="flex gap-4 mb-8 border-b border-white/10 pb-4 overflow-x-auto">
           {[
             { id: "overview", label: "Aperçu" },
+            { id: "content", label: "Contenu Site" },
+            { id: "portfolio", label: "Portfolio" },
             { id: "quotes", label: "Devis Mariage" },
             { id: "bookings", label: "Réservations" },
             { id: "clients", label: "Clients" },
