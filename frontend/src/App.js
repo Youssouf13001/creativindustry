@@ -2308,8 +2308,8 @@ const AdminDashboard = () => {
       return;
     }
     
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("Le fichier est trop volumineux (max 100 Mo)");
+    if (file.size > 1024 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux (max 1 Go)");
       return;
     }
     
@@ -2352,8 +2352,8 @@ const AdminDashboard = () => {
       return;
     }
     
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("Le fichier est trop volumineux (max 100 Mo)");
+    if (file.size > 1024 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux (max 1 Go)");
       return;
     }
     
