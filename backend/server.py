@@ -366,6 +366,57 @@ class BankDetails(BaseModel):
     bank_name: str = "Revolut"
     deposit_percentage: int = 30
 
+# Appointment Models
+APPOINTMENT_TYPES = [
+    {"id": "contract_sign", "label": "Signature de contrat"},
+    {"id": "contract_discuss", "label": "Discussion de contrat"},
+    {"id": "billing", "label": "Problème de facturation"},
+    {"id": "project", "label": "Discussion de projet"},
+    {"id": "other", "label": "Autre"}
+]
+
+APPOINTMENT_DURATIONS = [
+    {"id": "30", "label": "30 minutes"},
+    {"id": "60", "label": "1 heure"},
+    {"id": "90", "label": "1 heure 30"}
+]
+
+class Appointment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_name: str
+    client_email: EmailStr
+    client_phone: str
+    appointment_type: str  # contract_sign, contract_discuss, billing, project, other
+    appointment_type_label: str = ""
+    duration: str  # 30, 60, 90 (minutes)
+    proposed_date: str
+    proposed_time: str
+    message: Optional[str] = None
+    status: str = "pending"  # pending, confirmed, refused, rescheduled_pending, rescheduled_confirmed
+    admin_response: Optional[str] = None
+    new_proposed_date: Optional[str] = None
+    new_proposed_time: Optional[str] = None
+    confirmation_token: str = Field(default_factory=lambda: str(uuid.uuid4())[:8].upper())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+
+class AppointmentCreate(BaseModel):
+    client_name: str
+    client_email: EmailStr
+    client_phone: str
+    appointment_type: str
+    duration: str
+    proposed_date: str
+    proposed_time: str
+    message: Optional[str] = None
+
+class AppointmentAdminUpdate(BaseModel):
+    status: str  # confirmed, refused, rescheduled_pending
+    admin_response: Optional[str] = None
+    new_proposed_date: Optional[str] = None
+    new_proposed_time: Optional[str] = None
+
 class ContactMessage(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
