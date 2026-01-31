@@ -117,6 +117,86 @@ class ContactMessageCreate(BaseModel):
     subject: str
     message: str
 
+# ==================== WEDDING QUOTE MODELS ====================
+
+class WeddingOption(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: str
+    price: float
+    category: str  # coverage, extras, editing
+    is_active: bool = True
+
+class WeddingOptionCreate(BaseModel):
+    name: str
+    description: str
+    price: float
+    category: str
+
+class WeddingOptionUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    category: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class WeddingQuote(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_name: str
+    client_email: EmailStr
+    client_phone: str
+    event_date: str
+    event_location: Optional[str] = None
+    selected_options: List[str]  # List of option IDs
+    options_details: List[dict] = []  # Populated with option names and prices
+    total_price: float = 0
+    message: Optional[str] = None
+    status: str = "pending"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class WeddingQuoteCreate(BaseModel):
+    client_name: str
+    client_email: EmailStr
+    client_phone: str
+    event_date: str
+    event_location: Optional[str] = None
+    selected_options: List[str]
+    message: Optional[str] = None
+
+# ==================== PORTFOLIO MODELS ====================
+
+class PortfolioItem(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: Optional[str] = None
+    media_type: str  # photo, video
+    media_url: str
+    thumbnail_url: Optional[str] = None
+    category: str  # wedding, podcast, tv_set
+    is_featured: bool = False
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class PortfolioItemCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    media_type: str
+    media_url: str
+    thumbnail_url: Optional[str] = None
+    category: str
+    is_featured: bool = False
+
+class PortfolioItemUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    media_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    is_featured: Optional[bool] = None
+    is_active: Optional[bool] = None
+
 # ==================== AUTH HELPERS ====================
 
 def hash_password(password: str) -> str:
