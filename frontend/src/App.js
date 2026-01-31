@@ -1181,8 +1181,10 @@ const BookingPage = () => {
         ...formData,
         service_id: selectedService.id
       });
-      toast.success("Réservation envoyée ! Nous vous contacterons bientôt.");
-      navigate("/");
+      // Show success with deposit info
+      const depositAmount = selectedService.price * 0.3;
+      toast.success(`Réservation confirmée ! Vérifiez votre email pour les instructions de paiement de l'acompte (${depositAmount.toFixed(0)}€).`);
+      setStep(4); // Show confirmation step
     } catch (e) {
       toast.error("Erreur lors de l'envoi. Veuillez réessayer.");
     } finally {
