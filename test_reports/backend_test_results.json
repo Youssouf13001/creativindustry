@@ -1,200 +1,266 @@
 {
-  "total_tests": 32,
-  "passed_tests": 31,
+  "total_tests": 43,
+  "passed_tests": 42,
   "failed_tests": 1,
-  "success_rate": 96.875,
+  "success_rate": 97.67441860465115,
   "results": [
     {
       "test": "Root API Endpoint",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:36.819684"
+      "timestamp": "2026-01-31T12:03:55.435864"
     },
     {
       "test": "Seed Data",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:36.859073"
+      "timestamp": "2026-01-31T12:03:55.475197"
     },
     {
       "test": "Get All Services",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:36.908753"
+      "timestamp": "2026-01-31T12:03:55.516556"
     },
     {
       "test": "Service Count Check",
       "success": true,
       "details": "Found 9 services (expected 9)",
-      "timestamp": "2026-01-31T09:05:36.909392"
+      "timestamp": "2026-01-31T12:03:55.517136"
     },
     {
       "test": "Get Wedding Services",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:36.947302"
+      "timestamp": "2026-01-31T12:03:55.554941"
     },
     {
       "test": "Wedding Service Count",
       "success": true,
       "details": "Found 3 services (expected 3)",
-      "timestamp": "2026-01-31T09:05:36.947893"
+      "timestamp": "2026-01-31T12:03:55.555540"
     },
     {
       "test": "Get Podcast Services",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:36.987169"
+      "timestamp": "2026-01-31T12:03:55.593363"
     },
     {
       "test": "Podcast Service Count",
       "success": true,
       "details": "Found 3 services (expected 3)",
-      "timestamp": "2026-01-31T09:05:36.987711"
+      "timestamp": "2026-01-31T12:03:55.593962"
     },
     {
       "test": "Get Tv_Set Services",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.040544"
+      "timestamp": "2026-01-31T12:03:55.630286"
     },
     {
       "test": "Tv_Set Service Count",
       "success": true,
       "details": "Found 3 services (expected 3)",
-      "timestamp": "2026-01-31T09:05:37.041170"
+      "timestamp": "2026-01-31T12:03:55.630844"
     },
     {
       "test": "Get Services for Single Test",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.080016"
+      "timestamp": "2026-01-31T12:03:55.667808"
     },
     {
       "test": "Get Single Service",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.122990"
+      "timestamp": "2026-01-31T12:03:55.712743"
     },
     {
       "test": "Get Services for Booking",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.159405"
+      "timestamp": "2026-01-31T12:03:55.751661"
     },
     {
       "test": "Create Booking",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.229264"
+      "timestamp": "2026-01-31T12:03:55.796860"
     },
     {
       "test": "Create Contact Message",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.291276"
+      "timestamp": "2026-01-31T12:03:55.835995"
+    },
+    {
+      "test": "Chatbot Message",
+      "success": true,
+      "details": "Status: 200",
+      "timestamp": "2026-01-31T12:04:01.079608"
+    },
+    {
+      "test": "Chatbot Response Format",
+      "success": true,
+      "details": "Response fields: ['response', 'session_id']",
+      "timestamp": "2026-01-31T12:04:01.080221"
+    },
+    {
+      "test": "Get Chat History",
+      "success": true,
+      "details": "Status: 200",
+      "timestamp": "2026-01-31T12:04:01.138015"
+    },
+    {
+      "test": "Client Registration",
+      "success": true,
+      "details": "Status: 200",
+      "timestamp": "2026-01-31T12:04:01.425425"
+    },
+    {
+      "test": "Get Client Profile",
+      "success": true,
+      "details": "Status: 200",
+      "timestamp": "2026-01-31T12:04:01.463421"
+    },
+    {
+      "test": "Get Client Files",
+      "success": true,
+      "details": "Status: 200",
+      "timestamp": "2026-01-31T12:04:01.503761"
+    },
+    {
+      "test": "Client Login",
+      "success": false,
+      "details": "Status: 200 (expected 401) - No error details",
+      "timestamp": "2026-01-31T12:04:01.761577"
     },
     {
       "test": "Admin Registration",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.601372"
+      "timestamp": "2026-01-31T12:04:02.026990"
     },
     {
       "test": "Get Admin Profile",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.637930"
+      "timestamp": "2026-01-31T12:04:02.062990"
     },
     {
       "test": "Get Bookings",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.674577"
+      "timestamp": "2026-01-31T12:04:02.098102"
     },
     {
       "test": "Get Services for Booking",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.711799"
+      "timestamp": "2026-01-31T12:04:02.135703"
     },
     {
       "test": "Create Booking",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.750758"
+      "timestamp": "2026-01-31T12:04:02.175042"
     },
     {
       "test": "Update Booking Status",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.796183"
+      "timestamp": "2026-01-31T12:04:02.216081"
     },
     {
       "test": "Get Contact Messages",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.834038"
+      "timestamp": "2026-01-31T12:04:02.255675"
     },
     {
       "test": "Get Dashboard Stats",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.877783"
+      "timestamp": "2026-01-31T12:04:02.294995"
     },
     {
       "test": "Stats Field total_bookings",
       "success": true,
-      "details": "Value: 2",
-      "timestamp": "2026-01-31T09:05:37.878376"
+      "details": "Value: 6",
+      "timestamp": "2026-01-31T12:04:02.295515"
     },
     {
       "test": "Stats Field pending_bookings",
       "success": true,
-      "details": "Value: 1",
-      "timestamp": "2026-01-31T09:05:37.878393"
+      "details": "Value: 4",
+      "timestamp": "2026-01-31T12:04:02.295539"
     },
     {
       "test": "Stats Field confirmed_bookings",
       "success": true,
-      "details": "Value: 1",
-      "timestamp": "2026-01-31T09:05:37.878398"
+      "details": "Value: 2",
+      "timestamp": "2026-01-31T12:04:02.295545"
     },
     {
       "test": "Stats Field unread_messages",
       "success": true,
-      "details": "Value: 1",
-      "timestamp": "2026-01-31T09:05:37.878403"
+      "details": "Value: 3",
+      "timestamp": "2026-01-31T12:04:02.295551"
     },
     {
       "test": "Stats Field total_services",
       "success": true,
       "details": "Value: 9",
-      "timestamp": "2026-01-31T09:05:37.878408"
+      "timestamp": "2026-01-31T12:04:02.295556"
     },
     {
       "test": "Get Services for Management",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.914883"
+      "timestamp": "2026-01-31T12:04:02.329580"
     },
     {
       "test": "Update Service Price",
       "success": true,
       "details": "Status: 200",
-      "timestamp": "2026-01-31T09:05:37.952436"
+      "timestamp": "2026-01-31T12:04:02.406948"
     },
     {
       "test": "Price Update Verification",
       "success": true,
-      "details": "Price updated to 1600.0 (expected 1600.0)",
-      "timestamp": "2026-01-31T09:05:37.952941"
+      "details": "Price updated to 1700.0 (expected 1700.0)",
+      "timestamp": "2026-01-31T12:04:02.407634"
+    },
+    {
+      "test": "Get All Clients",
+      "success": true,
+      "details": "Status: 200",
+      "timestamp": "2026-01-31T12:04:02.443443"
+    },
+    {
+      "test": "Admin Create Client",
+      "success": true,
+      "details": "Status: 200",
+      "timestamp": "2026-01-31T12:04:02.705531"
+    },
+    {
+      "test": "Get Client Files (Admin)",
+      "success": true,
+      "details": "Status: 200",
+      "timestamp": "2026-01-31T12:04:02.744296"
+    },
+    {
+      "test": "Add File to Client",
+      "success": true,
+      "details": "Status: 200",
+      "timestamp": "2026-01-31T12:04:02.805318"
     },
     {
       "test": "Admin Login (New Credentials)",
-      "success": false,
-      "details": "Status: 200 (expected 401) - No error details",
-      "timestamp": "2026-01-31T09:05:38.251495"
+      "success": true,
+      "details": "Status: 401",
+      "timestamp": "2026-01-31T12:04:02.841950"
     }
   ]
 }
