@@ -1679,6 +1679,7 @@ const AdminDashboard = () => {
   const [uploadingClientFile, setUploadingClientFile] = useState(false);
   const portfolioFileRef = useRef(null);
   const clientFileRef = useRef(null);
+  const [bankDetails, setBankDetails] = useState({ iban: "", bic: "", account_holder: "", bank_name: "", deposit_percentage: 30 });
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
@@ -1690,7 +1691,26 @@ const AdminDashboard = () => {
       return;
     }
     fetchData();
+    fetchBankDetails();
   }, [token]);
+
+  const fetchBankDetails = async () => {
+    try {
+      const res = await axios.get(`${API}/bank-details`);
+      setBankDetails(res.data);
+    } catch (e) {
+      console.error("Error fetching bank details");
+    }
+  };
+
+  const updateBankDetails = async () => {
+    try {
+      await axios.put(`${API}/bank-details`, bankDetails, { headers });
+      toast.success("Coordonnées bancaires mises à jour !");
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
 
   const fetchData = async () => {
     try {
