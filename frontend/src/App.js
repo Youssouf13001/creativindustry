@@ -2742,7 +2742,7 @@ const ChatWidget = () => {
       {/* Chat Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 right-6 z-50 w-14 h-14 flex items-center justify-center transition-all ${
+        className={`fixed bottom-20 right-6 z-50 w-14 h-14 flex items-center justify-center transition-all ${
           isOpen ? "bg-white/20 rotate-0" : "bg-primary"
         }`}
         data-testid="chat-toggle"
@@ -2757,7 +2757,7 @@ const ChatWidget = () => {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-48px)] bg-card border border-white/10 shadow-2xl"
+            className="fixed bottom-36 right-6 z-50 w-[360px] max-w-[calc(100vw-48px)] bg-card border border-white/10 shadow-2xl"
             data-testid="chat-window"
           >
             {/* Header */}
