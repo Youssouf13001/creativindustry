@@ -415,6 +415,17 @@ class CreativIndustryAPITester:
         # Public contact form
         self.test_create_contact_message()
         
+        # Chatbot functionality
+        self.test_chatbot()
+        
+        # Client authentication and functionality
+        if self.test_client_registration():
+            self.test_client_profile()
+            self.test_client_files()
+        
+        # Test client login (separate from registration)
+        self.test_client_login()
+        
         # Admin authentication
         if self.test_admin_registration():
             self.test_get_admin_profile()
@@ -425,6 +436,9 @@ class CreativIndustryAPITester:
             self.test_get_contact_messages()
             self.test_get_stats()
             self.test_service_management()
+            
+            # Admin client management
+            self.test_admin_client_management()
         
         # Test admin login (separate from registration)
         self.test_admin_login()
