@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Phone, Mail, MapPin, Check, Camera, Mic, Tv, Menu, X, ChevronRight, Play, ArrowRight, Clock, Users, FileText, Image, Video, Plus, Minus } from "lucide-react";
+import { Calendar, Phone, Mail, MapPin, Check, Camera, Mic, Tv, Menu, X, ChevronRight, Play, ArrowRight, Clock, Users, FileText, Image, Video, Plus, Minus, MessageCircle, Send, Download, User, LogOut, FolderOpen } from "lucide-react";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 
