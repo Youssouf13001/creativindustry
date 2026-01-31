@@ -8,6 +8,7 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - **Backend**: FastAPI + MongoDB
 - **Auth**: JWT avec bcrypt (Admin + Client séparés)
 - **IA**: OpenAI GPT-4o via Emergent Universal Key
+- **Stockage**: Fichiers stockés sur le serveur IONOS
 
 ## Fonctionnalités Implémentées
 
@@ -40,19 +41,18 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 
 ### V5 - Gestion Complète du Contenu (31 Jan 2026)
 - ✅ Onglet "Contenu Site" dans l'admin
-  - Modification du titre/sous-titre Hero
-  - Modification des images de fond (URL)
-  - Édition des textes et images pour Mariage, Podcast, Plateau TV
-  - Modification des informations de contact
-  - Section CTA personnalisable
 - ✅ Onglet "Portfolio" dans l'admin
-  - Ajout/modification/suppression d'éléments
-  - Support photo et vidéo
-  - Catégorisation (Mariage, Podcast, Plateau TV)
-  - Option "Featured" pour mise en avant
-  - Activation/désactivation des éléments
-- ✅ APIs Backend complètes (GET/PUT /api/content, CRUD /api/admin/portfolio)
+- ✅ APIs Backend complètes
 - ✅ Tests validés : 100% backend, 100% frontend
+
+### V6 - Upload Direct de Fichiers (31 Jan 2026)
+- ✅ Upload direct sur le serveur IONOS (pas de service externe)
+- ✅ **Portfolio** : Bouton "Uploader une photo/vidéo" 
+- ✅ **Espace Client** : Bouton "Uploader un fichier"
+- ✅ Formats supportés : JPG, PNG, WEBP, GIF, MP4, WEBM, MOV
+- ✅ Limite de taille : 100 Mo par fichier
+- ✅ Notification email automatique au client après upload
+- ✅ Possibilité de garder les liens externes (YouTube, Google Drive, etc.)
 
 ## Tarifs de Base
 ### Mariages : 1500€ - 4500€
@@ -67,18 +67,23 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 ## APIs Clés
 - `/api/content` - GET/PUT contenu du site
 - `/api/admin/portfolio` - CRUD portfolio (admin)
+- `/api/upload/portfolio` - Upload fichiers portfolio
+- `/api/upload/client/{id}` - Upload fichiers client
 - `/api/portfolio` - GET portfolio public
 - `/api/auth/*` - Authentification admin
 - `/api/client/*` - Authentification et gestion client
-- `/api/chatbot` - Chatbot IA
 
 ## Backlog
-- P1: Upload direct de fichiers (Cloudinary)
-- P2: Calendrier disponibilités
+- P2: Calendrier des disponibilités
 - P2: Paiement en ligne (Stripe)
 - P2: Refactoring du frontend (décomposer App.js en composants)
 
-## Mise à jour du site
-1. Modifier sur Emergent
-2. "Save to GitHub"
-3. Sur VPS IONOS: `git pull` + `npm run build` + `systemctl restart creativindustry`
+## Mise à jour du site IONOS
+1. "Save to GitHub" sur Emergent
+2. Sur VPS IONOS: 
+```bash
+cd /var/www/creativindustry
+git pull origin main
+cd frontend && npm run build
+sudo systemctl restart creativindustry
+```
