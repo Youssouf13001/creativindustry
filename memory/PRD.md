@@ -1,58 +1,55 @@
 # CREATIVINDUSTRY France - PRD
 
 ## Énoncé du Problème
-Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio podcast. Système de réservation avec prix modifiables via admin.
+Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio podcast. Système de réservation avec prix modifiables via admin. Espace client pour télécharger fichiers. Chatbot IA.
 
 ## Architecture
 - **Frontend**: React 19 + Tailwind CSS + Framer Motion
 - **Backend**: FastAPI + MongoDB
-- **Auth**: JWT avec bcrypt
+- **Auth**: JWT avec bcrypt (Admin + Client séparés)
+- **IA**: OpenAI GPT-4o via Emergent Universal Key
 
-## Fonctionnalités Implémentées (31 Jan 2026)
+## Fonctionnalités Implémentées
 
-### Site Vitrine
+### V1 - Site Vitrine (31 Jan 2026)
 - Page d'accueil avec hero cinématique
 - 3 pages services (Mariage, Podcast, Plateau TV)
 - Page contact avec formulaire
 - Design "Dark Luxury" avec accents dorés
+- Système de réservation
+- Espace Admin
 
-### Système de Réservation
-- Sélection service → Date → Coordonnées
-- 9 services avec tarification (seed data)
-- Réservations stockées en base
+### V2 - Devis Mariage Personnalisé (31 Jan 2026)
+- Configurateur de devis en 3 étapes
+- 16 options sélectionnables (Drone, Cérémonie, Soirée, etc.)
+- Calcul automatique du prix
+- Portfolio photos/vidéos
 
-### Espace Admin
-- Inscription/Connexion par mot de passe
-- Dashboard avec statistiques
-- Gestion des réservations (statut)
-- Modification des prix des services
-- Visualisation des messages contact
+### V3 - Espace Client + Chatbot (31 Jan 2026)
+- ✅ Espace Client avec connexion
+- ✅ Dashboard client avec fichiers (vidéos/photos)
+- ✅ Téléchargement via liens externes (Google Drive, Dropbox)
+- ✅ Chatbot IA (GPT-4o) pour visiteurs
+- ✅ Gestion des clients dans l'admin
+- ✅ Ajout de fichiers aux clients
 
 ## Tarifs de Base
-### Mariages
-- Essentielle: 1500€
-- Complète: 2800€
-- Premium: 4500€
+### Mariages : 1500€ - 4500€
+### Podcast : 150€/h - 700€/jour
+### Plateau TV : 800€ - 3500€
 
-### Podcast
-- 1h: 150€
-- Demi-journée: 400€
-- Journée: 700€
-
-### Plateau TV
-- Standard: 800€
-- Équipé: 1500€
-- Production Complète: 3500€
+## URLs importantes
+- Site : https://creativindustry.com
+- Admin : /admin
+- Espace Client : /client
 
 ## Backlog
-- P1: Intégration calendrier disponibilités
-- P1: Email de confirmation automatique
-- P2: Galerie portfolio avec lightbox
-- P2: Témoignages clients
-- P3: Paiement en ligne (Stripe)
+- P1: Upload direct de fichiers (Cloudinary)
+- P1: Notifications email automatiques
+- P2: Calendrier disponibilités
+- P2: Paiement en ligne (Stripe)
 
-## Personas
-1. **Couple** - Recherche photographe mariage
-2. **Créateur** - Location studio podcast
-3. **Entreprise** - Production TV/Corporate
-4. **Admin** - Gestion site et réservations
+## Mise à jour du site
+1. Modifier sur Emergent
+2. "Save to GitHub"
+3. Sur VPS: `git pull` + `npm run build` + `systemctl restart creativindustry`
