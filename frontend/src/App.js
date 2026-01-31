@@ -2418,6 +2418,37 @@ const AdminDashboard = () => {
     navigate("/admin");
   };
 
+  // Appointment functions
+  const respondToAppointment = async (appointmentId, response) => {
+    try {
+      await axios.put(`${API}/appointments/${appointmentId}`, response, { headers });
+      toast.success(
+        response.status === "confirmed" ? "Rendez-vous confirmé ! Email envoyé au client." :
+        response.status === "refused" ? "Rendez-vous refusé. Email envoyé au client." :
+        "Nouvelle date proposée ! Email envoyé au client."
+      );
+      setSelectedAppointment(null);
+      setAppointmentResponse({ status: "", admin_response: "", new_proposed_date: "", new_proposed_time: "" });
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  const appointmentStatusColors = {
+    pending: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30",
+    confirmed: "bg-green-500/20 text-green-500 border-green-500/30",
+    refused: "bg-red-500/20 text-red-500 border-red-500/30",
+    rescheduled_pending: "bg-orange-500/20 text-orange-500 border-orange-500/30"
+  };
+
+  const appointmentStatusLabels = {
+    pending: "En attente",
+    confirmed: "Confirmé",
+    refused: "Refusé",
+    rescheduled_pending: "Nouvelle date proposée"
+  };
+
   const statusColors = {
     pending: "bg-yellow-500/20 text-yellow-500",
     confirmed: "bg-green-500/20 text-green-500",
