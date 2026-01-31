@@ -1822,6 +1822,88 @@ const AdminDashboard = () => {
   };
 
   // Portfolio Functions
+  // Upload Portfolio File
+  const handlePortfolioFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Type de fichier non supporté. Utilisez JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.");
+      return;
+    }
+    
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux (max 100 Mo)");
+      return;
+    }
+    
+    setUploadingPortfolio(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const res = await axios.post(`${API}/upload/portfolio`, formData, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+      });
+      const uploadedUrl = `${BACKEND_URL}${res.data.url}`;
+      setNewPortfolioItem({ 
+        ...newPortfolioItem, 
+        media_url: uploadedUrl, 
+        media_type: res.data.media_type,
+        thumbnail_url: res.data.media_type === 'photo' ? uploadedUrl : ''
+      });
+      toast.success("Fichier uploadé !");
+    } catch (e) {
+      toast.error("Erreur lors de l'upload");
+    } finally {
+      setUploadingPortfolio(false);
+    }
+  };
+
+  // Upload Client File
+  const handleClientFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!selectedClient) {
+      toast.error("Sélectionnez d'abord un client");
+      return;
+    }
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Type de fichier non supporté. Utilisez JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.");
+      return;
+    }
+    
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux (max 100 Mo)");
+      return;
+    }
+    
+    const title = prompt("Titre du fichier:", file.name.split('.')[0]);
+    if (!title) return;
+    
+    setUploadingClientFile(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', title);
+    formData.append('description', '');
+    
+    try {
+      await axios.post(`${API}/upload/client/${selectedClient.id}`, formData, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success("Fichier uploadé et client notifié par email !");
+      selectClient(selectedClient);
+    } catch (e) {
+      toast.error("Erreur lors de l'upload");
+    } finally {
+      setUploadingClientFile(false);
+    }
+  };
+
   const createPortfolioItem = async () => {
     try {
       await axios.post(`${API}/admin/portfolio`, newPortfolioItem, { headers });
