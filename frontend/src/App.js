@@ -3457,6 +3457,157 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Appointments Tab */}
+        {activeTab === "appointments" && (
+          <div>
+            <h2 className="font-primary font-bold text-xl mb-4">Demandes de rendez-vous</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Appointments List */}
+              <div className="space-y-4">
+                {appointments.length === 0 ? (
+                  <p className="text-center text-white/60 py-8">Aucune demande de rendez-vous</p>
+                ) : (
+                  appointments.map((apt) => (
+                    <div 
+                      key={apt.id} 
+                      onClick={() => setSelectedAppointment(apt)}
+                      className={`bg-card border p-4 cursor-pointer transition-all hover:border-primary ${selectedAppointment?.id === apt.id ? "border-primary" : "border-white/10"}`}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-primary font-bold">{apt.client_name}</h3>
+                          <p className="text-white/60 text-sm">{apt.client_email}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-1 border ${appointmentStatusColors[apt.status] || "bg-white/10"}`}>
+                          {appointmentStatusLabels[apt.status] || apt.status}
+                        </span>
+                      </div>
+                      <div className="text-sm space-y-1">
+                        <p><span className="text-white/50">Motif :</span> {apt.appointment_type_label || apt.appointment_type}</p>
+                        <p><span className="text-white/50">Date souhaitée :</span> <span className="text-primary font-semibold">{apt.proposed_date} à {apt.proposed_time}</span></p>
+                        {apt.new_proposed_date && (
+                          <p><span className="text-white/50">Nouvelle date :</span> <span className="text-orange-400 font-semibold">{apt.new_proposed_date} à {apt.new_proposed_time}</span></p>
+                        )}
+                      </div>
+                      <p className="text-white/40 text-xs mt-3">
+                        Réf: RDV-{apt.id.substring(0, 8).toUpperCase()} • {new Date(apt.created_at).toLocaleDateString("fr-FR")}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Selected Appointment Detail */}
+              {selectedAppointment && (
+                <div className="bg-card border border-primary p-6">
+                  <h3 className="font-primary font-bold text-lg mb-4">Détails du rendez-vous</h3>
+                  
+                  <div className="space-y-3 text-sm mb-6">
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Client</span>
+                      <span className="font-semibold">{selectedAppointment.client_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Email</span>
+                      <span>{selectedAppointment.client_email}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Téléphone</span>
+                      <span>{selectedAppointment.client_phone}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Motif</span>
+                      <span>{selectedAppointment.appointment_type_label || selectedAppointment.appointment_type}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Date souhaitée</span>
+                      <span className="text-primary font-bold">{selectedAppointment.proposed_date} à {selectedAppointment.proposed_time}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Durée</span>
+                      <span>{selectedAppointment.duration} min</span>
+                    </div>
+                    {selectedAppointment.message && (
+                      <div className="bg-background p-3 mt-2">
+                        <p className="text-white/60 text-xs mb-1">Message du client :</p>
+                        <p className="text-sm">{selectedAppointment.message}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedAppointment.status === "pending" && (
+                    <div className="space-y-4 border-t border-white/10 pt-4">
+                      <h4 className="font-primary font-semibold">Répondre à la demande</h4>
+                      
+                      <textarea
+                        placeholder="Message pour le client (optionnel)"
+                        value={appointmentResponse.admin_response}
+                        onChange={(e) => setAppointmentResponse({ ...appointmentResponse, admin_response: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+                        rows={2}
+                      />
+                      
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => respondToAppointment(selectedAppointment.id, { status: "confirmed", admin_response: appointmentResponse.admin_response })}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 text-sm font-semibold"
+                        >
+                          ✓ Confirmer
+                        </button>
+                        <button
+                          onClick={() => respondToAppointment(selectedAppointment.id, { status: "refused", admin_response: appointmentResponse.admin_response })}
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 text-sm font-semibold"
+                        >
+                          ✕ Refuser
+                        </button>
+                      </div>
+                      
+                      <div className="border-t border-white/10 pt-4">
+                        <h5 className="text-sm font-semibold mb-3">Ou proposer une autre date :</h5>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          <input
+                            type="date"
+                            value={appointmentResponse.new_proposed_date}
+                            onChange={(e) => setAppointmentResponse({ ...appointmentResponse, new_proposed_date: e.target.value })}
+                            className="bg-background border border-white/20 px-3 py-2 text-sm"
+                          />
+                          <input
+                            type="time"
+                            value={appointmentResponse.new_proposed_time}
+                            onChange={(e) => setAppointmentResponse({ ...appointmentResponse, new_proposed_time: e.target.value })}
+                            className="bg-background border border-white/20 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <button
+                          onClick={() => respondToAppointment(selectedAppointment.id, { 
+                            status: "rescheduled_pending", 
+                            admin_response: appointmentResponse.admin_response,
+                            new_proposed_date: appointmentResponse.new_proposed_date,
+                            new_proposed_time: appointmentResponse.new_proposed_time
+                          })}
+                          disabled={!appointmentResponse.new_proposed_date || !appointmentResponse.new_proposed_time}
+                          className="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 text-sm font-semibold disabled:opacity-50"
+                        >
+                          📅 Proposer cette date
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedAppointment.status !== "pending" && (
+                    <div className={`p-4 text-center ${appointmentStatusColors[selectedAppointment.status]}`}>
+                      <p className="font-semibold">{appointmentStatusLabels[selectedAppointment.status]}</p>
+                      {selectedAppointment.status === "rescheduled_pending" && (
+                        <p className="text-sm mt-1">En attente de confirmation du client pour le {selectedAppointment.new_proposed_date} à {selectedAppointment.new_proposed_time}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Settings Tab */}
         {activeTab === "settings" && (
           <div>
