@@ -12,78 +12,63 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 
 ## Fonctionnalités Implémentées
 
-### V1 - Site Vitrine (31 Jan 2026)
-- Page d'accueil avec hero cinématique
-- 3 pages services (Mariage, Podcast, Plateau TV)
-- Page contact avec formulaire
-- Design "Dark Luxury" avec accents dorés
-- Système de réservation
-- Espace Admin
+### V1 - V5 (Précédemment implémentées)
+- Site vitrine complet
+- Devis mariage personnalisé
+- Espace client avec téléchargements
+- Chatbot IA
+- Notifications email SMTP
+- Gestion du contenu depuis l'admin
+- Upload direct de fichiers
 
-### V2 - Devis Mariage Personnalisé (31 Jan 2026)
-- Configurateur de devis en 3 étapes
-- 16 options sélectionnables (Drone, Cérémonie, Soirée, etc.)
-- Calcul automatique du prix
-- Portfolio photos/vidéos
+### V7 - Système de Réservation avec Acompte (31 Jan 2026)
+- ✅ **Modification des formules depuis l'admin**
+  - Édition du nom, description, prix, durée
+  - Gestion des prestations incluses (ajouter/supprimer)
+  - Ex: "6h de couverture", "300+ photos retouchées"
+  
+- ✅ **Onglet Paramètres dans l'admin**
+  - Coordonnées bancaires modifiables (IBAN, BIC, titulaire)
+  - Pourcentage d'acompte configurable (par défaut 30%)
+  
+- ✅ **Page de réservation améliorée**
+  - Affichage du prix total et de l'acompte
+  - Bouton "Valider et recevoir les instructions de paiement"
+  - Étape de confirmation après validation
+  
+- ✅ **Emails automatiques**
+  - Email client : Récapitulatif + coordonnées bancaires + référence de virement
+  - Email admin : Notification de nouvelle réservation avec détails client
 
-### V3 - Espace Client + Chatbot (31 Jan 2026)
-- ✅ Espace Client avec connexion
-- ✅ Dashboard client avec fichiers (vidéos/photos)
-- ✅ Téléchargement via liens externes (Google Drive, Dropbox)
-- ✅ Chatbot IA (GPT-4o) pour visiteurs
-- ✅ Gestion des clients dans l'admin
-- ✅ Ajout de fichiers aux clients
-
-### V4 - Notifications Email (31 Jan 2026)
-- ✅ Email automatique lors du dépôt d'un fichier client
-- ✅ Template email professionnel avec design CREATIVINDUSTRY
-- ✅ SMTP IONOS configuré (via variables d'environnement .env)
-
-### V5 - Gestion Complète du Contenu (31 Jan 2026)
-- ✅ Onglet "Contenu Site" dans l'admin
-- ✅ Onglet "Portfolio" dans l'admin
-- ✅ APIs Backend complètes
-- ✅ Tests validés : 100% backend, 100% frontend
-
-### V6 - Upload Direct de Fichiers (31 Jan 2026)
-- ✅ Upload direct sur le serveur IONOS (pas de service externe)
-- ✅ **Portfolio** : Bouton "Uploader une photo/vidéo" 
-- ✅ **Espace Client** : Bouton "Uploader un fichier"
-- ✅ Formats supportés : JPG, PNG, WEBP, GIF, MP4, WEBM, MOV
-- ✅ Limite de taille : 100 Mo par fichier
-- ✅ Notification email automatique au client après upload
-- ✅ Possibilité de garder les liens externes (YouTube, Google Drive, etc.)
-
-## Tarifs de Base
-### Mariages : 1500€ - 4500€
-### Podcast : 150€/h - 700€/jour
-### Plateau TV : 800€ - 3500€
+### Coordonnées bancaires par défaut
+- IBAN: FR7628233000011130178183593
+- BIC: REVOFRP2
+- Titulaire: CREATIVINDUSTRY FRANCE
 
 ## URLs importantes
 - Site : https://creativindustry.com
 - Admin : /admin
 - Espace Client : /client
+- Réservation : /booking
 
 ## APIs Clés
-- `/api/content` - GET/PUT contenu du site
-- `/api/admin/portfolio` - CRUD portfolio (admin)
+- `/api/bank-details` - GET/PUT coordonnées bancaires
+- `/api/bookings` - POST créer réservation avec acompte
+- `/api/services` - CRUD services avec features
 - `/api/upload/portfolio` - Upload fichiers portfolio
 - `/api/upload/client/{id}` - Upload fichiers client
-- `/api/portfolio` - GET portfolio public
-- `/api/auth/*` - Authentification admin
-- `/api/client/*` - Authentification et gestion client
 
 ## Backlog
 - P2: Calendrier des disponibilités
-- P2: Paiement en ligne (Stripe)
-- P2: Refactoring du frontend (décomposer App.js en composants)
+- P2: Système de confirmation automatique après virement
 
 ## Mise à jour du site IONOS
-1. "Save to GitHub" sur Emergent
-2. Sur VPS IONOS: 
 ```bash
 cd /var/www/creativindustry
 git pull origin main
 cd frontend && npm run build
+cd ../backend
+source venv/bin/activate
+pip install -r requirements.txt
 sudo systemctl restart creativindustry
 ```
