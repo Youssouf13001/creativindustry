@@ -207,9 +207,10 @@ def hash_password(password: str) -> str:
 def verify_password(password: str, hashed: str) -> bool:
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
-def create_token(admin_id: str) -> str:
+def create_token(user_id: str, user_type: str = "admin") -> str:
     payload = {
-        "sub": admin_id,
+        "sub": user_id,
+        "type": user_type,
         "exp": datetime.now(timezone.utc).timestamp() + 86400 * 7  # 7 days
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
@@ -218,6 +219,9 @@ async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         admin_id = payload.get("sub")
+        user_type = payload.get("type", "admin")
+        if user_type != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
         admin = await db.admins.find_one({"id": admin_id}, {"_id": 0})
         if not admin:
             raise HTTPException(status_code=401, detail="Admin not found")
@@ -226,6 +230,74 @@ async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+async def get_current_client(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        client_id = payload.get("sub")
+        user_type = payload.get("type", "admin")
+        if user_type != "client":
+            raise HTTPException(status_code=403, detail="Client access required")
+        client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+        if not client:
+            raise HTTPException(status_code=401, detail="Client not found")
+        return client
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# ==================== CLIENT MODELS ====================
+
+class ClientCreate(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+    phone: Optional[str] = None
+
+class ClientLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class ClientResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    email: str
+    name: str
+    phone: Optional[str] = None
+
+class ClientFile(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    title: str
+    description: Optional[str] = None
+    file_type: str  # video, photo, document
+    file_url: str  # External URL (Google Drive, Dropbox, YouTube)
+    thumbnail_url: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ClientFileCreate(BaseModel):
+    client_id: str
+    title: str
+    description: Optional[str] = None
+    file_type: str
+    file_url: str
+    thumbnail_url: Optional[str] = None
+
+# ==================== CHAT MODELS ====================
+
+class ChatMessage(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    session_id: str
+    role: str  # user, assistant
+    content: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ChatRequest(BaseModel):
+    session_id: str
+    message: str
 
 # ==================== AUTH ROUTES ====================
 
