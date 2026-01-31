@@ -6,69 +6,61 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 ## Architecture
 - **Frontend**: React 19 + Tailwind CSS + Framer Motion
 - **Backend**: FastAPI + MongoDB
-- **Auth**: JWT avec bcrypt (Admin + Client séparés)
+- **Auth**: JWT avec bcrypt
 - **IA**: OpenAI GPT-4o via Emergent Universal Key
-- **Stockage**: Fichiers stockés sur le serveur IONOS
+- **Stockage**: Fichiers sur serveur IONOS
 
 ## Fonctionnalités Implémentées
 
-### V1 - V5 (Précédemment implémentées)
+### V1-V7 (Précédemment)
 - Site vitrine complet
 - Devis mariage personnalisé
 - Espace client avec téléchargements
-- Chatbot IA
-- Notifications email SMTP
-- Gestion du contenu depuis l'admin
-- Upload direct de fichiers
+- Chatbot IA, Notifications email SMTP
+- Gestion contenu admin, Upload fichiers
+- Système réservation avec acompte 30%
 
-### V7 - Système de Réservation avec Acompte (31 Jan 2026)
-- ✅ **Modification des formules depuis l'admin**
-  - Édition du nom, description, prix, durée
-  - Gestion des prestations incluses (ajouter/supprimer)
-  - Ex: "6h de couverture", "300+ photos retouchées"
-  
-- ✅ **Onglet Paramètres dans l'admin**
-  - Coordonnées bancaires modifiables (IBAN, BIC, titulaire)
-  - Pourcentage d'acompte configurable (par défaut 30%)
-  
-- ✅ **Page de réservation améliorée**
-  - Affichage du prix total et de l'acompte
-  - Bouton "Valider et recevoir les instructions de paiement"
-  - Étape de confirmation après validation
-  
+### V8 - Système de Rendez-vous (31 Jan 2026)
+- ✅ **Page /rendez-vous** pour prise de RDV
+  - 5 motifs : Signature contrat, Discussion contrat, Facturation, Projet, Autre
+  - 3 durées : 30 min, 1h, 1h30
+  - Créneaux : Lundi-Vendredi 18h+, Dimanche 9h-17h
+  - Lieu : Dans vos locaux
+
+- ✅ **Onglet "Rendez-vous" dans l'admin**
+  - Liste des demandes avec statut coloré
+  - Détails complets (nom, email, téléphone, motif, date, message)
+  - 3 actions : Confirmer / Refuser / Proposer nouvelle date
+
+- ✅ **Processus de validation en 2 étapes**
+  - Si nouvelle date proposée → Email au client avec lien de confirmation
+  - Client clique sur le lien → RDV confirmé automatiquement
+
 - ✅ **Emails automatiques**
-  - Email client : Récapitulatif + coordonnées bancaires + référence de virement
-  - Email admin : Notification de nouvelle réservation avec détails client
-
-### Coordonnées bancaires par défaut
-- IBAN: FR7628233000011130178183593
-- BIC: REVOFRP2
-- Titulaire: CREATIVINDUSTRY FRANCE
+  - Email client : Demande reçue
+  - Email admin : Notification nouvelle demande
+  - Email client : Confirmation / Refus / Nouvelle date proposée
+  - Email client : Confirmation finale après validation du lien
 
 ## URLs importantes
 - Site : https://creativindustry.com
+- Rendez-vous : /rendez-vous
+- Confirmation RDV : /rendez-vous/confirmer/:id/:token
 - Admin : /admin
-- Espace Client : /client
-- Réservation : /booking
 
 ## APIs Clés
-- `/api/bank-details` - GET/PUT coordonnées bancaires
-- `/api/bookings` - POST créer réservation avec acompte
-- `/api/services` - CRUD services avec features
-- `/api/upload/portfolio` - Upload fichiers portfolio
-- `/api/upload/client/{id}` - Upload fichiers client
+- `/api/appointment-types` - Types et durées de RDV
+- `/api/appointments` - CRUD rendez-vous
+- `/api/appointments/confirm/:id/:token` - Confirmation lien email
 
 ## Backlog
-- P2: Calendrier des disponibilités
-- P2: Système de confirmation automatique après virement
+- P2: Calendrier visuel des disponibilités
+- P2: Rappels automatiques 24h avant le RDV
 
-## Mise à jour du site IONOS
+## Mise à jour IONOS
 ```bash
 cd /var/www/creativindustry
 git pull origin main
 cd frontend && npm run build
-cd ../backend
-source venv/bin/activate
-pip install -r requirements.txt
 sudo systemctl restart creativindustry
 ```
