@@ -2961,8 +2961,21 @@ const EditServiceForm = ({ service, onSave, onCancel }) => {
     description: service.description,
     price: service.price,
     duration: service.duration || "",
-    is_active: service.is_active
+    is_active: service.is_active,
+    features: service.features || []
   });
+  const [newFeature, setNewFeature] = useState("");
+
+  const addFeature = () => {
+    if (newFeature.trim()) {
+      setFormData({ ...formData, features: [...formData.features, newFeature.trim()] });
+      setNewFeature("");
+    }
+  };
+
+  const removeFeature = (index) => {
+    setFormData({ ...formData, features: formData.features.filter((_, i) => i !== index) });
+  };
 
   return (
     <div className="space-y-4">
@@ -3000,6 +3013,39 @@ const EditServiceForm = ({ service, onSave, onCancel }) => {
           data-testid="edit-service-duration"
         />
       </div>
+      
+      {/* Features Editor */}
+      <div className="border border-white/10 p-3 space-y-2">
+        <p className="text-xs text-white/60 font-semibold uppercase tracking-wider">Prestations incluses</p>
+        {formData.features.map((feature, index) => (
+          <div key={index} className="flex items-center gap-2 bg-background/50 p-2">
+            <span className="text-sm flex-1">{feature}</span>
+            <button 
+              onClick={() => removeFeature(index)}
+              className="text-red-400 hover:text-red-300 text-xs px-2"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newFeature}
+            onChange={(e) => setNewFeature(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
+            className="flex-1 bg-background border border-white/20 px-3 py-2 text-sm"
+            placeholder="Ajouter une prestation..."
+          />
+          <button 
+            onClick={addFeature}
+            className="btn-primary px-4 py-2 text-xs"
+          >
+            +
+          </button>
+        </div>
+      </div>
+      
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
