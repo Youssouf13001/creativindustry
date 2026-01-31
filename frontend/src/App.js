@@ -2145,6 +2145,444 @@ const EditServiceForm = ({ service, onSave, onCancel }) => {
   );
 };
 
+// ==================== CLIENT LOGIN PAGE ====================
+const ClientLogin = () => {
+  const [isRegister, setIsRegister] = useState(false);
+  const [formData, setFormData] = useState({ email: "", password: "", name: "", phone: "" });
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem("client_token");
+    if (token) {
+      navigate("/client/dashboard");
+    }
+  }, [navigate]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const endpoint = isRegister ? "/client/register" : "/client/login";
+      const payload = isRegister ? formData : { email: formData.email, password: formData.password };
+      const res = await axios.post(`${API}${endpoint}`, payload);
+      localStorage.setItem("client_token", res.data.token);
+      localStorage.setItem("client_user", JSON.stringify(res.data.client));
+      toast.success(isRegister ? "Compte créé !" : "Connexion réussie !");
+      navigate("/client/dashboard");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur de connexion");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="pt-20 min-h-screen flex items-center justify-center" data-testid="client-login-page">
+      <div className="w-full max-w-md p-8">
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <User className="text-primary" size={32} />
+          <h1 className="font-primary font-black text-3xl tracking-tighter uppercase">
+            <span className="text-gold-gradient">Espace Client</span>
+          </h1>
+        </div>
+        <p className="font-secondary text-white/60 text-center mb-8">
+          {isRegister ? "Créez votre compte client" : "Connectez-vous pour accéder à vos fichiers"}
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {isRegister && (
+            <>
+              <div>
+                <label className="block font-primary text-sm mb-2">Nom complet</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="client-name-input"
+                />
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Téléphone</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  data-testid="client-phone-input"
+                />
+              </div>
+            </>
+          )}
+          <div>
+            <label className="block font-primary text-sm mb-2">Email</label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+              data-testid="client-email-input"
+            />
+          </div>
+          <div>
+            <label className="block font-primary text-sm mb-2">Mot de passe</label>
+            <input
+              type="password"
+              required
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+              data-testid="client-password-input"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-primary w-full py-4 text-sm disabled:opacity-50"
+            data-testid="client-submit-btn"
+          >
+            {loading ? "Chargement..." : isRegister ? "Créer mon compte" : "Se connecter"}
+          </button>
+        </form>
+
+        <p className="text-center text-white/60 text-sm mt-6">
+          {isRegister ? "Déjà un compte ?" : "Pas encore de compte ?"}{" "}
+          <button
+            onClick={() => setIsRegister(!isRegister)}
+            className="text-primary hover:underline"
+            data-testid="client-toggle-auth"
+          >
+            {isRegister ? "Se connecter" : "Créer un compte"}
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ==================== CLIENT DASHBOARD ====================
+const ClientDashboard = () => {
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [clientUser, setClientUser] = useState(null);
+  const navigate = useNavigate();
+
+  const token = localStorage.getItem("client_token");
+  const headers = { Authorization: `Bearer ${token}` };
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/client");
+      return;
+    }
+    const user = JSON.parse(localStorage.getItem("client_user") || "{}");
+    setClientUser(user);
+    fetchFiles();
+  }, [token, navigate]);
+
+  const fetchFiles = async () => {
+    try {
+      const res = await axios.get(`${API}/client/files`, { headers });
+      setFiles(res.data);
+    } catch (e) {
+      if (e.response?.status === 401) {
+        localStorage.removeItem("client_token");
+        navigate("/client");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("client_token");
+    localStorage.removeItem("client_user");
+    navigate("/client");
+  };
+
+  const fileTypeIcons = {
+    video: Video,
+    photo: Image,
+    document: FileText
+  };
+
+  const videos = files.filter(f => f.file_type === "video");
+  const photos = files.filter(f => f.file_type === "photo");
+  const documents = files.filter(f => f.file_type === "document");
+
+  return (
+    <div className="pt-20 min-h-screen" data-testid="client-dashboard">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="font-primary font-black text-3xl tracking-tighter uppercase">
+              <span className="text-gold-gradient">Mes Fichiers</span>
+            </h1>
+            {clientUser && (
+              <p className="text-white/60 mt-1">Bienvenue, {clientUser.name}</p>
+            )}
+          </div>
+          <button onClick={logout} className="btn-outline px-6 py-2 text-sm flex items-center gap-2" data-testid="client-logout-btn">
+            <LogOut size={16} /> Déconnexion
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="text-center text-white/60 py-20">Chargement...</div>
+        ) : files.length === 0 ? (
+          <div className="text-center py-20">
+            <FolderOpen className="mx-auto text-white/30 mb-4" size={64} />
+            <h2 className="font-primary font-bold text-xl mb-2">Aucun fichier disponible</h2>
+            <p className="text-white/60">Vos fichiers (vidéos et photos) apparaîtront ici une fois mis à disposition par notre équipe.</p>
+          </div>
+        ) : (
+          <>
+            {/* Videos Section */}
+            {videos.length > 0 && (
+              <section className="mb-12">
+                <h2 className="font-primary font-bold text-xl mb-6 flex items-center gap-3">
+                  <Video className="text-primary" size={24} /> Mes Vidéos
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {videos.map((file) => (
+                    <div key={file.id} className="bg-card border border-white/10 overflow-hidden card-hover" data-testid={`file-${file.id}`}>
+                      <div className="relative aspect-video bg-black/50 flex items-center justify-center">
+                        {file.thumbnail_url ? (
+                          <img src={file.thumbnail_url} alt={file.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <Video size={48} className="text-white/30" />
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-primary font-semibold mb-1">{file.title}</h3>
+                        {file.description && <p className="text-white/60 text-sm mb-3">{file.description}</p>}
+                        <a
+                          href={file.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-primary w-full py-2 text-xs inline-flex items-center justify-center gap-2"
+                        >
+                          <Download size={14} /> Télécharger / Voir
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Photos Section */}
+            {photos.length > 0 && (
+              <section className="mb-12">
+                <h2 className="font-primary font-bold text-xl mb-6 flex items-center gap-3">
+                  <Image className="text-primary" size={24} /> Mes Photos
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {photos.map((file) => (
+                    <a
+                      key={file.id}
+                      href={file.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-card border border-white/10 overflow-hidden card-hover group"
+                      data-testid={`file-${file.id}`}
+                    >
+                      <div className="relative aspect-square bg-black/50">
+                        {file.thumbnail_url ? (
+                          <img src={file.thumbnail_url} alt={file.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Image size={32} className="text-white/30" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Download size={24} className="text-primary" />
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <h3 className="font-primary font-semibold text-sm truncate">{file.title}</h3>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Documents Section */}
+            {documents.length > 0 && (
+              <section>
+                <h2 className="font-primary font-bold text-xl mb-6 flex items-center gap-3">
+                  <FileText className="text-primary" size={24} /> Documents
+                </h2>
+                <div className="space-y-4">
+                  {documents.map((file) => (
+                    <a
+                      key={file.id}
+                      href={file.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block bg-card border border-white/10 p-4 card-hover flex items-center justify-between"
+                      data-testid={`file-${file.id}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <FileText className="text-primary" size={24} />
+                        <div>
+                          <h3 className="font-primary font-semibold">{file.title}</h3>
+                          {file.description && <p className="text-white/60 text-sm">{file.description}</p>}
+                        </div>
+                      </div>
+                      <Download size={20} className="text-white/60" />
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ==================== CHATBOT WIDGET ====================
+const ChatWidget = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sessionId] = useState(() => `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    if (isOpen && messages.length === 0) {
+      setMessages([
+        {
+          role: "assistant",
+          content: "Bonjour ! 👋 Je suis l'assistant de CREATIVINDUSTRY. Comment puis-je vous aider ? Je peux répondre à vos questions sur nos services de mariage, podcast ou plateau TV."
+        }
+      ]);
+    }
+  }, [isOpen]);
+
+  const sendMessage = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || loading) return;
+
+    const userMessage = input.trim();
+    setInput("");
+    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+    setLoading(true);
+
+    try {
+      const res = await axios.post(`${API}/chat`, {
+        session_id: sessionId,
+        message: userMessage
+      });
+      setMessages(prev => [...prev, { role: "assistant", content: res.data.response }]);
+    } catch (e) {
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "Désolé, je rencontre un problème. Veuillez nous contacter au +33 1 23 45 67 89"
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      {/* Chat Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`fixed bottom-6 right-6 z-50 w-14 h-14 flex items-center justify-center transition-all ${
+          isOpen ? "bg-white/20 rotate-0" : "bg-primary"
+        }`}
+        data-testid="chat-toggle"
+      >
+        {isOpen ? <X size={24} className="text-white" /> : <MessageCircle size={24} className="text-black" />}
+      </button>
+
+      {/* Chat Window */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-24 right-6 z-50 w-[360px] max-w-[calc(100vw-48px)] bg-card border border-white/10 shadow-2xl"
+            data-testid="chat-window"
+          >
+            {/* Header */}
+            <div className="bg-primary p-4">
+              <h3 className="font-primary font-bold text-black">CREATIVINDUSTRY</h3>
+              <p className="text-black/70 text-sm">Assistant virtuel</p>
+            </div>
+
+            {/* Messages */}
+            <div className="h-80 overflow-y-auto p-4 space-y-4">
+              {messages.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] px-4 py-2 text-sm ${
+                      msg.role === "user"
+                        ? "bg-primary text-black"
+                        : "bg-white/10 text-white"
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {loading && (
+                <div className="flex justify-start">
+                  <div className="bg-white/10 px-4 py-2 text-sm text-white/60">
+                    En train d'écrire...
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <form onSubmit={sendMessage} className="border-t border-white/10 p-4 flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Écrivez votre message..."
+                className="flex-1 bg-background border border-white/20 px-4 py-2 text-sm focus:border-primary focus:outline-none"
+                data-testid="chat-input"
+              />
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                className="btn-primary px-4 py-2 disabled:opacity-50"
+                data-testid="chat-send"
+              >
+                <Send size={16} />
+              </button>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+
 // ==================== APP ====================
 function App() {
   return (
@@ -2163,8 +2601,11 @@ function App() {
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/client" element={<ClientLogin />} />
+          <Route path="/client/dashboard" element={<ClientDashboard />} />
         </Routes>
         <Footer />
+        <ChatWidget />
         <Toaster position="top-right" />
       </BrowserRouter>
     </div>
