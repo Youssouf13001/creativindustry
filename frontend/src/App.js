@@ -2860,7 +2860,7 @@ const AdminDashboard = () => {
                           </>
                         )}
                       </button>
-                      <p className="text-xs text-white/50 mt-2">JPG, PNG, WEBP, GIF, MP4, WEBM, MOV (max 100 Mo)</p>
+                      <p className="text-xs text-white/50 mt-2">JPG, PNG, WEBP, GIF, MP4, WEBM, MOV (max 1 Go)</p>
                     </div>
                     
                     {/* Preview uploaded file */}
