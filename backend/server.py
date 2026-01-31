@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime, timezone
 import jwt
 import bcrypt
+from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -26,6 +27,7 @@ security = HTTPBearer()
 
 SECRET_KEY = os.environ.get('JWT_SECRET', 'creativindustry-secret-key-2024')
 ALGORITHM = "HS256"
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
 # ==================== MODELS ====================
 
