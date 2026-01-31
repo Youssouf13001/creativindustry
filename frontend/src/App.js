@@ -29,6 +29,7 @@ const Header = () => {
     { name: "Plateau TV", path: "/services/tv_set" },
     { name: "Portfolio", path: "/portfolio" },
     { name: "Contact", path: "/contact" },
+    { name: "Espace Client", path: "/client" },
   ];
 
   return (
