@@ -2123,6 +2123,9 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [editingService, setEditingService] = useState(null);
   const [editingOption, setEditingOption] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [appointmentResponse, setAppointmentResponse] = useState({ status: "", admin_response: "", new_proposed_date: "", new_proposed_time: "" });
   const [editingPortfolio, setEditingPortfolio] = useState(null);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
   const [uploadingClientFile, setUploadingClientFile] = useState(false);
