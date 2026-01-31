@@ -2166,7 +2166,7 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes, clientsRes, contentRes] = await Promise.all([
+      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes, clientsRes, contentRes, appointmentsRes] = await Promise.all([
         axios.get(`${API}/stats`, { headers }),
         axios.get(`${API}/bookings`, { headers }),
         axios.get(`${API}/wedding-quotes`, { headers }),
@@ -2175,7 +2175,8 @@ const AdminDashboard = () => {
         axios.get(`${API}/contact`, { headers }),
         axios.get(`${API}/admin/portfolio`, { headers }),
         axios.get(`${API}/admin/clients`, { headers }),
-        axios.get(`${API}/content`)
+        axios.get(`${API}/content`),
+        axios.get(`${API}/appointments`, { headers })
       ]);
       setStats(statsRes.data);
       setBookings(bookingsRes.data);
@@ -2187,6 +2188,7 @@ const AdminDashboard = () => {
       setClients(clientsRes.data);
       setSiteContent(contentRes.data);
       setEditingContent(contentRes.data);
+      setAppointments(appointmentsRes.data);
     } catch (e) {
       if (e.response?.status === 401) {
         localStorage.removeItem("admin_token");
