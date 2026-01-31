@@ -2970,6 +2970,77 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
+
+        {/* Settings Tab */}
+        {activeTab === "settings" && (
+          <div>
+            <h2 className="font-primary font-bold text-xl mb-6">Paramètres</h2>
+            
+            {/* Bank Details */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-primary">💳 Coordonnées bancaires</h3>
+              <p className="text-white/60 text-sm mb-4">Ces informations seront envoyées aux clients pour le paiement de l'acompte.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titulaire du compte</label>
+                  <input
+                    type="text"
+                    value={bankDetails.account_holder}
+                    onChange={(e) => setBankDetails({ ...bankDetails, account_holder: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                    placeholder="CREATIVINDUSTRY FRANCE"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Nom de la banque</label>
+                  <input
+                    type="text"
+                    value={bankDetails.bank_name}
+                    onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                    placeholder="Revolut"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">IBAN</label>
+                  <input
+                    type="text"
+                    value={bankDetails.iban}
+                    onChange={(e) => setBankDetails({ ...bankDetails, iban: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3 font-mono"
+                    placeholder="FR76..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">BIC</label>
+                  <input
+                    type="text"
+                    value={bankDetails.bic}
+                    onChange={(e) => setBankDetails({ ...bankDetails, bic: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3 font-mono"
+                    placeholder="REVOFRP2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Pourcentage d'acompte (%)</label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="100"
+                    value={bankDetails.deposit_percentage}
+                    onChange={(e) => setBankDetails({ ...bankDetails, deposit_percentage: parseInt(e.target.value) })}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+              </div>
+              
+              <button onClick={updateBankDetails} className="btn-primary px-6 py-3 mt-6">
+                Enregistrer les coordonnées bancaires
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
