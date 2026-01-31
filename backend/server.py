@@ -316,7 +316,7 @@ async def register_admin(data: AdminCreate):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.admins.insert_one(admin_doc)
-    token = create_token(admin_id)
+    token = create_token(admin_id, "admin")
     return {"token": token, "admin": {"id": admin_id, "email": data.email, "name": data.name}}
 
 @api_router.post("/auth/login", response_model=dict)
@@ -325,12 +325,180 @@ async def login_admin(data: AdminLogin):
     if not admin or not verify_password(data.password, admin["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    token = create_token(admin["id"])
+    token = create_token(admin["id"], "admin")
     return {"token": token, "admin": {"id": admin["id"], "email": admin["email"], "name": admin["name"]}}
 
 @api_router.get("/auth/me", response_model=AdminResponse)
 async def get_me(admin: dict = Depends(get_current_admin)):
     return AdminResponse(id=admin["id"], email=admin["email"], name=admin["name"])
+
+# ==================== CLIENT AUTH ROUTES ====================
+
+@api_router.post("/client/register", response_model=dict)
+async def register_client(data: ClientCreate):
+    existing = await db.clients.find_one({"email": data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email déjà utilisé")
+    
+    client_id = str(uuid.uuid4())
+    client_doc = {
+        "id": client_id,
+        "email": data.email,
+        "password": hash_password(data.password),
+        "name": data.name,
+        "phone": data.phone,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.clients.insert_one(client_doc)
+    token = create_token(client_id, "client")
+    return {"token": token, "client": {"id": client_id, "email": data.email, "name": data.name, "phone": data.phone}}
+
+@api_router.post("/client/login", response_model=dict)
+async def login_client(data: ClientLogin):
+    client = await db.clients.find_one({"email": data.email}, {"_id": 0})
+    if not client or not verify_password(data.password, client["password"]):
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+    
+    token = create_token(client["id"], "client")
+    return {"token": token, "client": {"id": client["id"], "email": client["email"], "name": client["name"], "phone": client.get("phone")}}
+
+@api_router.get("/client/me", response_model=ClientResponse)
+async def get_client_me(client: dict = Depends(get_current_client)):
+    return ClientResponse(id=client["id"], email=client["email"], name=client["name"], phone=client.get("phone"))
+
+# ==================== CLIENT FILES ROUTES ====================
+
+@api_router.get("/client/files", response_model=List[ClientFile])
+async def get_client_files(client: dict = Depends(get_current_client)):
+    files = await db.client_files.find({"client_id": client["id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for f in files:
+        if isinstance(f.get('created_at'), str):
+            f['created_at'] = datetime.fromisoformat(f['created_at'])
+    return files
+
+@api_router.post("/client/files", response_model=ClientFile)
+async def create_client_file(data: ClientFileCreate, admin: dict = Depends(get_current_admin)):
+    # Verify client exists
+    client = await db.clients.find_one({"id": data.client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    file = ClientFile(**data.model_dump())
+    doc = file.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.client_files.insert_one(doc)
+    return file
+
+@api_router.delete("/client/files/{file_id}")
+async def delete_client_file(file_id: str, admin: dict = Depends(get_current_admin)):
+    result = await db.client_files.delete_one({"id": file_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="File not found")
+    return {"message": "File deleted"}
+
+# ==================== ADMIN CLIENT MANAGEMENT ====================
+
+@api_router.get("/admin/clients", response_model=List[ClientResponse])
+async def get_all_clients(admin: dict = Depends(get_current_admin)):
+    clients = await db.clients.find({}, {"_id": 0, "password": 0}).to_list(500)
+    return clients
+
+@api_router.post("/admin/clients", response_model=dict)
+async def create_client_by_admin(data: ClientCreate, admin: dict = Depends(get_current_admin)):
+    existing = await db.clients.find_one({"email": data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email déjà utilisé")
+    
+    client_id = str(uuid.uuid4())
+    client_doc = {
+        "id": client_id,
+        "email": data.email,
+        "password": hash_password(data.password),
+        "name": data.name,
+        "phone": data.phone,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.clients.insert_one(client_doc)
+    return {"id": client_id, "email": data.email, "name": data.name, "phone": data.phone}
+
+@api_router.get("/admin/clients/{client_id}/files", response_model=List[ClientFile])
+async def get_client_files_admin(client_id: str, admin: dict = Depends(get_current_admin)):
+    files = await db.client_files.find({"client_id": client_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    for f in files:
+        if isinstance(f.get('created_at'), str):
+            f['created_at'] = datetime.fromisoformat(f['created_at'])
+    return files
+
+# ==================== CHATBOT ROUTES ====================
+
+@api_router.post("/chat")
+async def chat_with_bot(data: ChatRequest):
+    try:
+        # Get chat history for this session
+        history = await db.chat_messages.find({"session_id": data.session_id}, {"_id": 0}).sort("created_at", 1).to_list(50)
+        
+        # Build messages for context
+        messages_for_llm = []
+        for msg in history[-10:]:  # Last 10 messages for context
+            messages_for_llm.append({"role": msg["role"], "content": msg["content"]})
+        
+        # Initialize chat
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=data.session_id,
+            system_message="""Tu es l'assistant virtuel de CREATIVINDUSTRY France, un studio de production créative spécialisé dans :
+- La photographie et vidéographie de mariage
+- Les studios podcast
+- Les plateaux TV
+
+Tu dois répondre en français de manière professionnelle et chaleureuse. 
+Tu aides les visiteurs à :
+- Comprendre nos services et tarifs
+- Les orienter vers la bonne formule
+- Répondre aux questions sur le processus de réservation
+- Donner des informations sur le studio
+
+Services principaux :
+- Mariages : Formules de 1500€ à 4500€ (Essentielle, Complète, Premium)
+- Podcast : Location studio de 150€/h à 700€/jour
+- Plateau TV : De 800€ à 3500€ selon les besoins
+
+Si tu ne sais pas répondre à une question spécifique, invite le visiteur à nous contacter directement ou à demander un devis personnalisé."""
+        ).with_model("openai", "gpt-4o")
+        
+        # Save user message
+        user_msg = {
+            "id": str(uuid.uuid4()),
+            "session_id": data.session_id,
+            "role": "user",
+            "content": data.message,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.chat_messages.insert_one(user_msg)
+        
+        # Get response from AI
+        user_message = UserMessage(text=data.message)
+        response = await chat.send_message(user_message)
+        
+        # Save assistant message
+        assistant_msg = {
+            "id": str(uuid.uuid4()),
+            "session_id": data.session_id,
+            "role": "assistant",
+            "content": response,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.chat_messages.insert_one(assistant_msg)
+        
+        return {"response": response, "session_id": data.session_id}
+    except Exception as e:
+        logging.error(f"Chat error: {str(e)}")
+        return {"response": "Désolé, je rencontre un problème technique. Veuillez nous contacter directement au +33 1 23 45 67 89 ou par email à contact@creativindustry.fr", "session_id": data.session_id}
+
+@api_router.get("/chat/{session_id}/history")
+async def get_chat_history(session_id: str):
+    messages = await db.chat_messages.find({"session_id": session_id}, {"_id": 0}).sort("created_at", 1).to_list(100)
+    return messages
 
 # ==================== SERVICES ROUTES ====================
 
