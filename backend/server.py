@@ -295,6 +295,67 @@ class PortfolioItemUpdate(BaseModel):
     is_featured: Optional[bool] = None
     is_active: Optional[bool] = None
 
+# ==================== SITE CONTENT MODELS ====================
+
+class SiteContent(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = "main"
+    # Hero Section
+    hero_title: str = "Créons vos moments d'exception"
+    hero_subtitle: str = "Studio de production créative pour mariages, podcasts et productions télévisées. L'excellence au service de votre vision."
+    hero_image: str = "https://images.unsplash.com/photo-1673195577797-d86fd842ade8?w=1920"
+    # Services
+    wedding_title: str = "Mariages"
+    wedding_subtitle: str = "Immortalisez votre amour"
+    wedding_description: str = "Photographie et vidéographie cinématique pour immortaliser votre jour le plus précieux."
+    wedding_image: str = "https://images.unsplash.com/photo-1644951565774-1b0904943820?w=800"
+    podcast_title: str = "Studio Podcast"
+    podcast_subtitle: str = "Votre voix, notre expertise"
+    podcast_description: str = "Studio d'enregistrement professionnel équipé pour vos podcasts et interviews."
+    podcast_image: str = "https://images.unsplash.com/photo-1659083725992-9d88c12e719c?w=800"
+    tv_title: str = "Plateau TV"
+    tv_subtitle: str = "Production professionnelle"
+    tv_description: str = "Plateaux de tournage équipés pour vos productions télévisées et corporate."
+    tv_image: str = "https://images.unsplash.com/photo-1643651342963-d4478284de5d?w=800"
+    # Contact Info
+    phone: str = "+33 1 23 45 67 89"
+    email: str = "contact@creativindustry.fr"
+    address: str = "123 Rue de la Création, 75001 Paris, France"
+    hours: str = "Lun - Ven: 9h - 19h, Sam: Sur rendez-vous"
+    # Social Links
+    instagram: str = ""
+    facebook: str = ""
+    youtube: str = ""
+    # CTA Section
+    cta_title: str = "Prêt à créer quelque chose d'extraordinaire ?"
+    cta_subtitle: str = "Contactez-nous pour discuter de votre projet et obtenir un devis personnalisé."
+
+class SiteContentUpdate(BaseModel):
+    hero_title: Optional[str] = None
+    hero_subtitle: Optional[str] = None
+    hero_image: Optional[str] = None
+    wedding_title: Optional[str] = None
+    wedding_subtitle: Optional[str] = None
+    wedding_description: Optional[str] = None
+    wedding_image: Optional[str] = None
+    podcast_title: Optional[str] = None
+    podcast_subtitle: Optional[str] = None
+    podcast_description: Optional[str] = None
+    podcast_image: Optional[str] = None
+    tv_title: Optional[str] = None
+    tv_subtitle: Optional[str] = None
+    tv_description: Optional[str] = None
+    tv_image: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    hours: Optional[str] = None
+    instagram: Optional[str] = None
+    facebook: Optional[str] = None
+    youtube: Optional[str] = None
+    cta_title: Optional[str] = None
+    cta_subtitle: Optional[str] = None
+
 # ==================== AUTH HELPERS ====================
 
 def hash_password(password: str) -> str:
