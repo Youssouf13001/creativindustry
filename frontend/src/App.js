@@ -4062,6 +4062,8 @@ function App() {
           <Route path="/devis-mariage" element={<WeddingQuotePage />} />
           <Route path="/portfolio" element={<PortfolioPage />} />
           <Route path="/booking" element={<BookingPage />} />
+          <Route path="/rendez-vous" element={<AppointmentPage />} />
+          <Route path="/rendez-vous/confirmer/:appointmentId/:token" element={<AppointmentConfirmPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
