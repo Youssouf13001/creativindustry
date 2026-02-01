@@ -27,6 +27,8 @@ UPLOADS_DIR = ROOT_DIR / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
 (UPLOADS_DIR / "portfolio").mkdir(exist_ok=True)
 (UPLOADS_DIR / "clients").mkdir(exist_ok=True)
+(UPLOADS_DIR / "galleries").mkdir(exist_ok=True)
+(UPLOADS_DIR / "selections").mkdir(exist_ok=True)
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
