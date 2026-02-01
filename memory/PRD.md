@@ -26,11 +26,14 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
   - Créer des galeries par client (ex: "Mariage 15 juin")
   - Upload multiple de photos
   - Voir les photos sélectionnées par le client
+  - **⬇ Télécharger ZIP** des photos sélectionnées
   - Supprimer photos/galeries
 - ✅ **Client - Sélection des photos** :
   - Nouvel onglet "📸 Sélection Photos" dans l'espace client
   - Vue des galeries disponibles
-  - Clic pour sélectionner/désélectionner les photos
+  - **🔍 Lightbox** pour voir les photos en grand (navigation ← →)
+  - Clic pour sélectionner/désélectionner (bouton ✓ sur chaque photo)
+  - Numéro d'ordre affiché sur chaque photo sélectionnée
   - Sauvegarde brouillon possible
   - Validation définitive de la sélection
 - ✅ **Email de notification** à l'admin quand le client valide sa sélection
