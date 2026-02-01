@@ -2882,13 +2882,29 @@ const AdminDashboard = () => {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm text-white/60 mb-2">Image (URL)</label>
-                  <input
-                    type="url"
-                    value={editingContent.tv_image || ""}
-                    onChange={(e) => setEditingContent({...editingContent, tv_image: e.target.value})}
-                    className="w-full bg-background border border-white/20 px-4 py-3"
-                  />
+                  <label className="block text-sm text-white/60 mb-2">Image</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={editingContent.tv_image || ""}
+                      onChange={(e) => setEditingContent({...editingContent, tv_image: e.target.value})}
+                      className="flex-1 bg-background border border-white/20 px-4 py-3"
+                      placeholder="URL ou cliquez sur Uploader"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => triggerContentUpload('tv_image')}
+                      disabled={uploadingContentImage}
+                      className="btn-primary px-4 py-3 flex items-center gap-2"
+                    >
+                      {uploadingContentImage && currentContentField === 'tv_image' ? (
+                        <Loader size={16} className="animate-spin" />
+                      ) : (
+                        <Upload size={16} />
+                      )}
+                      Uploader
+                    </button>
+                  </div>
                   {editingContent.tv_image && (
                     <img src={editingContent.tv_image} alt="Preview" className="mt-2 h-32 object-cover" />
                   )}
