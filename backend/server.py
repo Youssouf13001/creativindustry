@@ -83,6 +83,154 @@ def send_email(to_email: str, subject: str, html_content: str):
         logging.error(f"Failed to send email: {str(e)}")
         return False
 
+def send_email_with_attachment(to_email: str, subject: str, html_content: str, attachment_data: bytes, attachment_filename: str):
+    """Send email with PDF attachment"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        logging.warning("SMTP credentials not configured")
+        return False
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_EMAIL
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        
+        # Attach HTML body
+        msg.attach(MIMEText(html_content, 'html'))
+        
+        # Attach PDF
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(attachment_data)
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename="{attachment_filename}"')
+        msg.attach(part)
+        
+        # Send email
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+        
+        logging.info(f"Email with attachment sent to {to_email}")
+        return True
+    except Exception as e:
+        logging.error(f"Failed to send email with attachment: {str(e)}")
+        return False
+
+def generate_quote_pdf(quote_data: dict, options_details: list) -> bytes:
+    """Generate a professional PDF quote"""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#d4af37'), alignment=TA_CENTER, spaceAfter=20)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=12, textColor=colors.HexColor('#666666'), alignment=TA_CENTER, spaceAfter=30)
+    heading_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#d4af37'), spaceBefore=20, spaceAfter=10)
+    normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=11, spaceAfter=5)
+    
+    elements = []
+    
+    # Header
+    elements.append(Paragraph("CREATIVINDUSTRY France", title_style))
+    elements.append(Paragraph("Devis Mariage", subtitle_style))
+    elements.append(Spacer(1, 20))
+    
+    # Quote reference
+    ref_date = datetime.now().strftime("%d/%m/%Y")
+    quote_id = quote_data.get('id', '')[:8].upper()
+    elements.append(Paragraph(f"<b>Référence:</b> #{quote_id} | <b>Date:</b> {ref_date}", normal_style))
+    elements.append(Spacer(1, 20))
+    
+    # Client info section
+    elements.append(Paragraph("Informations Client", heading_style))
+    
+    client_data = [
+        ["Nom:", quote_data.get('client_name', '')],
+        ["Email:", quote_data.get('client_email', '')],
+        ["Téléphone:", quote_data.get('client_phone', '')],
+        ["Date du mariage:", quote_data.get('event_date', '')],
+        ["Lieu:", quote_data.get('event_location', '') or 'Non précisé'],
+    ]
+    
+    client_table = Table(client_data, colWidths=[4*cm, 12*cm])
+    client_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#666666')),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    elements.append(client_table)
+    elements.append(Spacer(1, 20))
+    
+    # Prestations section
+    elements.append(Paragraph("Prestations Sélectionnées", heading_style))
+    
+    # Table header
+    prestations_data = [["Prestation", "Prix"]]
+    
+    # Group by category
+    categories = {'coverage': '📸 Couverture', 'extras': '✨ Options', 'editing': '🎬 Livrables', 'other': 'Autres'}
+    options_by_cat = {}
+    for opt in options_details:
+        cat = opt.get('category', 'other')
+        if cat not in options_by_cat:
+            options_by_cat[cat] = []
+        options_by_cat[cat].append(opt)
+    
+    for cat, cat_label in categories.items():
+        if cat in options_by_cat:
+            prestations_data.append([cat_label, ""])
+            for opt in options_by_cat[cat]:
+                prestations_data.append([f"   {opt['name']}", f"{opt['price']} €"])
+    
+    # Total
+    total = sum(opt['price'] for opt in options_details)
+    prestations_data.append(["TOTAL", f"{total} €"])
+    
+    prestations_table = Table(prestations_data, colWidths=[12*cm, 4*cm])
+    prestations_table.setStyle(TableStyle([
+        # Header
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#d4af37')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 11),
+        ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+        # Body
+        ('FONTSIZE', (0, 1), (-1, -2), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#dddddd')),
+        # Category rows (bold)
+        ('FONTNAME', (0, 1), (0, -2), 'Helvetica-Bold'),
+        ('TEXTCOLOR', (0, 1), (0, -2), colors.HexColor('#d4af37')),
+        # Total row
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#d4af37')),
+        ('TEXTCOLOR', (0, -1), (-1, -1), colors.black),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, -1), (-1, -1), 14),
+    ]))
+    elements.append(prestations_table)
+    elements.append(Spacer(1, 30))
+    
+    # Message if any
+    if quote_data.get('message'):
+        elements.append(Paragraph("Message du Client", heading_style))
+        elements.append(Paragraph(f"<i>\"{quote_data['message']}\"</i>", normal_style))
+        elements.append(Spacer(1, 20))
+    
+    # Footer
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#888888'), alignment=TA_CENTER, spaceBefore=30)
+    elements.append(Paragraph("─" * 50, footer_style))
+    elements.append(Paragraph("CREATIVINDUSTRY France", footer_style))
+    elements.append(Paragraph("contact@creativindustry.com | communication@creativindustry.com", footer_style))
+    elements.append(Paragraph(f"Devis valable 30 jours à compter du {ref_date}", footer_style))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.read()
+
 def send_file_notification_email(client_email: str, client_name: str, file_title: str, file_type: str, file_url: str):
     """Send notification email when a file is added to client space"""
     
