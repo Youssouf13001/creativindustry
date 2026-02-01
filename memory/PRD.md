@@ -20,6 +20,12 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V9 - Upload Miniature Direct (01 Fév 2026)
+- ✅ Remplacement du champ URL miniature par bouton d'upload direct
+- ✅ Aperçu de la miniature avec bouton de suppression
+- ✅ Limite 50 Mo pour les miniatures (JPG, PNG, WEBP, GIF)
+- ✅ Fonctionnalité disponible dans Portfolio et Fichiers Client
+
 ### V8 - Système de Rendez-vous (31 Jan 2026)
 - ✅ **Page /rendez-vous** pour prise de RDV
   - 5 motifs : Signature contrat, Discussion contrat, Facturation, Projet, Autre
