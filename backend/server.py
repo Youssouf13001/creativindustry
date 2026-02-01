@@ -1895,6 +1895,28 @@ async def update_wedding_quote_status(quote_id: str, status: str, admin: dict = 
         raise HTTPException(status_code=404, detail="Quote not found")
     return {"message": "Status updated"}
 
+@api_router.get("/wedding-quotes/{quote_id}", response_model=dict)
+async def get_wedding_quote_detail(quote_id: str, admin: dict = Depends(get_current_admin)):
+    quote = await db.wedding_quotes.find_one({"id": quote_id}, {"_id": 0})
+    if not quote:
+        raise HTTPException(status_code=404, detail="Quote not found")
+    
+    # Convert datetime if needed
+    if isinstance(quote.get('created_at'), str):
+        quote['created_at'] = datetime.fromisoformat(quote['created_at'])
+    
+    # Group options by category
+    options_by_category = {}
+    for opt in quote.get('options_details', []):
+        category = opt.get('category', 'other')
+        if category not in options_by_category:
+            options_by_category[category] = []
+        options_by_category[category].append(opt)
+    
+    quote['options_by_category'] = options_by_category
+    
+    return quote
+
 # ==================== PORTFOLIO ROUTES ====================
 
 @api_router.get("/portfolio", response_model=List[PortfolioItem])
