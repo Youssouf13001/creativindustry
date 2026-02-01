@@ -61,13 +61,39 @@ const ClientDashboard = () => {
     }
   };
 
-  const togglePhotoSelection = (photoId) => {
+  const togglePhotoSelection = (photoId, e) => {
+    e.stopPropagation();
     if (isValidated) return; // Can't modify if already validated
     setSelectedPhotos(prev => 
       prev.includes(photoId) 
         ? prev.filter(id => id !== photoId)
         : [...prev, photoId]
     );
+  };
+
+  const openLightbox = (photo, index) => {
+    setLightboxPhoto(photo);
+    setLightboxIndex(index);
+  };
+
+  const closeLightbox = () => {
+    setLightboxPhoto(null);
+  };
+
+  const nextPhoto = (e) => {
+    e.stopPropagation();
+    if (!selectedGallery?.photos) return;
+    const nextIndex = (lightboxIndex + 1) % selectedGallery.photos.length;
+    setLightboxIndex(nextIndex);
+    setLightboxPhoto(selectedGallery.photos[nextIndex]);
+  };
+
+  const prevPhoto = (e) => {
+    e.stopPropagation();
+    if (!selectedGallery?.photos) return;
+    const prevIndex = (lightboxIndex - 1 + selectedGallery.photos.length) % selectedGallery.photos.length;
+    setLightboxIndex(prevIndex);
+    setLightboxPhoto(selectedGallery.photos[prevIndex]);
   };
 
   const saveSelection = async () => {
