@@ -381,6 +381,19 @@ const HomePage = () => {
 const ServicePage = ({ category }) => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showBuyModal, setShowBuyModal] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [bankDetails, setBankDetails] = useState(null);
+  const [buyFormData, setBuyFormData] = useState({
+    client_name: "",
+    client_email: "",
+    client_phone: "",
+    event_date: "",
+    event_location: "",
+    message: ""
+  });
+  const [buyLoading, setBuyLoading] = useState(false);
+  const [buySuccess, setBuySuccess] = useState(false);
 
   const categoryInfo = {
     wedding: {
@@ -411,21 +424,209 @@ const ServicePage = ({ category }) => {
   const Icon = info.icon;
 
   useEffect(() => {
-    const fetchServices = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get(`${API}/services?category=${category}`);
-        setServices(res.data);
+        const [servicesRes, bankRes] = await Promise.all([
+          axios.get(`${API}/services?category=${category}`),
+          axios.get(`${API}/bank-details`)
+        ]);
+        setServices(servicesRes.data);
+        setBankDetails(bankRes.data);
       } catch (e) {
         console.error(e);
       } finally {
         setLoading(false);
       }
     };
-    fetchServices();
+    fetchData();
   }, [category]);
+
+  const openBuyModal = (service) => {
+    setSelectedPackage(service);
+    setBuyFormData({ client_name: "", client_email: "", client_phone: "", event_date: "", event_location: "", message: "" });
+    setBuySuccess(false);
+    setShowBuyModal(true);
+  };
+
+  const handleBuySubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedPackage) return;
+    
+    setBuyLoading(true);
+    try {
+      await axios.post(`${API}/bookings`, {
+        ...buyFormData,
+        service_id: selectedPackage.id
+      });
+      setBuySuccess(true);
+      toast.success("Réservation confirmée ! Vérifiez votre email.");
+    } catch (e) {
+      toast.error("Erreur lors de la réservation");
+    } finally {
+      setBuyLoading(false);
+    }
+  };
+
+  const depositAmount = selectedPackage ? (selectedPackage.price * (bankDetails?.deposit_percentage || 30) / 100) : 0;
 
   return (
     <div className="pt-20" data-testid={`service-page-${category}`}>
+      {/* Buy Modal */}
+      {showBuyModal && selectedPackage && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-card border border-primary w-full max-w-2xl my-8">
+            {/* Modal Header */}
+            <div className="bg-primary/10 p-6 border-b border-primary/30">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="font-primary font-bold text-2xl">{selectedPackage.name}</h2>
+                  <p className="text-white/60 text-sm mt-1">{selectedPackage.description}</p>
+                </div>
+                <button onClick={() => setShowBuyModal(false)} className="text-white/60 hover:text-white">
+                  <X size={24} />
+                </button>
+              </div>
+              <div className="mt-4 flex items-baseline gap-3">
+                <span className="font-primary font-black text-3xl text-primary">{selectedPackage.price}€</span>
+                <span className="text-white/50">Acompte: {depositAmount.toFixed(0)}€ ({bankDetails?.deposit_percentage || 30}%)</span>
+              </div>
+            </div>
+
+            {!buySuccess ? (
+              <form onSubmit={handleBuySubmit} className="p-6">
+                <h3 className="font-primary font-semibold text-lg mb-4">Vos informations</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <label className="block text-sm text-white/60 mb-2">Nom complet *</label>
+                    <input
+                      type="text"
+                      required
+                      value={buyFormData.client_name}
+                      onChange={(e) => setBuyFormData({ ...buyFormData, client_name: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-white/60 mb-2">Email *</label>
+                    <input
+                      type="email"
+                      required
+                      value={buyFormData.client_email}
+                      onChange={(e) => setBuyFormData({ ...buyFormData, client_email: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-white/60 mb-2">Téléphone *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={buyFormData.client_phone}
+                      onChange={(e) => setBuyFormData({ ...buyFormData, client_phone: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-white/60 mb-2">Date de l'événement *</label>
+                    <input
+                      type="date"
+                      required
+                      value={buyFormData.event_date}
+                      onChange={(e) => setBuyFormData({ ...buyFormData, event_date: e.target.value })}
+                      min={new Date().toISOString().split("T")[0]}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm text-white/60 mb-2">Lieu de l'événement</label>
+                    <input
+                      type="text"
+                      value={buyFormData.event_location}
+                      onChange={(e) => setBuyFormData({ ...buyFormData, event_location: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                      placeholder="Ville, salle de réception..."
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm text-white/60 mb-2">Message (optionnel)</label>
+                    <textarea
+                      value={buyFormData.message}
+                      onChange={(e) => setBuyFormData({ ...buyFormData, message: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                      rows={2}
+                      placeholder="Informations complémentaires..."
+                    />
+                  </div>
+                </div>
+
+                {/* Price Summary */}
+                <div className="bg-primary/10 border border-primary/30 p-4 mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-white/70">Prix de la formule</span>
+                    <span className="font-bold">{selectedPackage.price}€</span>
+                  </div>
+                  <div className="flex justify-between items-center text-lg">
+                    <span className="text-white/70">Acompte à régler ({bankDetails?.deposit_percentage || 30}%)</span>
+                    <span className="font-primary font-bold text-2xl text-primary">{depositAmount.toFixed(0)}€</span>
+                  </div>
+                  <p className="text-xs text-white/50 mt-2">
+                    Vous recevrez un email avec les coordonnées bancaires pour effectuer le virement.
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => setShowBuyModal(false)} className="btn-outline flex-1 py-3">
+                    Annuler
+                  </button>
+                  <button type="submit" disabled={buyLoading} className="btn-primary flex-1 py-3 disabled:opacity-50">
+                    {buyLoading ? "Envoi..." : "Valider et recevoir le RIB"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* Success State */
+              <div className="p-6 text-center">
+                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Check size={40} className="text-green-500" />
+                </div>
+                <h3 className="font-primary font-bold text-2xl mb-4 text-green-500">Réservation confirmée !</h3>
+                <p className="text-white/70 mb-6">
+                  Un email a été envoyé à <span className="text-primary">{buyFormData.client_email}</span> avec les coordonnées bancaires pour effectuer le virement de l'acompte.
+                </p>
+
+                {bankDetails && (
+                  <div className="bg-background p-6 text-left mb-6">
+                    <h4 className="font-primary font-semibold mb-4">💳 Coordonnées bancaires</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Titulaire</span>
+                        <span className="font-mono">{bankDetails.account_holder}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/60">IBAN</span>
+                        <span className="font-mono text-xs">{bankDetails.iban}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/60">BIC</span>
+                        <span className="font-mono">{bankDetails.bic}</span>
+                      </div>
+                      <div className="flex justify-between text-primary font-bold mt-4 pt-4 border-t border-white/10">
+                        <span>Montant à virer</span>
+                        <span>{depositAmount.toFixed(0)}€</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <button onClick={() => setShowBuyModal(false)} className="btn-primary px-8 py-3">
+                  Fermer
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Hero */}
       <section className="relative py-24 md:py-32 overflow-hidden">
         <div className="absolute inset-0">
