@@ -1016,11 +1016,39 @@ const AdminDashboard = () => {
                       <h4 className="font-primary font-bold text-green-400">
                         📋 Photos sélectionnées par le client ({gallerySelection.photos.length})
                       </h4>
-                      {gallerySelection.is_validated && (
-                        <span className="bg-green-500 text-black text-xs px-3 py-1 font-bold">
-                          ✓ VALIDÉ
-                        </span>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {gallerySelection.is_validated && (
+                          <span className="bg-green-500 text-black text-xs px-3 py-1 font-bold">
+                            ✓ VALIDÉ
+                          </span>
+                        )}
+                        <a
+                          href={`${API}/admin/galleries/${selectedGallery.id}/download-selection`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            // Create download with auth header
+                            fetch(`${API}/admin/galleries/${selectedGallery.id}/download-selection`, {
+                              headers: { Authorization: `Bearer ${localStorage.getItem("admin_token")}` }
+                            })
+                            .then(res => res.blob())
+                            .then(blob => {
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `Selection_${selectedGallery.name.replace(/\s/g, '_')}.zip`;
+                              document.body.appendChild(a);
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                              a.remove();
+                              toast.success("Téléchargement du ZIP en cours...");
+                            })
+                            .catch(() => toast.error("Erreur lors du téléchargement"));
+                          }}
+                          className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                        >
+                          <Download size={16} /> Télécharger ZIP
+                        </a>
+                      </div>
                     </div>
                     <div className="grid grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
                       {gallerySelection.photos.map((photo) => (
