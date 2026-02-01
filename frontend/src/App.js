@@ -3178,7 +3178,81 @@ const AdminDashboard = () => {
         {/* Wedding Options Tab */}
         {activeTab === "options" && (
           <div>
-            <h2 className="font-primary font-bold text-xl mb-4">Options du devis mariage</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">Options du devis mariage</h2>
+              <button
+                onClick={() => setShowAddOption(true)}
+                className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
+              >
+                <Plus size={16} /> Ajouter une option
+              </button>
+            </div>
+
+            {/* Add Option Modal */}
+            {showAddOption && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-card border border-white/10 p-6 w-full max-w-md">
+                  <h3 className="font-primary font-bold text-xl mb-4">Nouvelle option</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Catégorie</label>
+                      <select
+                        value={newOption.category}
+                        onChange={(e) => setNewOption({ ...newOption, category: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      >
+                        <option value="coverage">Couverture</option>
+                        <option value="extras">Options</option>
+                        <option value="editing">Livrables</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Nom de l'option</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Cérémonie religieuse"
+                        value={newOption.name}
+                        onChange={(e) => setNewOption({ ...newOption, name: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Description</label>
+                      <textarea
+                        placeholder="Description de l'option..."
+                        value={newOption.description}
+                        onChange={(e) => setNewOption({ ...newOption, description: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                        rows={2}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Prix (€)</label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={newOption.price}
+                        onChange={(e) => setNewOption({ ...newOption, price: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowAddOption(false)} className="btn-outline flex-1 py-3">
+                        Annuler
+                      </button>
+                      <button 
+                        onClick={() => createWeddingOption(newOption)}
+                        disabled={!newOption.name}
+                        className="btn-primary flex-1 py-3 disabled:opacity-50"
+                      >
+                        Ajouter
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {["coverage", "extras", "editing"].map(cat => {
               const catOptions = weddingOptions.filter(o => o.category === cat);
               const labels = { coverage: "Couverture", extras: "Options", editing: "Livrables" };
@@ -3196,6 +3270,12 @@ const AdminDashboard = () => {
                               className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
                               id={`edit-name-${option.id}`}
                             />
+                            <textarea
+                              defaultValue={option.description}
+                              className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+                              rows={2}
+                              id={`edit-desc-${option.id}`}
+                            />
                             <input
                               type="number"
                               defaultValue={option.price}
@@ -3209,8 +3289,9 @@ const AdminDashboard = () => {
                               <button 
                                 onClick={() => {
                                   const name = document.getElementById(`edit-name-${option.id}`).value;
+                                  const description = document.getElementById(`edit-desc-${option.id}`).value;
                                   const price = parseFloat(document.getElementById(`edit-price-${option.id}`).value);
-                                  updateWeddingOption(option.id, { name, price });
+                                  updateWeddingOption(option.id, { name, description, price });
                                 }}
                                 className="btn-primary flex-1 py-2 text-xs"
                               >
@@ -3225,12 +3306,20 @@ const AdminDashboard = () => {
                               <span className="font-primary font-bold text-primary">{option.price}€</span>
                             </div>
                             <p className="text-white/60 text-sm mt-1 mb-3">{option.description}</p>
-                            <button
-                              onClick={() => setEditingOption(option.id)}
-                              className="text-primary text-xs hover:underline"
-                            >
-                              Modifier
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setEditingOption(option.id)}
+                                className="text-primary text-xs hover:underline"
+                              >
+                                Modifier
+                              </button>
+                              <button
+                                onClick={() => deleteWeddingOption(option.id)}
+                                className="text-red-400 text-xs hover:underline"
+                              >
+                                Supprimer
+                              </button>
+                            </div>
                           </>
                         )}
                       </div>
