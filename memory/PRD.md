@@ -20,6 +20,21 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V12 - Système de Sélection Photos Client (01 Fév 2026)
+- ✅ **Admin - Gestion des galeries** :
+  - Nouvel onglet "📸 Galeries" 
+  - Créer des galeries par client (ex: "Mariage 15 juin")
+  - Upload multiple de photos
+  - Voir les photos sélectionnées par le client
+  - Supprimer photos/galeries
+- ✅ **Client - Sélection des photos** :
+  - Nouvel onglet "📸 Sélection Photos" dans l'espace client
+  - Vue des galeries disponibles
+  - Clic pour sélectionner/désélectionner les photos
+  - Sauvegarde brouillon possible
+  - Validation définitive de la sélection
+- ✅ **Email de notification** à l'admin quand le client valide sa sélection
+
 ### V11 - Calendrier Admin (01 Fév 2026)
 - ✅ Nouvel onglet "📅 Calendrier" dans l'admin
 - ✅ Vue mensuelle avec navigation (mois précédent/suivant/aujourd'hui)
