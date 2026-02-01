@@ -44,6 +44,14 @@ const AdminDashboard = () => {
   const [currentContentField, setCurrentContentField] = useState(null);
   const [bankDetails, setBankDetails] = useState({ iban: "", bic: "", account_holder: "", bank_name: "", deposit_percentage: 30 });
   const [calendarDate, setCalendarDate] = useState(new Date());
+  // Gallery states
+  const [galleries, setGalleries] = useState([]);
+  const [selectedGallery, setSelectedGallery] = useState(null);
+  const [showAddGallery, setShowAddGallery] = useState(false);
+  const [newGallery, setNewGallery] = useState({ client_id: "", name: "", description: "" });
+  const [uploadingGalleryPhoto, setUploadingGalleryPhoto] = useState(false);
+  const [gallerySelection, setGallerySelection] = useState(null);
+  const galleryFileRef = useRef(null);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
