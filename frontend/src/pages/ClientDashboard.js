@@ -290,37 +290,121 @@ const ClientDashboard = () => {
 
                 {/* Photos Grid */}
                 <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                  {selectedGallery.photos?.map((photo) => {
+                  {selectedGallery.photos?.map((photo, index) => {
                     const isSelected = selectedPhotos.includes(photo.id);
                     return (
                       <div 
                         key={photo.id}
-                        onClick={() => togglePhotoSelection(photo.id)}
-                        className={`relative aspect-square cursor-pointer transition-all ${
-                          isSelected ? 'ring-4 ring-primary scale-95' : 'hover:opacity-80'
+                        className={`relative aspect-square cursor-pointer transition-all group ${
+                          isSelected ? 'ring-4 ring-primary scale-95' : ''
                         } ${isValidated && !isSelected ? 'opacity-30' : ''}`}
                       >
                         <img 
                           src={`${BACKEND_URL}${photo.url}`}
                           alt=""
                           className="w-full h-full object-cover"
+                          onClick={() => openLightbox(photo, index)}
                         />
+                        {/* Zoom icon on hover */}
+                        <div 
+                          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none"
+                        >
+                          <ZoomIn size={32} className="text-white" />
+                        </div>
+                        {/* Selection overlay */}
                         {isSelected && (
-                          <div className="absolute inset-0 bg-primary/30 flex items-center justify-center">
-                            <div className="bg-primary text-black p-2 rounded-full">
-                              <Check size={24} />
-                            </div>
-                          </div>
+                          <div className="absolute inset-0 bg-primary/30 pointer-events-none" />
                         )}
+                        {/* Selection number */}
                         {isSelected && (
-                          <div className="absolute top-2 right-2 bg-primary text-black text-xs font-bold w-6 h-6 flex items-center justify-center">
+                          <div className="absolute top-2 left-2 bg-primary text-black text-xs font-bold w-6 h-6 flex items-center justify-center">
                             {selectedPhotos.indexOf(photo.id) + 1}
                           </div>
+                        )}
+                        {/* Select/Deselect button */}
+                        {!isValidated && (
+                          <button
+                            onClick={(e) => togglePhotoSelection(photo.id, e)}
+                            className={`absolute bottom-2 right-2 p-2 transition-all ${
+                              isSelected 
+                                ? 'bg-primary text-black' 
+                                : 'bg-black/70 text-white hover:bg-primary hover:text-black'
+                            }`}
+                          >
+                            <Check size={16} />
+                          </button>
                         )}
                       </div>
                     );
                   })}
                 </div>
+
+                {/* Lightbox Modal */}
+                {lightboxPhoto && (
+                  <div 
+                    className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center"
+                    onClick={closeLightbox}
+                  >
+                    {/* Close button */}
+                    <button 
+                      className="absolute top-4 right-4 text-white/70 hover:text-white z-10"
+                      onClick={closeLightbox}
+                    >
+                      <X size={32} />
+                    </button>
+                    
+                    {/* Navigation arrows */}
+                    <button 
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 p-3 text-white"
+                      onClick={prevPhoto}
+                    >
+                      <ChevronLeft size={32} />
+                    </button>
+                    <button 
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 p-3 text-white"
+                      onClick={nextPhoto}
+                    >
+                      <ChevronRight size={32} />
+                    </button>
+                    
+                    {/* Main image */}
+                    <div className="max-w-[90vw] max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
+                      <img 
+                        src={`${BACKEND_URL}${lightboxPhoto.url}`}
+                        alt=""
+                        className="max-w-full max-h-[80vh] object-contain"
+                      />
+                    </div>
+                    
+                    {/* Bottom controls */}
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/80 px-6 py-3">
+                      <span className="text-white/60 text-sm">
+                        {lightboxIndex + 1} / {selectedGallery.photos?.length}
+                      </span>
+                      {!isValidated && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePhotoSelection(lightboxPhoto.id, e);
+                          }}
+                          className={`flex items-center gap-2 px-4 py-2 text-sm font-bold transition-all ${
+                            selectedPhotos.includes(lightboxPhoto.id)
+                              ? 'bg-primary text-black'
+                              : 'bg-white/20 text-white hover:bg-primary hover:text-black'
+                          }`}
+                        >
+                          <Check size={18} />
+                          {selectedPhotos.includes(lightboxPhoto.id) ? 'Sélectionnée' : 'Sélectionner'}
+                        </button>
+                      )}
+                      {selectedPhotos.includes(lightboxPhoto.id) && (
+                        <span className="text-primary font-bold">
+                          #{selectedPhotos.indexOf(lightboxPhoto.id) + 1}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
