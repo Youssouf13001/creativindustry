@@ -2751,6 +2751,43 @@ const AdminDashboard = () => {
     }
   };
 
+  // Upload Client File Thumbnail
+  const handleClientFileThumbnailUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Type de fichier non supporté. Utilisez JPG, PNG, WEBP ou GIF.");
+      return;
+    }
+    
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux (max 50 Mo pour les miniatures)");
+      return;
+    }
+    
+    setUploadingClientFileThumbnail(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const res = await axios.post(`${API}/upload/portfolio`, formData, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+      });
+      const uploadedUrl = `${BACKEND_URL}${res.data.url}`;
+      setNewFile({ 
+        ...newFile, 
+        thumbnail_url: uploadedUrl
+      });
+      toast.success("Miniature uploadée !");
+    } catch (e) {
+      toast.error("Erreur lors de l'upload de la miniature");
+    } finally {
+      setUploadingClientFileThumbnail(false);
+    }
+  };
+
   const createPortfolioItem = async () => {
     try {
       await axios.post(`${API}/admin/portfolio`, newPortfolioItem, { headers });
