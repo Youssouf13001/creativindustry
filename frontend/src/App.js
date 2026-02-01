@@ -698,15 +698,25 @@ const ServicePage = ({ category }) => {
                     ))}
                   </ul>
 
-                  <Link
-                    to={category === "wedding" ? "/devis-mariage" : `/booking?service=${service.id}`}
-                    className={`w-full inline-block text-center py-3 text-sm ${
-                      index === 1 ? "btn-primary" : "btn-outline"
-                    }`}
-                    data-testid={`book-service-${service.id}`}
-                  >
-                    {category === "wedding" ? "Créer mon devis" : "Réserver"}
-                  </Link>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => openBuyModal(service)}
+                      className={`w-full py-3 text-sm font-semibold ${
+                        index === 1 ? "btn-primary" : "btn-outline"
+                      }`}
+                      data-testid={`buy-service-${service.id}`}
+                    >
+                      Acheter cette formule
+                    </button>
+                    {category === "wedding" && (
+                      <Link
+                        to="/devis-mariage"
+                        className="w-full inline-block text-center py-2 text-xs text-white/50 hover:text-primary"
+                      >
+                        ou créer un devis personnalisé →
+                      </Link>
+                    )}
+                  </div>
                 </motion.div>
               ))}
             </div>
