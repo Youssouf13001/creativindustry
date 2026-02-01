@@ -3986,13 +3986,48 @@ const AdminDashboard = () => {
                             onChange={(e) => setNewFile({ ...newFile, file_url: e.target.value })}
                             className="w-full bg-background border border-white/20 px-4 py-3"
                           />
-                          <input
-                            type="url"
-                            placeholder="URL miniature (optionnel)"
-                            value={newFile.thumbnail_url}
-                            onChange={(e) => setNewFile({ ...newFile, thumbnail_url: e.target.value })}
-                            className="w-full bg-background border border-white/20 px-4 py-3"
-                          />
+                          
+                          {/* Thumbnail upload section for client files */}
+                          <div className="space-y-2">
+                            <p className="text-sm text-white/60">Miniature (optionnel) :</p>
+                            <input
+                              type="file"
+                              id="client-file-thumbnail-upload"
+                              className="hidden"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              onChange={handleClientFileThumbnailUpload}
+                            />
+                            <label
+                              htmlFor="client-file-thumbnail-upload"
+                              className={`flex items-center justify-center gap-2 w-full border-2 border-dashed border-primary/50 py-3 cursor-pointer hover:bg-primary/10 transition-colors ${uploadingClientFileThumbnail ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              {uploadingClientFileThumbnail ? (
+                                <>
+                                  <Loader size={16} className="animate-spin" /> Upload en cours...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload size={16} /> Uploader une miniature
+                                </>
+                              )}
+                            </label>
+                            <p className="text-xs text-white/50">JPG, PNG, WEBP, GIF (max 50 Mo)</p>
+                            
+                            {/* Thumbnail preview */}
+                            {newFile.thumbnail_url && (
+                              <div className="relative">
+                                <img src={newFile.thumbnail_url} alt="Miniature" className="w-full h-32 object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => setNewFile({ ...newFile, thumbnail_url: '' })}
+                                  className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          
                           <div className="flex gap-2">
                             <button onClick={() => setShowAddFile(false)} className="btn-outline flex-1 py-3">
                               Annuler
