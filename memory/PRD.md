@@ -69,8 +69,33 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - `/api/appointments/confirm/:id/:token` - Confirmation lien email
 
 ## Backlog
-- P2: Calendrier visuel des disponibilités
+- P2: Calendrier visuel des disponibilités admin
 - P2: Rappels automatiques 24h avant le RDV
+- P2: Compression automatique des images à l'upload
+
+## Architecture Frontend (Refactorisé V10)
+```
+/app/frontend/src/
+├── App.js (55 lignes)
+├── config/api.js
+├── components/
+│   ├── Header.js
+│   ├── Footer.js
+│   └── ChatWidget.js
+└── pages/
+    ├── HomePage.js
+    ├── ServicePage.js
+    ├── WeddingQuotePage.js
+    ├── PortfolioPage.js
+    ├── BookingPage.js
+    ├── AppointmentPage.js
+    ├── AppointmentConfirmPage.js
+    ├── ContactPage.js
+    ├── AdminLogin.js
+    ├── AdminDashboard.js
+    ├── ClientLogin.js
+    └── ClientDashboard.js
+```
 
 ## Mise à jour IONOS
 ```bash
