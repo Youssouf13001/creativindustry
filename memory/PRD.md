@@ -20,6 +20,14 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V11 - Calendrier Admin (01 Fév 2026)
+- ✅ Nouvel onglet "📅 Calendrier" dans l'admin
+- ✅ Vue mensuelle avec navigation (mois précédent/suivant/aujourd'hui)
+- ✅ Affichage des RDV avec couleurs par statut
+- ✅ Affichage des réservations (violet)
+- ✅ Clic sur un RDV → détails
+- ✅ Statistiques en bas (En attente, Confirmés, Date proposée, Réservations)
+
 ### V10 - Refactoring Frontend (01 Fév 2026)
 - ✅ **Découpage App.js** (4910 → 55 lignes)
 - ✅ Structure modulaire :
