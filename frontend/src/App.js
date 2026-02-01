@@ -2664,6 +2664,15 @@ const AdminDashboard = () => {
               </button>
             </div>
 
+            {/* Hidden file input for content uploads */}
+            <input
+              type="file"
+              ref={contentFileRef}
+              onChange={handleContentImageUpload}
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+            />
+
             {/* Hero Section */}
             <div className="bg-card border border-white/10 p-6 mb-6">
               <h3 className="font-primary font-bold text-lg mb-4 text-primary">Section Hero (Accueil)</h3>
@@ -2687,14 +2696,29 @@ const AdminDashboard = () => {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm text-white/60 mb-2">Image de fond (URL)</label>
-                  <input
-                    type="url"
-                    value={editingContent.hero_image || ""}
-                    onChange={(e) => setEditingContent({...editingContent, hero_image: e.target.value})}
-                    className="w-full bg-background border border-white/20 px-4 py-3"
-                    placeholder="https://..."
-                  />
+                  <label className="block text-sm text-white/60 mb-2">Image de fond</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={editingContent.hero_image || ""}
+                      onChange={(e) => setEditingContent({...editingContent, hero_image: e.target.value})}
+                      className="flex-1 bg-background border border-white/20 px-4 py-3"
+                      placeholder="URL ou cliquez sur Uploader"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => triggerContentUpload('hero_image')}
+                      disabled={uploadingContentImage}
+                      className="btn-primary px-4 py-3 flex items-center gap-2"
+                    >
+                      {uploadingContentImage && currentContentField === 'hero_image' ? (
+                        <Loader size={16} className="animate-spin" />
+                      ) : (
+                        <Upload size={16} />
+                      )}
+                      Uploader
+                    </button>
+                  </div>
                   {editingContent.hero_image && (
                     <img src={editingContent.hero_image} alt="Preview" className="mt-2 h-32 object-cover" />
                   )}
