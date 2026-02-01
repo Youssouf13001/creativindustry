@@ -43,6 +43,7 @@ const AdminDashboard = () => {
   const [uploadingContentImage, setUploadingContentImage] = useState(false);
   const [currentContentField, setCurrentContentField] = useState(null);
   const [bankDetails, setBankDetails] = useState({ iban: "", bic: "", account_holder: "", bank_name: "", deposit_percentage: 30 });
+  const [calendarDate, setCalendarDate] = useState(new Date());
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
