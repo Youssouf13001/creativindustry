@@ -859,6 +859,231 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Galleries Tab */}
+        {activeTab === "galleries" && (
+          <div data-testid="admin-galleries">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">
+                📸 Galeries Photos - Sélection Client
+              </h2>
+              <button 
+                onClick={() => setShowAddGallery(true)}
+                className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
+              >
+                <Plus size={16} /> Créer une galerie
+              </button>
+            </div>
+
+            <p className="text-white/60 mb-6">
+              Uploadez des photos pour vos clients. Ils pourront les voir et sélectionner celles qu'ils souhaitent pour la retouche.
+            </p>
+
+            {/* Add Gallery Modal */}
+            {showAddGallery && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-card border border-white/20 p-6 max-w-md w-full">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-primary font-bold text-lg">Nouvelle Galerie</h3>
+                    <button onClick={() => setShowAddGallery(false)} className="text-white/60 hover:text-white">
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Client *</label>
+                      <select
+                        value={newGallery.client_id}
+                        onChange={(e) => setNewGallery({ ...newGallery, client_id: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      >
+                        <option value="">Sélectionner un client</option>
+                        {clients.map(client => (
+                          <option key={client.id} value={client.id}>{client.name} ({client.email})</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Nom de la galerie *</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Mariage 15 juin 2024"
+                        value={newGallery.name}
+                        onChange={(e) => setNewGallery({ ...newGallery, name: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Description (optionnel)</label>
+                      <textarea
+                        placeholder="Description de l'événement..."
+                        value={newGallery.description}
+                        onChange={(e) => setNewGallery({ ...newGallery, description: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                        rows={2}
+                      />
+                    </div>
+                    <button onClick={createGallery} className="btn-primary w-full py-3">
+                      Créer la galerie
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Gallery List or Detail View */}
+            {!selectedGallery ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {galleries.length === 0 ? (
+                  <div className="col-span-full text-center py-12 text-white/60">
+                    Aucune galerie créée. Cliquez sur "Créer une galerie" pour commencer.
+                  </div>
+                ) : (
+                  galleries.map((gallery) => (
+                    <div 
+                      key={gallery.id} 
+                      className="bg-card border border-white/10 p-4 hover:border-primary transition-colors cursor-pointer"
+                      onClick={() => setSelectedGallery(gallery)}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-primary font-bold">{gallery.name}</h3>
+                          <p className="text-white/60 text-sm">{gallery.client_name}</p>
+                        </div>
+                        {gallery.is_validated && (
+                          <span className="bg-green-500/20 text-green-500 text-xs px-2 py-1 flex items-center gap-1">
+                            <Check size={12} /> Validé
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex justify-between text-sm text-white/50">
+                        <span>{gallery.photos?.length || 0} photos</span>
+                        <span>{gallery.selection_count || 0} sélectionnées</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : (
+              /* Gallery Detail View */
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <button 
+                      onClick={() => { setSelectedGallery(null); setGallerySelection(null); }}
+                      className="text-primary hover:underline text-sm mb-2"
+                    >
+                      ← Retour aux galeries
+                    </button>
+                    <h3 className="font-primary font-bold text-xl">{selectedGallery.name}</h3>
+                    <p className="text-white/60">{selectedGallery.client_name} • {selectedGallery.photos?.length || 0} photos</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="file"
+                      ref={galleryFileRef}
+                      className="hidden"
+                      accept="image/*"
+                      multiple
+                      onChange={handleGalleryPhotoUpload}
+                    />
+                    <button 
+                      onClick={() => galleryFileRef.current?.click()}
+                      disabled={uploadingGalleryPhoto}
+                      className="btn-primary px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {uploadingGalleryPhoto ? <Loader size={16} className="animate-spin" /> : <Upload size={16} />}
+                      Ajouter des photos
+                    </button>
+                    <button 
+                      onClick={() => viewGallerySelection(selectedGallery)}
+                      className="btn-outline px-4 py-2 text-sm"
+                    >
+                      Voir sélection ({selectedGallery.selection_count || 0})
+                    </button>
+                    <button 
+                      onClick={() => deleteGallery(selectedGallery.id)}
+                      className="bg-red-500/20 text-red-500 px-4 py-2 text-sm hover:bg-red-500/30"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </div>
+
+                {/* Selection View */}
+                {gallerySelection && gallerySelection.photos && gallerySelection.photos.length > 0 && (
+                  <div className="bg-green-500/10 border border-green-500/30 p-4 mb-6">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-primary font-bold text-green-400">
+                        📋 Photos sélectionnées par le client ({gallerySelection.photos.length})
+                      </h4>
+                      {gallerySelection.is_validated && (
+                        <span className="bg-green-500 text-black text-xs px-3 py-1 font-bold">
+                          ✓ VALIDÉ
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+                      {gallerySelection.photos.map((photo) => (
+                        <div key={photo.id} className="aspect-square border-2 border-green-500">
+                          <img 
+                            src={`${BACKEND_URL}${photo.url}`} 
+                            alt="" 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <button 
+                      onClick={() => setGallerySelection(null)}
+                      className="text-white/60 hover:text-white text-sm mt-3"
+                    >
+                      Masquer la sélection
+                    </button>
+                  </div>
+                )}
+
+                {/* All Photos Grid */}
+                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2">
+                  {selectedGallery.photos?.map((photo) => {
+                    const isSelected = gallerySelection?.selected_photo_ids?.includes(photo.id);
+                    return (
+                      <div 
+                        key={photo.id} 
+                        className={`relative aspect-square group ${isSelected ? 'ring-2 ring-green-500' : ''}`}
+                      >
+                        <img 
+                          src={`${BACKEND_URL}${photo.url}`} 
+                          alt="" 
+                          className="w-full h-full object-cover"
+                        />
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 bg-green-500 text-black p-1">
+                            <Check size={12} />
+                          </div>
+                        )}
+                        <button
+                          onClick={() => deleteGalleryPhoto(photo.id)}
+                          className="absolute top-1 left-1 bg-red-500 text-white p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {(!selectedGallery.photos || selectedGallery.photos.length === 0) && (
+                  <div className="text-center py-12 text-white/60 border border-dashed border-white/20">
+                    <Image size={48} className="mx-auto mb-4 opacity-50" />
+                    <p>Aucune photo dans cette galerie</p>
+                    <p className="text-sm">Cliquez sur "Ajouter des photos" pour commencer</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Site Content Tab */}
         {activeTab === "content" && siteContent && (
           <div>
