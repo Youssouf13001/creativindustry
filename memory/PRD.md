@@ -20,6 +20,15 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V10 - Refactoring Frontend (01 Fév 2026)
+- ✅ **Découpage App.js** (4910 → 55 lignes)
+- ✅ Structure modulaire :
+  - `/src/config/api.js` - Constantes API
+  - `/src/components/` - Header, Footer, ChatWidget
+  - `/src/pages/` - 12 pages séparées
+- ✅ Build optimisé (166 kB gzipped)
+- ✅ Tous les fonctionnalités préservées
+
 ### V9 - Upload Miniature Direct (01 Fév 2026)
 - ✅ Remplacement du champ URL miniature par bouton d'upload direct
 - ✅ Aperçu de la miniature avec bouton de suppression
