@@ -886,6 +886,43 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str
 
+# ==================== GALLERY MODELS (Photo Selection) ====================
+
+class GalleryPhoto(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    url: str
+    thumbnail_url: Optional[str] = None
+    filename: str
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class Gallery(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    name: str  # Event name like "Mariage 15 juin"
+    description: Optional[str] = None
+    photos: List[dict] = []
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    is_active: bool = True
+
+class GalleryCreate(BaseModel):
+    client_id: str
+    name: str
+    description: Optional[str] = None
+
+class PhotoSelection(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    gallery_id: str
+    selected_photo_ids: List[str] = []
+    is_validated: bool = False
+    validated_at: Optional[datetime] = None
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class SelectionUpdate(BaseModel):
+    selected_photo_ids: List[str]
+
 # ==================== AUTH ROUTES ====================
 
 @api_router.post("/auth/register", response_model=dict)
