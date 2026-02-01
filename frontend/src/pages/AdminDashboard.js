@@ -508,6 +508,91 @@ const AdminDashboard = () => {
     rescheduled_pending: "Nouvelle date proposée"
   };
 
+  // Gallery Functions
+  const createGallery = async () => {
+    if (!newGallery.client_id || !newGallery.name) {
+      toast.error("Veuillez sélectionner un client et donner un nom à la galerie");
+      return;
+    }
+    try {
+      await axios.post(`${API}/admin/galleries`, newGallery, { headers });
+      toast.success("Galerie créée !");
+      setShowAddGallery(false);
+      setNewGallery({ client_id: "", name: "", description: "" });
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de la création");
+    }
+  };
+
+  const deleteGallery = async (galleryId) => {
+    if (!window.confirm("Supprimer cette galerie et toutes ses photos ?")) return;
+    try {
+      await axios.delete(`${API}/admin/galleries/${galleryId}`, { headers });
+      toast.success("Galerie supprimée");
+      setSelectedGallery(null);
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  const handleGalleryPhotoUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !selectedGallery) return;
+    
+    setUploadingGalleryPhoto(true);
+    let successCount = 0;
+    
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      try {
+        await axios.post(`${API}/admin/galleries/${selectedGallery.id}/photos`, formData, {
+          headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+        });
+        successCount++;
+      } catch (e) {
+        console.error(`Error uploading ${file.name}`);
+      }
+    }
+    
+    toast.success(`${successCount} photo(s) uploadée(s) !`);
+    setUploadingGalleryPhoto(false);
+    
+    // Refresh gallery
+    const res = await axios.get(`${API}/admin/galleries`, { headers });
+    setGalleries(res.data);
+    const updated = res.data.find(g => g.id === selectedGallery.id);
+    if (updated) setSelectedGallery(updated);
+  };
+
+  const deleteGalleryPhoto = async (photoId) => {
+    if (!selectedGallery) return;
+    try {
+      await axios.delete(`${API}/admin/galleries/${selectedGallery.id}/photos/${photoId}`, { headers });
+      toast.success("Photo supprimée");
+      // Refresh gallery
+      const res = await axios.get(`${API}/admin/galleries`, { headers });
+      setGalleries(res.data);
+      const updated = res.data.find(g => g.id === selectedGallery.id);
+      if (updated) setSelectedGallery(updated);
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  const viewGallerySelection = async (gallery) => {
+    try {
+      const res = await axios.get(`${API}/admin/galleries/${gallery.id}/selection`, { headers });
+      setGallerySelection(res.data);
+      setSelectedGallery(gallery);
+    } catch (e) {
+      toast.error("Erreur lors du chargement de la sélection");
+    }
+  };
+
   const statusColors = {
     pending: "bg-yellow-500/20 text-yellow-500",
     confirmed: "bg-green-500/20 text-green-500",
