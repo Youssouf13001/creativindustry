@@ -1727,6 +1727,154 @@ const AdminDashboard = () => {
         {(activeTab === "overview" || activeTab === "quotes") && (
           <div className="mb-12">
             <h2 className="font-primary font-bold text-xl mb-4">Demandes de devis mariage</h2>
+
+            {/* Quote Detail Modal */}
+            {selectedQuote && (
+              <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 overflow-y-auto">
+                <div className="bg-card border border-primary w-full max-w-3xl my-8">
+                  {/* Modal Header */}
+                  <div className="bg-primary p-6 flex justify-between items-center">
+                    <div>
+                      <h2 className="font-primary font-bold text-2xl text-black">Devis Mariage</h2>
+                      <p className="text-black/70">Ref: #{selectedQuote.id?.slice(0, 8).toUpperCase()}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={printQuote} className="bg-black/20 text-black px-4 py-2 hover:bg-black/30 flex items-center gap-2">
+                        <Printer size={18} /> Imprimer / PDF
+                      </button>
+                      <button onClick={() => setSelectedQuote(null)} className="bg-black/20 text-black px-3 py-2 hover:bg-black/30">
+                        <X size={20} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Printable Content */}
+                  <div ref={quoteDetailRef} className="p-6">
+                    {/* Header for print */}
+                    <div className="header hidden print:block">
+                      <h1>CREATIVINDUSTRY France</h1>
+                      <p>Devis Mariage - Ref: #{selectedQuote.id?.slice(0, 8).toUpperCase()}</p>
+                    </div>
+
+                    {/* Client Info */}
+                    <div className="section mb-8">
+                      <h2 className="font-primary font-bold text-lg text-primary mb-4 pb-2 border-b border-white/20">
+                        Informations Client
+                      </h2>
+                      <div className="info-grid grid grid-cols-2 gap-4">
+                        <div className="info-item">
+                          <p className="label text-white/50 text-xs uppercase">Nom</p>
+                          <p className="value font-bold text-lg">{selectedQuote.client_name}</p>
+                        </div>
+                        <div className="info-item">
+                          <p className="label text-white/50 text-xs uppercase">Email</p>
+                          <p className="value font-bold">{selectedQuote.client_email}</p>
+                        </div>
+                        <div className="info-item">
+                          <p className="label text-white/50 text-xs uppercase">Téléphone</p>
+                          <p className="value font-bold">{selectedQuote.client_phone}</p>
+                        </div>
+                        <div className="info-item">
+                          <p className="label text-white/50 text-xs uppercase">Date du mariage</p>
+                          <p className="value font-bold text-primary">{selectedQuote.event_date}</p>
+                        </div>
+                        {selectedQuote.event_location && (
+                          <div className="info-item col-span-2">
+                            <p className="label text-white/50 text-xs uppercase">Lieu</p>
+                            <p className="value font-bold">{selectedQuote.event_location}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Prestations */}
+                    <div className="section mb-8">
+                      <h2 className="font-primary font-bold text-lg text-primary mb-4 pb-2 border-b border-white/20">
+                        Prestations Sélectionnées
+                      </h2>
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-black/30">
+                            <th className="text-left p-3 text-white/60 text-sm uppercase">Prestation</th>
+                            <th className="text-right p-3 text-white/60 text-sm uppercase">Prix</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {/* Group by category */}
+                          {selectedQuote.options_by_category && Object.entries(selectedQuote.options_by_category).map(([category, options]) => (
+                            <>
+                              <tr key={`cat-${category}`} className="category-header bg-primary/20">
+                                <td colSpan={2} className="p-3 font-bold text-primary uppercase text-sm">
+                                  {category === 'coverage' ? '📸 Couverture' : 
+                                   category === 'extras' ? '✨ Options' : 
+                                   category === 'editing' ? '🎬 Livrables' : category}
+                                </td>
+                              </tr>
+                              {options.map((opt, i) => (
+                                <tr key={`${category}-${i}`} className="border-b border-white/10">
+                                  <td className="p-3">{opt.name}</td>
+                                  <td className="p-3 text-right font-bold">{opt.price}€</td>
+                                </tr>
+                              ))}
+                            </>
+                          ))}
+                          {/* If no categories, show flat list */}
+                          {!selectedQuote.options_by_category && selectedQuote.options_details?.map((opt, i) => (
+                            <tr key={i} className="border-b border-white/10">
+                              <td className="p-3">{opt.name}</td>
+                              <td className="p-3 text-right font-bold">{opt.price}€</td>
+                            </tr>
+                          ))}
+                          {/* Total */}
+                          <tr className="total-row bg-primary">
+                            <td className="p-4 font-bold text-black text-lg">TOTAL</td>
+                            <td className="p-4 text-right font-bold text-black text-2xl">{selectedQuote.total_price}€</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Message */}
+                    {selectedQuote.message && (
+                      <div className="section mb-8">
+                        <h2 className="font-primary font-bold text-lg text-primary mb-4 pb-2 border-b border-white/20">
+                          Message du Client
+                        </h2>
+                        <div className="bg-black/30 p-4 italic text-white/80">
+                          "{selectedQuote.message}"
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Footer for print */}
+                    <div className="footer text-center text-white/50 text-sm mt-8 pt-4 border-t border-white/10">
+                      <p>CREATIVINDUSTRY France • contact@creativindustry.com</p>
+                      <p>Devis généré le {new Date().toLocaleDateString('fr-FR')}</p>
+                    </div>
+                  </div>
+
+                  {/* Modal Actions */}
+                  <div className="p-6 border-t border-white/10 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <span className="text-white/60">Statut:</span>
+                      <select
+                        value={selectedQuote.status}
+                        onChange={(e) => updateQuoteStatus(selectedQuote.id, e.target.value)}
+                        className="bg-background border border-white/20 px-3 py-2"
+                      >
+                        <option value="pending">En attente</option>
+                        <option value="confirmed">Confirmé</option>
+                        <option value="cancelled">Annulé</option>
+                      </select>
+                    </div>
+                    <button onClick={() => setSelectedQuote(null)} className="btn-outline px-6 py-2">
+                      Fermer
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="bg-card border border-white/10 overflow-hidden overflow-x-auto">
               <table className="w-full min-w-[800px]">
                 <thead className="bg-black/50">
