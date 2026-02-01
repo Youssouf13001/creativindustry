@@ -652,6 +652,7 @@ const AdminDashboard = () => {
           {[
             { id: "overview", label: "Aperçu" },
             { id: "calendar", label: "📅 Calendrier" },
+            { id: "galleries", label: "📸 Galeries" },
             { id: "content", label: "Contenu Site" },
             { id: "portfolio", label: "Portfolio" },
             { id: "quotes", label: "Devis Mariage" },
