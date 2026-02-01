@@ -20,6 +20,14 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V13 - Améliorations Devis Mariage (01 Fév 2026)
+- ✅ **Vue détaillée du devis** : Modal avec toutes les infos client et prestations
+- ✅ **Bouton "Imprimer / PDF"** : Génère une version imprimable
+- ✅ **Notifications email** aux 2 adresses :
+  - contact@creativindustry.com
+  - communication@creativindustry.com
+- ✅ **Email formaté** avec récap complet (client, prestations, total)
+
 ### V12 - Système de Sélection Photos Client (01 Fév 2026)
 - ✅ **Admin - Gestion des galeries** :
   - Nouvel onglet "📸 Galeries" 
