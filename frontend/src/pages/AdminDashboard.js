@@ -137,9 +137,63 @@ const AdminDashboard = () => {
       await axios.put(`${API}/wedding-quotes/${id}/status?status=${status}`, {}, { headers });
       toast.success("Statut mis à jour");
       fetchData();
+      if (selectedQuote && selectedQuote.id === id) {
+        setSelectedQuote({ ...selectedQuote, status });
+      }
     } catch (e) {
       toast.error("Erreur");
     }
+  };
+
+  const openQuoteDetail = async (quoteId) => {
+    setLoadingQuoteDetail(true);
+    try {
+      const res = await axios.get(`${API}/wedding-quotes/${quoteId}`, { headers });
+      setSelectedQuote(res.data);
+    } catch (e) {
+      toast.error("Erreur lors du chargement du devis");
+    } finally {
+      setLoadingQuoteDetail(false);
+    }
+  };
+
+  const printQuote = () => {
+    if (!quoteDetailRef.current) return;
+    
+    const printContent = quoteDetailRef.current.innerHTML;
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Devis - ${selectedQuote?.client_name}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+          .header { text-align: center; margin-bottom: 40px; border-bottom: 3px solid #d4af37; padding-bottom: 20px; }
+          .header h1 { color: #d4af37; margin: 0; font-size: 32px; }
+          .header p { color: #666; margin-top: 10px; }
+          .section { margin-bottom: 30px; }
+          .section h2 { color: #d4af37; font-size: 18px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+          .info-item { padding: 10px 0; }
+          .info-item .label { color: #888; font-size: 12px; text-transform: uppercase; }
+          .info-item .value { font-weight: bold; font-size: 16px; margin-top: 5px; }
+          table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+          th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+          th { background: #f9f9f9; color: #666; font-size: 12px; text-transform: uppercase; }
+          .category-header { background: #d4af37; color: #fff; font-weight: bold; }
+          .total-row { background: #d4af37; color: #000; font-weight: bold; font-size: 18px; }
+          .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #888; font-size: 12px; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        ${printContent}
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   const updateService = async (id, data) => {
