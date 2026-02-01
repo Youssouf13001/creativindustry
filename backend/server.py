@@ -1133,6 +1133,41 @@ async def upload_portfolio_file(
         "original_name": file.filename
     }
 
+@api_router.post("/upload/content")
+async def upload_content_image(
+    file: UploadFile = File(...),
+    admin: dict = Depends(get_current_admin)
+):
+    """Upload an image for site content (hero, services, etc.)"""
+    # Check file type - only images for content
+    content_type = file.content_type
+    if content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="Type de fichier non supporté. Utilisez JPG, PNG, WEBP ou GIF.")
+    
+    # Create content folder if not exists
+    content_folder = UPLOADS_DIR / "content"
+    content_folder.mkdir(exist_ok=True)
+    
+    # Generate unique filename
+    file_ext = Path(file.filename).suffix.lower()
+    unique_filename = f"{uuid.uuid4()}{file_ext}"
+    file_path = content_folder / unique_filename
+    
+    # Save file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload: {str(e)}")
+    
+    # Return URL
+    file_url = f"/uploads/content/{unique_filename}"
+    return {
+        "url": file_url,
+        "filename": unique_filename,
+        "original_name": file.filename
+    }
+
 @api_router.post("/upload/client/{client_id}")
 async def upload_client_file(
     client_id: str,
