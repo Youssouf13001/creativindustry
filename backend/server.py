@@ -1972,6 +1972,24 @@ async def create_wedding_quote(data: WeddingQuoteCreate):
     doc['created_at'] = doc['created_at'].isoformat()
     await db.wedding_quotes.insert_one(doc)
     
+    # Generate PDF
+    quote_data = {
+        'id': quote.id,
+        'client_name': data.client_name,
+        'client_email': data.client_email,
+        'client_phone': data.client_phone,
+        'event_date': data.event_date,
+        'event_location': data.event_location,
+        'message': data.message
+    }
+    
+    try:
+        pdf_data = generate_quote_pdf(quote_data, options_details)
+        pdf_filename = f"Devis_Mariage_{data.client_name.replace(' ', '_')}_{quote.id[:8].upper()}.pdf"
+    except Exception as e:
+        logging.error(f"Error generating PDF: {e}")
+        pdf_data = None
+    
     # Send notification email to admin addresses
     admin_emails = ["contact@creativindustry.com", "communication@creativindustry.com"]
     
@@ -2020,6 +2038,7 @@ async def create_wedding_quote(data: WeddingQuoteCreate):
                 {f'<div style="margin-top: 20px; padding: 15px; background: #222;"><strong>Message du client:</strong><br>{data.message}</div>' if data.message else ''}
                 
                 <p style="color: #888; font-size: 12px; margin-top: 30px; text-align: center;">
+                    📎 Le devis en PDF est joint à cet email.<br>
                     Connectez-vous à votre admin pour gérer cette demande.
                 </p>
             </div>
@@ -2028,10 +2047,19 @@ async def create_wedding_quote(data: WeddingQuoteCreate):
     </html>
     """
     
-    # Send to both admin emails
+    # Send to both admin emails with PDF attachment
     for admin_email in admin_emails:
         try:
-            send_email(admin_email, f"💒 Nouveau Devis Mariage - {data.client_name} ({total_price}€)", html_content)
+            if pdf_data:
+                send_email_with_attachment(
+                    admin_email, 
+                    f"💒 Nouveau Devis Mariage - {data.client_name} ({total_price}€)", 
+                    html_content,
+                    pdf_data,
+                    pdf_filename
+                )
+            else:
+                send_email(admin_email, f"💒 Nouveau Devis Mariage - {data.client_name} ({total_price}€)", html_content)
         except Exception as e:
             logging.error(f"Error sending email to {admin_email}: {e}")
     
