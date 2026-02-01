@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Calendar, Check, Camera, Mic, Tv, X, Clock, Users, FileText, Image, Video, Plus, Minus, User, LogOut, Upload, Loader, Download } from "lucide-react";
+import { Calendar, Check, Camera, Mic, Tv, X, Clock, Users, FileText, Image, Video, Plus, Minus, User, LogOut, Upload, Loader, Download, Eye, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 
