@@ -834,6 +834,32 @@ async def get_current_client(credentials: HTTPAuthorizationCredentials = Depends
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+def verify_token(token: str):
+    """Verify admin JWT token and return payload"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_type = payload.get("type", "admin")
+        if user_type != "admin":
+            raise HTTPException(status_code=403, detail="Admin access required")
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+def verify_client_token(token: str):
+    """Verify client JWT token and return payload"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_type = payload.get("type", "admin")
+        if user_type != "client":
+            raise HTTPException(status_code=403, detail="Client access required")
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
 # ==================== CLIENT MODELS ====================
 
 class ClientCreate(BaseModel):
