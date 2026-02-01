@@ -1803,7 +1803,7 @@ async def delete_wedding_option(option_id: str, admin: dict = Depends(get_curren
 @api_router.post("/wedding-quotes", response_model=WeddingQuote)
 async def create_wedding_quote(data: WeddingQuoteCreate):
     options = await db.wedding_options.find({"id": {"$in": data.selected_options}}, {"_id": 0}).to_list(100)
-    options_details = [{"id": o["id"], "name": o["name"], "price": o["price"]} for o in options]
+    options_details = [{"id": o["id"], "name": o["name"], "price": o["price"], "category": o.get("category", "")} for o in options]
     total_price = sum(o["price"] for o in options)
     
     quote = WeddingQuote(
@@ -1814,6 +1814,70 @@ async def create_wedding_quote(data: WeddingQuoteCreate):
     doc = quote.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     await db.wedding_quotes.insert_one(doc)
+    
+    # Send notification email to admin addresses
+    admin_emails = ["contact@creativindustry.com", "communication@creativindustry.com"]
+    
+    # Build options HTML
+    options_html = ""
+    for opt in options_details:
+        options_html += f"<tr><td style='padding: 8px; border-bottom: 1px solid #333;'>{opt['name']}</td><td style='padding: 8px; border-bottom: 1px solid #333; text-align: right;'>{opt['price']}€</td></tr>"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><style>
+        body {{ font-family: Arial, sans-serif; background: #0a0a0a; color: #fff; margin: 0; padding: 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: #111; border: 1px solid #333; }}
+        .header {{ background: linear-gradient(135deg, #d4af37, #f5e6a3); padding: 30px; text-align: center; }}
+        .header h1 {{ color: #000; margin: 0; font-size: 24px; }}
+        .content {{ padding: 30px; }}
+        .info-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }}
+        .label {{ color: #888; }}
+        .value {{ color: #fff; font-weight: bold; }}
+        .total {{ background: #d4af37; color: #000; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; margin-top: 20px; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+        th {{ text-align: left; padding: 10px; background: #222; color: #d4af37; }}
+    </style></head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>💒 Nouvelle Demande de Devis Mariage</h1>
+            </div>
+            <div class="content">
+                <h2 style="color: #d4af37; margin-bottom: 20px;">Informations Client</h2>
+                <div class="info-row"><span class="label">Nom</span><span class="value">{data.client_name}</span></div>
+                <div class="info-row"><span class="label">Email</span><span class="value">{data.client_email}</span></div>
+                <div class="info-row"><span class="label">Téléphone</span><span class="value">{data.client_phone}</span></div>
+                <div class="info-row"><span class="label">Date du mariage</span><span class="value">{data.event_date}</span></div>
+                <div class="info-row"><span class="label">Lieu</span><span class="value">{data.event_location or 'Non précisé'}</span></div>
+                
+                <h2 style="color: #d4af37; margin: 30px 0 20px;">Prestations Sélectionnées</h2>
+                <table>
+                    <tr><th>Prestation</th><th style="text-align: right;">Prix</th></tr>
+                    {options_html}
+                </table>
+                
+                <div class="total">TOTAL: {total_price}€</div>
+                
+                {f'<div style="margin-top: 20px; padding: 15px; background: #222;"><strong>Message du client:</strong><br>{data.message}</div>' if data.message else ''}
+                
+                <p style="color: #888; font-size: 12px; margin-top: 30px; text-align: center;">
+                    Connectez-vous à votre admin pour gérer cette demande.
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    # Send to both admin emails
+    for admin_email in admin_emails:
+        try:
+            send_email(admin_email, f"💒 Nouveau Devis Mariage - {data.client_name} ({total_price}€)", html_content)
+        except Exception as e:
+            logging.error(f"Error sending email to {admin_email}: {e}")
+    
     return quote
 
 @api_router.get("/wedding-quotes", response_model=List[WeddingQuote])
