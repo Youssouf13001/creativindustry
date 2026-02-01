@@ -1901,9 +1901,7 @@ async def get_wedding_quote_detail(quote_id: str, admin: dict = Depends(get_curr
     if not quote:
         raise HTTPException(status_code=404, detail="Quote not found")
     
-    # Convert datetime if needed
-    if isinstance(quote.get('created_at'), str):
-        quote['created_at'] = datetime.fromisoformat(quote['created_at'])
+    # Keep created_at as string for JSON serialization
     
     # Group options by category
     options_by_category = {}
