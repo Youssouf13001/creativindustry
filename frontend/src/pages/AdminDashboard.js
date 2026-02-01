@@ -1770,16 +1770,25 @@ const AdminDashboard = () => {
                         </span>
                       </td>
                       <td className="p-4">
-                        <select
-                          value={quote.status}
-                          onChange={(e) => updateQuoteStatus(quote.id, e.target.value)}
-                          className="bg-background border border-white/20 px-2 py-1 text-sm"
-                          data-testid={`quote-status-select-${quote.id}`}
-                        >
-                          <option value="pending">En attente</option>
-                          <option value="confirmed">Confirmé</option>
-                          <option value="cancelled">Annulé</option>
-                        </select>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openQuoteDetail(quote.id)}
+                            className="bg-primary/20 text-primary px-3 py-1 text-sm hover:bg-primary/30 flex items-center gap-1"
+                            data-testid={`quote-view-${quote.id}`}
+                          >
+                            <Eye size={14} /> Voir
+                          </button>
+                          <select
+                            value={quote.status}
+                            onChange={(e) => updateQuoteStatus(quote.id, e.target.value)}
+                            className="bg-background border border-white/20 px-2 py-1 text-sm"
+                            data-testid={`quote-status-select-${quote.id}`}
+                          >
+                            <option value="pending">En attente</option>
+                            <option value="confirmed">Confirmé</option>
+                            <option value="cancelled">Annulé</option>
+                          </select>
+                        </div>
                       </td>
                     </tr>
                   ))}
