@@ -2271,6 +2271,55 @@ async def get_gallery_selection_admin(gallery_id: str, credentials: HTTPAuthoriz
     
     return selection
 
+# Admin: Download selected photos as ZIP
+@api_router.get("/admin/galleries/{gallery_id}/download-selection")
+async def download_gallery_selection(gallery_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    verify_token(credentials.credentials)
+    
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Gallery not found")
+    
+    selection = await db.photo_selections.find_one({"gallery_id": gallery_id})
+    if not selection or len(selection.get("selected_photo_ids", [])) == 0:
+        raise HTTPException(status_code=400, detail="No photos selected")
+    
+    # Get selected photos
+    selected_photos = [p for p in gallery.get("photos", []) if p["id"] in selection.get("selected_photo_ids", [])]
+    
+    if not selected_photos:
+        raise HTTPException(status_code=400, detail="No photos to download")
+    
+    # Create ZIP file
+    zip_filename = f"selection_{gallery_id[:8]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    zip_path = UPLOADS_DIR / "selections" / zip_filename
+    
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for idx, photo in enumerate(selected_photos, 1):
+            # Get original filename or create one
+            original_filename = photo.get("filename", f"photo_{idx}.jpg")
+            # Add index prefix for ordering
+            archive_name = f"{idx:03d}_{original_filename}"
+            
+            # Get file path
+            file_path = UPLOADS_DIR / "galleries" / Path(photo["url"]).name
+            
+            if file_path.exists():
+                zipf.write(file_path, archive_name)
+    
+    # Get client name for the filename
+    client = await db.clients.find_one({"id": gallery.get("client_id")})
+    client_name = client.get("name", "client").replace(" ", "_") if client else "client"
+    gallery_name = gallery.get("name", "galerie").replace(" ", "_")
+    
+    download_filename = f"Selection_{client_name}_{gallery_name}.zip"
+    
+    return FileResponse(
+        path=str(zip_path),
+        filename=download_filename,
+        media_type="application/zip"
+    )
+
 # Client: Get my galleries
 @api_router.get("/client/galleries", response_model=List[dict])
 async def get_client_galleries(credentials: HTTPAuthorizationCredentials = Depends(security)):
