@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera } from "lucide-react";
+import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 
@@ -14,6 +14,8 @@ const ClientDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("galleries");
   const [clientUser, setClientUser] = useState(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState(null);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("client_token");
