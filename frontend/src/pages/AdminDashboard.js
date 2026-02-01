@@ -1,0 +1,2079 @@
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import { Calendar, Check, Camera, Mic, Tv, X, Clock, Users, FileText, Image, Video, Plus, Minus, User, LogOut, Upload, Loader } from "lucide-react";
+import { toast } from "sonner";
+import { API, BACKEND_URL } from "../config/api";
+
+const AdminDashboard = () => {
+  const [stats, setStats] = useState(null);
+  const [bookings, setBookings] = useState([]);
+  const [quotes, setQuotes] = useState([]);
+  const [services, setServices] = useState([]);
+  const [weddingOptions, setWeddingOptions] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [portfolio, setPortfolio] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [clientFiles, setClientFiles] = useState([]);
+  const [showAddClient, setShowAddClient] = useState(false);
+  const [showAddFile, setShowAddFile] = useState(false);
+  const [showAddPortfolio, setShowAddPortfolio] = useState(false);
+  const [newClient, setNewClient] = useState({ name: "", email: "", password: "", phone: "" });
+  const [newFile, setNewFile] = useState({ title: "", description: "", file_type: "video", file_url: "", thumbnail_url: "" });
+  const [newPortfolioItem, setNewPortfolioItem] = useState({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", is_featured: false });
+  const [siteContent, setSiteContent] = useState(null);
+  const [editingContent, setEditingContent] = useState({});
+  const [activeTab, setActiveTab] = useState("overview");
+  const [editingService, setEditingService] = useState(null);
+  const [editingOption, setEditingOption] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [appointmentResponse, setAppointmentResponse] = useState({ status: "", admin_response: "", new_proposed_date: "", new_proposed_time: "" });
+  const [showAddOption, setShowAddOption] = useState(false);
+  const [newOption, setNewOption] = useState({ name: "", description: "", price: 0, category: "coverage" });
+  const [editingPortfolio, setEditingPortfolio] = useState(null);
+  const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
+  const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [uploadingClientFileThumbnail, setUploadingClientFileThumbnail] = useState(false);
+  const [uploadingClientFile, setUploadingClientFile] = useState(false);
+  const portfolioFileRef = useRef(null);
+  const clientFileRef = useRef(null);
+  const contentFileRef = useRef(null);
+  const [uploadingContentImage, setUploadingContentImage] = useState(false);
+  const [currentContentField, setCurrentContentField] = useState(null);
+  const [bankDetails, setBankDetails] = useState({ iban: "", bic: "", account_holder: "", bank_name: "", deposit_percentage: 30 });
+  const navigate = useNavigate();
+
+  const token = localStorage.getItem("admin_token");
+  const headers = { Authorization: `Bearer ${token}` };
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/admin");
+      return;
+    }
+    fetchData();
+    fetchBankDetails();
+  }, [token]);
+
+  const fetchBankDetails = async () => {
+    try {
+      const res = await axios.get(`${API}/bank-details`);
+      setBankDetails(res.data);
+    } catch (e) {
+      console.error("Error fetching bank details");
+    }
+  };
+
+  const updateBankDetails = async () => {
+    try {
+      await axios.put(`${API}/bank-details`, bankDetails, { headers });
+      toast.success("Coordonnées bancaires mises à jour !");
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes, clientsRes, contentRes, appointmentsRes] = await Promise.all([
+        axios.get(`${API}/stats`, { headers }),
+        axios.get(`${API}/bookings`, { headers }),
+        axios.get(`${API}/wedding-quotes`, { headers }),
+        axios.get(`${API}/services?active_only=false`),
+        axios.get(`${API}/wedding-options`),
+        axios.get(`${API}/contact`, { headers }),
+        axios.get(`${API}/admin/portfolio`, { headers }),
+        axios.get(`${API}/admin/clients`, { headers }),
+        axios.get(`${API}/content`),
+        axios.get(`${API}/appointments`, { headers })
+      ]);
+      setStats(statsRes.data);
+      setBookings(bookingsRes.data);
+      setQuotes(quotesRes.data);
+      setServices(servicesRes.data);
+      setWeddingOptions(optionsRes.data);
+      setMessages(messagesRes.data);
+      setPortfolio(portfolioRes.data);
+      setClients(clientsRes.data);
+      setSiteContent(contentRes.data);
+      setEditingContent(contentRes.data);
+      setAppointments(appointmentsRes.data);
+    } catch (e) {
+      if (e.response?.status === 401) {
+        localStorage.removeItem("admin_token");
+        navigate("/admin");
+      }
+    }
+  };
+
+  const updateBookingStatus = async (id, status) => {
+    try {
+      await axios.put(`${API}/bookings/${id}`, { status }, { headers });
+      toast.success("Statut mis à jour");
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const updateQuoteStatus = async (id, status) => {
+    try {
+      await axios.put(`${API}/wedding-quotes/${id}/status?status=${status}`, {}, { headers });
+      toast.success("Statut mis à jour");
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const updateService = async (id, data) => {
+    try {
+      await axios.put(`${API}/services/${id}`, data, { headers });
+      toast.success("Service mis à jour");
+      setEditingService(null);
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const updateWeddingOption = async (id, data) => {
+    try {
+      await axios.put(`${API}/wedding-options/${id}`, data, { headers });
+      toast.success("Option mise à jour");
+      setEditingOption(null);
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const createWeddingOption = async (optionData) => {
+    try {
+      await axios.post(`${API}/wedding-options`, optionData, { headers });
+      toast.success("Option ajoutée");
+      setShowAddOption(false);
+      setNewOption({ name: "", description: "", price: 0, category: "coverage" });
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de l'ajout");
+    }
+  };
+
+  const deleteWeddingOption = async (id) => {
+    if (!window.confirm("Supprimer cette option ?")) return;
+    try {
+      await axios.delete(`${API}/wedding-options/${id}`, { headers });
+      toast.success("Option supprimée");
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  const createClient = async () => {
+    try {
+      await axios.post(`${API}/admin/clients`, newClient, { headers });
+      toast.success("Client créé");
+      setShowAddClient(false);
+      setNewClient({ name: "", email: "", password: "", phone: "" });
+      fetchData();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur");
+    }
+  };
+
+  const selectClient = async (client) => {
+    setSelectedClient(client);
+    try {
+      const res = await axios.get(`${API}/admin/clients/${client.id}/files`, { headers });
+      setClientFiles(res.data);
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const addFileToClient = async () => {
+    if (!selectedClient) return;
+    try {
+      await axios.post(`${API}/client/files`, { ...newFile, client_id: selectedClient.id }, { headers });
+      toast.success("Fichier ajouté");
+      setShowAddFile(false);
+      setNewFile({ title: "", description: "", file_type: "video", file_url: "", thumbnail_url: "" });
+      selectClient(selectedClient);
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const deleteFile = async (fileId) => {
+    try {
+      await axios.delete(`${API}/client/files/${fileId}`, { headers });
+      toast.success("Fichier supprimé");
+      selectClient(selectedClient);
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  // Site Content Functions
+  const updateSiteContent = async () => {
+    try {
+      await axios.put(`${API}/content`, editingContent, { headers });
+      toast.success("Contenu mis à jour !");
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  // Upload Content Image
+  const handleContentImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !currentContentField) return;
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Type de fichier non supporté. Utilisez JPG, PNG, WEBP ou GIF.");
+      return;
+    }
+    
+    if (file.size > 1024 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux (max 1 Go)");
+      return;
+    }
+    
+    setUploadingContentImage(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const res = await axios.post(`${API}/upload/content`, formData, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+      });
+      const uploadedUrl = `${BACKEND_URL}${res.data.url}`;
+      setEditingContent({ ...editingContent, [currentContentField]: uploadedUrl });
+      toast.success("Image uploadée !");
+    } catch (e) {
+      toast.error("Erreur lors de l'upload");
+    } finally {
+      setUploadingContentImage(false);
+      setCurrentContentField(null);
+    }
+  };
+
+  const triggerContentUpload = (fieldName) => {
+    setCurrentContentField(fieldName);
+    contentFileRef.current?.click();
+  };
+
+  // Portfolio Functions
+  // Upload Portfolio File
+  const handlePortfolioFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Type de fichier non supporté. Utilisez JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.");
+      return;
+    }
+    
+    if (file.size > 1024 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux (max 1 Go)");
+      return;
+    }
+    
+    setUploadingPortfolio(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const res = await axios.post(`${API}/upload/portfolio`, formData, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+      });
+      const uploadedUrl = `${BACKEND_URL}${res.data.url}`;
+      setNewPortfolioItem({ 
+        ...newPortfolioItem, 
+        media_url: uploadedUrl, 
+        media_type: res.data.media_type,
+        thumbnail_url: res.data.media_type === 'photo' ? uploadedUrl : ''
+      });
+      toast.success("Fichier uploadé !");
+    } catch (e) {
+      toast.error("Erreur lors de l'upload");
+    } finally {
+      setUploadingPortfolio(false);
+    }
+  };
+
+  // Upload Thumbnail for video
+  const handleThumbnailUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Type de fichier non supporté. Utilisez JPG, PNG, WEBP ou GIF.");
+      return;
+    }
+    
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux (max 50 Mo pour les miniatures)");
+      return;
+    }
+    
+    setUploadingThumbnail(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const res = await axios.post(`${API}/upload/portfolio`, formData, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+      });
+      const uploadedUrl = `${BACKEND_URL}${res.data.url}`;
+      setNewPortfolioItem({ 
+        ...newPortfolioItem, 
+        thumbnail_url: uploadedUrl
+      });
+      toast.success("Miniature uploadée !");
+    } catch (e) {
+      toast.error("Erreur lors de l'upload de la miniature");
+    } finally {
+      setUploadingThumbnail(false);
+    }
+  };
+
+  // Upload Client File
+  const handleClientFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    if (!selectedClient) {
+      toast.error("Sélectionnez d'abord un client");
+      return;
+    }
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Type de fichier non supporté. Utilisez JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.");
+      return;
+    }
+    
+    if (file.size > 1024 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux (max 1 Go)");
+      return;
+    }
+    
+    const title = prompt("Titre du fichier:", file.name.split('.')[0]);
+    if (!title) return;
+    
+    setUploadingClientFile(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('title', title);
+    formData.append('description', '');
+    
+    try {
+      await axios.post(`${API}/upload/client/${selectedClient.id}`, formData, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+      });
+      toast.success("Fichier uploadé et client notifié par email !");
+      selectClient(selectedClient);
+    } catch (e) {
+      toast.error("Erreur lors de l'upload");
+    } finally {
+      setUploadingClientFile(false);
+    }
+  };
+
+  // Upload Client File Thumbnail
+  const handleClientFileThumbnailUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Type de fichier non supporté. Utilisez JPG, PNG, WEBP ou GIF.");
+      return;
+    }
+    
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux (max 50 Mo pour les miniatures)");
+      return;
+    }
+    
+    setUploadingClientFileThumbnail(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const res = await axios.post(`${API}/upload/portfolio`, formData, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+      });
+      const uploadedUrl = `${BACKEND_URL}${res.data.url}`;
+      setNewFile({ 
+        ...newFile, 
+        thumbnail_url: uploadedUrl
+      });
+      toast.success("Miniature uploadée !");
+    } catch (e) {
+      toast.error("Erreur lors de l'upload de la miniature");
+    } finally {
+      setUploadingClientFileThumbnail(false);
+    }
+  };
+
+  const createPortfolioItem = async () => {
+    try {
+      await axios.post(`${API}/admin/portfolio`, newPortfolioItem, { headers });
+      toast.success("Élément ajouté au portfolio");
+      setShowAddPortfolio(false);
+      setNewPortfolioItem({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", is_featured: false });
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const updatePortfolioItem = async (id, data) => {
+    try {
+      await axios.put(`${API}/admin/portfolio/${id}`, data, { headers });
+      toast.success("Portfolio mis à jour");
+      setEditingPortfolio(null);
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const deletePortfolioItem = async (id) => {
+    if (!window.confirm("Supprimer cet élément ?")) return;
+    try {
+      await axios.delete(`${API}/admin/portfolio/${id}`, { headers });
+      toast.success("Élément supprimé");
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("admin_token");
+    localStorage.removeItem("admin_user");
+    navigate("/admin");
+  };
+
+  // Appointment functions
+  const respondToAppointment = async (appointmentId, response) => {
+    try {
+      await axios.put(`${API}/appointments/${appointmentId}`, response, { headers });
+      toast.success(
+        response.status === "confirmed" ? "Rendez-vous confirmé ! Email envoyé au client." :
+        response.status === "refused" ? "Rendez-vous refusé. Email envoyé au client." :
+        "Nouvelle date proposée ! Email envoyé au client."
+      );
+      setSelectedAppointment(null);
+      setAppointmentResponse({ status: "", admin_response: "", new_proposed_date: "", new_proposed_time: "" });
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  const appointmentStatusColors = {
+    pending: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30",
+    confirmed: "bg-green-500/20 text-green-500 border-green-500/30",
+    refused: "bg-red-500/20 text-red-500 border-red-500/30",
+    rescheduled_pending: "bg-orange-500/20 text-orange-500 border-orange-500/30"
+  };
+
+  const appointmentStatusLabels = {
+    pending: "En attente",
+    confirmed: "Confirmé",
+    refused: "Refusé",
+    rescheduled_pending: "Nouvelle date proposée"
+  };
+
+  const statusColors = {
+    pending: "bg-yellow-500/20 text-yellow-500",
+    confirmed: "bg-green-500/20 text-green-500",
+    cancelled: "bg-red-500/20 text-red-500"
+  };
+
+  const statusLabels = {
+    pending: "En attente",
+    confirmed: "Confirmé",
+    cancelled: "Annulé"
+  };
+
+  return (
+    <div className="pt-20 min-h-screen" data-testid="admin-dashboard">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="font-primary font-black text-3xl tracking-tighter uppercase">
+            <span className="text-gold-gradient">Dashboard</span>
+          </h1>
+          <button onClick={logout} className="btn-outline px-6 py-2 text-sm" data-testid="admin-logout-btn">
+            Déconnexion
+          </button>
+        </div>
+
+        {/* Stats */}
+        {stats && (
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">Réservations</p>
+              <p className="font-primary font-black text-3xl text-gold-gradient">{stats.total_bookings}</p>
+            </div>
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">Devis Mariage</p>
+              <p className="font-primary font-black text-3xl text-pink-500">{stats.pending_quotes || 0}</p>
+            </div>
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">En attente</p>
+              <p className="font-primary font-black text-3xl text-yellow-500">{stats.pending_bookings}</p>
+            </div>
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">Confirmées</p>
+              <p className="font-primary font-black text-3xl text-green-500">{stats.confirmed_bookings}</p>
+            </div>
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">Messages</p>
+              <p className="font-primary font-black text-3xl text-blue-500">{stats.unread_messages}</p>
+            </div>
+            <div className="bg-card border border-white/10 p-6">
+              <p className="text-white/60 text-sm">Services</p>
+              <p className="font-primary font-black text-3xl">{stats.total_services}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8 border-b border-white/10 pb-4 overflow-x-auto">
+          {[
+            { id: "overview", label: "Aperçu" },
+            { id: "content", label: "Contenu Site" },
+            { id: "portfolio", label: "Portfolio" },
+            { id: "quotes", label: "Devis Mariage" },
+            { id: "bookings", label: "Réservations" },
+            { id: "clients", label: "Clients" },
+            { id: "services", label: "Services" },
+            { id: "options", label: "Options Mariage" },
+            { id: "messages", label: "Messages" },
+            { id: "appointments", label: "Rendez-vous" },
+            { id: "settings", label: "Paramètres" }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`font-primary text-sm uppercase tracking-wider pb-2 border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"
+              }`}
+              data-testid={`admin-tab-${tab.id}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Site Content Tab */}
+        {activeTab === "content" && siteContent && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">Modifier le contenu du site</h2>
+              <button onClick={updateSiteContent} className="btn-primary px-6 py-2 text-sm">
+                Enregistrer les modifications
+              </button>
+            </div>
+
+            {/* Hidden file input for content uploads */}
+            <input
+              type="file"
+              ref={contentFileRef}
+              onChange={handleContentImageUpload}
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+            />
+
+            {/* Hero Section */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-primary">Section Hero (Accueil)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titre principal</label>
+                  <input
+                    type="text"
+                    value={editingContent.hero_title || ""}
+                    onChange={(e) => setEditingContent({...editingContent, hero_title: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Sous-titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.hero_subtitle || ""}
+                    onChange={(e) => setEditingContent({...editingContent, hero_subtitle: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Image de fond</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={editingContent.hero_image || ""}
+                      onChange={(e) => setEditingContent({...editingContent, hero_image: e.target.value})}
+                      className="flex-1 bg-background border border-white/20 px-4 py-3"
+                      placeholder="URL ou cliquez sur Uploader"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => triggerContentUpload('hero_image')}
+                      disabled={uploadingContentImage}
+                      className="btn-primary px-4 py-3 flex items-center gap-2"
+                    >
+                      {uploadingContentImage && currentContentField === 'hero_image' ? (
+                        <Loader size={16} className="animate-spin" />
+                      ) : (
+                        <Upload size={16} />
+                      )}
+                      Uploader
+                    </button>
+                  </div>
+                  {editingContent.hero_image && (
+                    <img src={editingContent.hero_image} alt="Preview" className="mt-2 h-32 object-cover" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Wedding Section */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-pink-400">Service Mariage</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.wedding_title || ""}
+                    onChange={(e) => setEditingContent({...editingContent, wedding_title: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Sous-titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.wedding_subtitle || ""}
+                    onChange={(e) => setEditingContent({...editingContent, wedding_subtitle: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Description</label>
+                  <textarea
+                    value={editingContent.wedding_description || ""}
+                    onChange={(e) => setEditingContent({...editingContent, wedding_description: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                    rows={2}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Image</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={editingContent.wedding_image || ""}
+                      onChange={(e) => setEditingContent({...editingContent, wedding_image: e.target.value})}
+                      className="flex-1 bg-background border border-white/20 px-4 py-3"
+                      placeholder="URL ou cliquez sur Uploader"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => triggerContentUpload('wedding_image')}
+                      disabled={uploadingContentImage}
+                      className="btn-primary px-4 py-3 flex items-center gap-2"
+                    >
+                      {uploadingContentImage && currentContentField === 'wedding_image' ? (
+                        <Loader size={16} className="animate-spin" />
+                      ) : (
+                        <Upload size={16} />
+                      )}
+                      Uploader
+                    </button>
+                  </div>
+                  {editingContent.wedding_image && (
+                    <img src={editingContent.wedding_image} alt="Preview" className="mt-2 h-32 object-cover" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Podcast Section */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-blue-400">Service Podcast</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.podcast_title || ""}
+                    onChange={(e) => setEditingContent({...editingContent, podcast_title: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Sous-titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.podcast_subtitle || ""}
+                    onChange={(e) => setEditingContent({...editingContent, podcast_subtitle: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Description</label>
+                  <textarea
+                    value={editingContent.podcast_description || ""}
+                    onChange={(e) => setEditingContent({...editingContent, podcast_description: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                    rows={2}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Image</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={editingContent.podcast_image || ""}
+                      onChange={(e) => setEditingContent({...editingContent, podcast_image: e.target.value})}
+                      className="flex-1 bg-background border border-white/20 px-4 py-3"
+                      placeholder="URL ou cliquez sur Uploader"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => triggerContentUpload('podcast_image')}
+                      disabled={uploadingContentImage}
+                      className="btn-primary px-4 py-3 flex items-center gap-2"
+                    >
+                      {uploadingContentImage && currentContentField === 'podcast_image' ? (
+                        <Loader size={16} className="animate-spin" />
+                      ) : (
+                        <Upload size={16} />
+                      )}
+                      Uploader
+                    </button>
+                  </div>
+                  {editingContent.podcast_image && (
+                    <img src={editingContent.podcast_image} alt="Preview" className="mt-2 h-32 object-cover" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* TV Section */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-purple-400">Service Plateau TV</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.tv_title || ""}
+                    onChange={(e) => setEditingContent({...editingContent, tv_title: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Sous-titre</label>
+                  <input
+                    type="text"
+                    value={editingContent.tv_subtitle || ""}
+                    onChange={(e) => setEditingContent({...editingContent, tv_subtitle: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Description</label>
+                  <textarea
+                    value={editingContent.tv_description || ""}
+                    onChange={(e) => setEditingContent({...editingContent, tv_description: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                    rows={2}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-white/60 mb-2">Image</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={editingContent.tv_image || ""}
+                      onChange={(e) => setEditingContent({...editingContent, tv_image: e.target.value})}
+                      className="flex-1 bg-background border border-white/20 px-4 py-3"
+                      placeholder="URL ou cliquez sur Uploader"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => triggerContentUpload('tv_image')}
+                      disabled={uploadingContentImage}
+                      className="btn-primary px-4 py-3 flex items-center gap-2"
+                    >
+                      {uploadingContentImage && currentContentField === 'tv_image' ? (
+                        <Loader size={16} className="animate-spin" />
+                      ) : (
+                        <Upload size={16} />
+                      )}
+                      Uploader
+                    </button>
+                  </div>
+                  {editingContent.tv_image && (
+                    <img src={editingContent.tv_image} alt="Preview" className="mt-2 h-32 object-cover" />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Info */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-green-400">Informations de Contact</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Téléphone</label>
+                  <input
+                    type="text"
+                    value={editingContent.phone || ""}
+                    onChange={(e) => setEditingContent({...editingContent, phone: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={editingContent.email || ""}
+                    onChange={(e) => setEditingContent({...editingContent, email: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Adresse</label>
+                  <input
+                    type="text"
+                    value={editingContent.address || ""}
+                    onChange={(e) => setEditingContent({...editingContent, address: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Horaires</label>
+                  <input
+                    type="text"
+                    value={editingContent.hours || ""}
+                    onChange={(e) => setEditingContent({...editingContent, hours: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* CTA Section */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-yellow-400">Section Appel à l'action</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titre CTA</label>
+                  <input
+                    type="text"
+                    value={editingContent.cta_title || ""}
+                    onChange={(e) => setEditingContent({...editingContent, cta_title: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Sous-titre CTA</label>
+                  <input
+                    type="text"
+                    value={editingContent.cta_subtitle || ""}
+                    onChange={(e) => setEditingContent({...editingContent, cta_subtitle: e.target.value})}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button onClick={updateSiteContent} className="btn-primary w-full py-4 text-sm">
+              Enregistrer toutes les modifications
+            </button>
+          </div>
+        )}
+
+        {/* Portfolio Tab */}
+        {activeTab === "portfolio" && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">Gérer le Portfolio</h2>
+              <button
+                onClick={() => setShowAddPortfolio(true)}
+                className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
+              >
+                <Plus size={16} /> Ajouter
+              </button>
+            </div>
+
+            {/* Add Portfolio Modal */}
+            {showAddPortfolio && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-card border border-white/10 p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                  <h3 className="font-primary font-bold text-xl mb-4">Ajouter au Portfolio</h3>
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="Titre"
+                      value={newPortfolioItem.title}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, title: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <textarea
+                      placeholder="Description"
+                      value={newPortfolioItem.description}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, description: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                      rows={2}
+                    />
+                    <select
+                      value={newPortfolioItem.category}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, category: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    >
+                      <option value="wedding">Mariage</option>
+                      <option value="podcast">Podcast</option>
+                      <option value="tv_set">Plateau TV</option>
+                    </select>
+                    
+                    {/* Upload Section */}
+                    <div className="border-2 border-dashed border-primary/50 p-4 text-center bg-primary/5">
+                      <input
+                        type="file"
+                        ref={portfolioFileRef}
+                        onChange={handlePortfolioFileUpload}
+                        accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => portfolioFileRef.current?.click()}
+                        disabled={uploadingPortfolio}
+                        className="btn-primary px-6 py-3 w-full flex items-center justify-center gap-2"
+                      >
+                        {uploadingPortfolio ? (
+                          <>
+                            <Loader size={16} className="animate-spin" /> Upload en cours...
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={16} /> Uploader une photo/vidéo
+                          </>
+                        )}
+                      </button>
+                      <p className="text-xs text-white/50 mt-2">JPG, PNG, WEBP, GIF, MP4, WEBM, MOV (max 1 Go)</p>
+                    </div>
+                    
+                    {/* Preview uploaded file */}
+                    {newPortfolioItem.media_url && (
+                      <div className="relative">
+                        <p className="text-sm text-white/60 mb-2">Aperçu :</p>
+                        {newPortfolioItem.media_type === 'photo' ? (
+                          <img src={newPortfolioItem.media_url} alt="Preview" className="w-full h-40 object-cover" />
+                        ) : (
+                          <video src={newPortfolioItem.media_url} className="w-full h-40 object-cover" controls />
+                        )}
+                      </div>
+                    )}
+                    
+                    <div className="text-white/40 text-center text-sm">— ou —</div>
+                    
+                    <input
+                      type="url"
+                      placeholder="URL externe (YouTube, Vimeo, etc.)"
+                      value={newPortfolioItem.media_url}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, media_url: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    
+                    {/* Thumbnail upload section for videos */}
+                    <div className="space-y-2">
+                      <p className="text-sm text-white/60">Miniature (optionnel, pour vidéos) :</p>
+                      <input
+                        type="file"
+                        id="thumbnail-upload"
+                        className="hidden"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        onChange={handleThumbnailUpload}
+                      />
+                      <label
+                        htmlFor="thumbnail-upload"
+                        className={`flex items-center justify-center gap-2 w-full border-2 border-dashed border-primary/50 py-3 cursor-pointer hover:bg-primary/10 transition-colors ${uploadingThumbnail ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {uploadingThumbnail ? (
+                          <>
+                            <Loader size={16} className="animate-spin" /> Upload en cours...
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={16} /> Uploader une miniature
+                          </>
+                        )}
+                      </label>
+                      <p className="text-xs text-white/50">JPG, PNG, WEBP, GIF (max 50 Mo)</p>
+                      
+                      {/* Thumbnail preview */}
+                      {newPortfolioItem.thumbnail_url && (
+                        <div className="relative">
+                          <img src={newPortfolioItem.thumbnail_url} alt="Miniature" className="w-full h-32 object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setNewPortfolioItem({ ...newPortfolioItem, thumbnail_url: '' })}
+                            className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <select
+                      value={newPortfolioItem.media_type}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, media_type: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    >
+                      <option value="photo">Photo</option>
+                      <option value="video">Vidéo</option>
+                    </select>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={newPortfolioItem.is_featured}
+                        onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, is_featured: e.target.checked })}
+                        className="accent-primary"
+                      />
+                      <span className="text-sm">Mettre en avant</span>
+                    </label>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowAddPortfolio(false)} className="btn-outline flex-1 py-3">
+                        Annuler
+                      </button>
+                      <button onClick={createPortfolioItem} className="btn-primary flex-1 py-3">
+                        Ajouter
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Portfolio Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {portfolio.map((item) => (
+                <div key={item.id} className="bg-card border border-white/10 overflow-hidden" data-testid={`portfolio-admin-${item.id}`}>
+                  <div className="relative aspect-video bg-black/50">
+                    {item.media_type === "photo" ? (
+                      <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <img src={item.thumbnail_url || item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                    )}
+                    {item.is_featured && (
+                      <span className="absolute top-2 right-2 bg-primary text-black text-xs px-2 py-1 font-bold">Featured</span>
+                    )}
+                    <span className={`absolute top-2 left-2 text-xs px-2 py-1 font-bold ${
+                      item.category === "wedding" ? "bg-pink-500" : item.category === "podcast" ? "bg-blue-500" : "bg-purple-500"
+                    }`}>
+                      {item.category === "wedding" ? "Mariage" : item.category === "podcast" ? "Podcast" : "Plateau TV"}
+                    </span>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      {item.media_type === "photo" ? <Image size={16} className="text-primary" /> : <Video size={16} className="text-primary" />}
+                      <h3 className="font-primary font-semibold text-sm truncate">{item.title}</h3>
+                    </div>
+                    {item.description && (
+                      <p className="text-white/60 text-xs mb-3 line-clamp-2">{item.description}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => updatePortfolioItem(item.id, { is_featured: !item.is_featured })}
+                        className={`flex-1 py-2 text-xs ${item.is_featured ? "btn-primary" : "btn-outline"}`}
+                      >
+                        {item.is_featured ? "★ Featured" : "☆ Feature"}
+                      </button>
+                      <button
+                        onClick={() => updatePortfolioItem(item.id, { is_active: !item.is_active })}
+                        className={`flex-1 py-2 text-xs ${item.is_active !== false ? "bg-green-500/20 text-green-500 border border-green-500/50" : "bg-red-500/20 text-red-500 border border-red-500/50"}`}
+                      >
+                        {item.is_active !== false ? "Actif" : "Inactif"}
+                      </button>
+                      <button
+                        onClick={() => deletePortfolioItem(item.id)}
+                        className="px-3 py-2 text-xs bg-red-500/20 text-red-500 border border-red-500/50"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {portfolio.length === 0 && (
+              <p className="text-center text-white/60 py-12">Aucun élément dans le portfolio</p>
+            )}
+          </div>
+        )}
+
+        {/* Wedding Quotes Tab */}
+        {(activeTab === "overview" || activeTab === "quotes") && (
+          <div className="mb-12">
+            <h2 className="font-primary font-bold text-xl mb-4">Demandes de devis mariage</h2>
+            <div className="bg-card border border-white/10 overflow-hidden overflow-x-auto">
+              <table className="w-full min-w-[800px]">
+                <thead className="bg-black/50">
+                  <tr>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Client</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Date</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Options</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Total</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Statut</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quotes.slice(0, activeTab === "overview" ? 5 : 50).map((quote) => (
+                    <tr key={quote.id} className="border-t border-white/10" data-testid={`quote-row-${quote.id}`}>
+                      <td className="p-4">
+                        <p className="font-semibold">{quote.client_name}</p>
+                        <p className="text-white/60 text-sm">{quote.client_email}</p>
+                        <p className="text-white/40 text-xs">{quote.client_phone}</p>
+                      </td>
+                      <td className="p-4">
+                        <p>{quote.event_date}</p>
+                        {quote.event_location && <p className="text-white/60 text-sm">{quote.event_location}</p>}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex flex-wrap gap-1">
+                          {quote.options_details?.slice(0, 3).map((opt, i) => (
+                            <span key={i} className="bg-white/10 px-2 py-0.5 text-xs">{opt.name}</span>
+                          ))}
+                          {quote.options_details?.length > 3 && (
+                            <span className="text-white/40 text-xs">+{quote.options_details.length - 3}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <span className="font-primary font-bold text-gold-gradient">{quote.total_price}€</span>
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-3 py-1 text-xs font-semibold ${statusColors[quote.status]}`}>
+                          {statusLabels[quote.status]}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <select
+                          value={quote.status}
+                          onChange={(e) => updateQuoteStatus(quote.id, e.target.value)}
+                          className="bg-background border border-white/20 px-2 py-1 text-sm"
+                          data-testid={`quote-status-select-${quote.id}`}
+                        >
+                          <option value="pending">En attente</option>
+                          <option value="confirmed">Confirmé</option>
+                          <option value="cancelled">Annulé</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {quotes.length === 0 && (
+                <p className="text-center text-white/60 py-8">Aucun devis</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Bookings Tab */}
+        {(activeTab === "overview" || activeTab === "bookings") && (
+          <div className="mb-12">
+            <h2 className="font-primary font-bold text-xl mb-4">Réservations (Podcast/TV)</h2>
+            <div className="bg-card border border-white/10 overflow-hidden overflow-x-auto">
+              <table className="w-full min-w-[700px]">
+                <thead className="bg-black/50">
+                  <tr>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Client</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Service</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Date</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Statut</th>
+                    <th className="text-left p-4 font-primary text-sm text-white/60">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.slice(0, activeTab === "overview" ? 5 : 50).map((booking) => (
+                    <tr key={booking.id} className="border-t border-white/10" data-testid={`booking-row-${booking.id}`}>
+                      <td className="p-4">
+                        <p className="font-semibold">{booking.client_name}</p>
+                        <p className="text-white/60 text-sm">{booking.client_email}</p>
+                      </td>
+                      <td className="p-4">
+                        <p>{booking.service_name}</p>
+                        <p className="text-white/60 text-sm capitalize">{booking.service_category === "tv_set" ? "Plateau TV" : booking.service_category}</p>
+                      </td>
+                      <td className="p-4">{booking.event_date}</td>
+                      <td className="p-4">
+                        <span className={`px-3 py-1 text-xs font-semibold ${statusColors[booking.status]}`}>
+                          {statusLabels[booking.status]}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <select
+                          value={booking.status}
+                          onChange={(e) => updateBookingStatus(booking.id, e.target.value)}
+                          className="bg-background border border-white/20 px-2 py-1 text-sm"
+                          data-testid={`booking-status-select-${booking.id}`}
+                        >
+                          <option value="pending">En attente</option>
+                          <option value="confirmed">Confirmé</option>
+                          <option value="cancelled">Annulé</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {bookings.length === 0 && (
+                <p className="text-center text-white/60 py-8">Aucune réservation</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Services Tab */}
+        {activeTab === "services" && (
+          <div>
+            <h2 className="font-primary font-bold text-xl mb-4">Gestion des services</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {services.map((service) => (
+                <div key={service.id} className="bg-card border border-white/10 p-6" data-testid={`service-card-admin-${service.id}`}>
+                  {editingService === service.id ? (
+                    <EditServiceForm
+                      service={service}
+                      onSave={(data) => updateService(service.id, data)}
+                      onCancel={() => setEditingService(null)}
+                    />
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <span className={`text-xs uppercase tracking-wider ${
+                            service.category === "wedding" ? "text-pink-400" :
+                            service.category === "podcast" ? "text-blue-400" : "text-purple-400"
+                          }`}>
+                            {service.category === "wedding" ? "Mariage" :
+                             service.category === "podcast" ? "Podcast" : "Plateau TV"}
+                          </span>
+                          <h3 className="font-primary font-bold text-lg">{service.name}</h3>
+                        </div>
+                        <span className={`text-xs px-2 py-1 ${service.is_active ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"}`}>
+                          {service.is_active ? "Actif" : "Inactif"}
+                        </span>
+                      </div>
+                      <p className="text-white/60 text-sm mb-4">{service.description}</p>
+                      <p className="font-primary font-black text-2xl text-gold-gradient mb-4">{service.price}€</p>
+                      <button
+                        onClick={() => setEditingService(service.id)}
+                        className="btn-outline w-full py-2 text-xs"
+                        data-testid={`edit-service-${service.id}`}
+                      >
+                        Modifier
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Wedding Options Tab */}
+        {activeTab === "options" && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">Options du devis mariage</h2>
+              <button
+                onClick={() => setShowAddOption(true)}
+                className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
+              >
+                <Plus size={16} /> Ajouter une option
+              </button>
+            </div>
+
+            {/* Add Option Modal */}
+            {showAddOption && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-card border border-white/10 p-6 w-full max-w-md">
+                  <h3 className="font-primary font-bold text-xl mb-4">Nouvelle option</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Catégorie</label>
+                      <select
+                        value={newOption.category}
+                        onChange={(e) => setNewOption({ ...newOption, category: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      >
+                        <option value="coverage">Couverture</option>
+                        <option value="extras">Options</option>
+                        <option value="editing">Livrables</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Nom de l'option</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Cérémonie religieuse"
+                        value={newOption.name}
+                        onChange={(e) => setNewOption({ ...newOption, name: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Description</label>
+                      <textarea
+                        placeholder="Description de l'option..."
+                        value={newOption.description}
+                        onChange={(e) => setNewOption({ ...newOption, description: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                        rows={2}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Prix (€)</label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={newOption.price}
+                        onChange={(e) => setNewOption({ ...newOption, price: parseFloat(e.target.value) || 0 })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowAddOption(false)} className="btn-outline flex-1 py-3">
+                        Annuler
+                      </button>
+                      <button 
+                        onClick={() => createWeddingOption(newOption)}
+                        disabled={!newOption.name}
+                        className="btn-primary flex-1 py-3 disabled:opacity-50"
+                      >
+                        Ajouter
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {["coverage", "extras", "editing"].map(cat => {
+              const catOptions = weddingOptions.filter(o => o.category === cat);
+              const labels = { coverage: "Couverture", extras: "Options", editing: "Livrables" };
+              return (
+                <div key={cat} className="mb-8">
+                  <h3 className="font-primary font-semibold text-lg mb-4">{labels[cat]}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {catOptions.map(option => (
+                      <div key={option.id} className="bg-card border border-white/10 p-4" data-testid={`option-admin-${option.id}`}>
+                        {editingOption === option.id ? (
+                          <div className="space-y-3">
+                            <input
+                              type="text"
+                              defaultValue={option.name}
+                              className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+                              id={`edit-name-${option.id}`}
+                            />
+                            <textarea
+                              defaultValue={option.description}
+                              className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+                              rows={2}
+                              id={`edit-desc-${option.id}`}
+                            />
+                            <input
+                              type="number"
+                              defaultValue={option.price}
+                              className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+                              id={`edit-price-${option.id}`}
+                            />
+                            <div className="flex gap-2">
+                              <button onClick={() => setEditingOption(null)} className="btn-outline flex-1 py-2 text-xs">
+                                Annuler
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  const name = document.getElementById(`edit-name-${option.id}`).value;
+                                  const description = document.getElementById(`edit-desc-${option.id}`).value;
+                                  const price = parseFloat(document.getElementById(`edit-price-${option.id}`).value);
+                                  updateWeddingOption(option.id, { name, description, price });
+                                }}
+                                className="btn-primary flex-1 py-2 text-xs"
+                              >
+                                Sauver
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex justify-between items-start">
+                              <h4 className="font-primary font-semibold">{option.name}</h4>
+                              <span className="font-primary font-bold text-primary">{option.price}€</span>
+                            </div>
+                            <p className="text-white/60 text-sm mt-1 mb-3">{option.description}</p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setEditingOption(option.id)}
+                                className="text-primary text-xs hover:underline"
+                              >
+                                Modifier
+                              </button>
+                              <button
+                                onClick={() => deleteWeddingOption(option.id)}
+                                className="text-red-400 text-xs hover:underline"
+                              >
+                                Supprimer
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Clients Tab */}
+        {activeTab === "clients" && (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">Gestion des Clients</h2>
+              <button
+                onClick={() => setShowAddClient(true)}
+                className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
+              >
+                <Plus size={16} /> Nouveau Client
+              </button>
+            </div>
+
+            {/* Add Client Modal */}
+            {showAddClient && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-card border border-white/10 p-6 w-full max-w-md">
+                  <h3 className="font-primary font-bold text-xl mb-4">Nouveau Client</h3>
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      placeholder="Nom complet"
+                      value={newClient.name}
+                      onChange={(e) => setNewClient({ ...newClient, name: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email"
+                      value={newClient.email}
+                      onChange={(e) => setNewClient({ ...newClient, email: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <input
+                      type="password"
+                      placeholder="Mot de passe"
+                      value={newClient.password}
+                      onChange={(e) => setNewClient({ ...newClient, password: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Téléphone"
+                      value={newClient.phone}
+                      onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowAddClient(false)} className="btn-outline flex-1 py-3">
+                        Annuler
+                      </button>
+                      <button onClick={createClient} className="btn-primary flex-1 py-3">
+                        Créer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Client List */}
+              <div>
+                <h3 className="font-primary font-semibold mb-4">Liste des clients ({clients.length})</h3>
+                <div className="space-y-2">
+                  {clients.map((client) => (
+                    <button
+                      key={client.id}
+                      onClick={() => selectClient(client)}
+                      className={`w-full text-left bg-card border p-4 transition-colors ${
+                        selectedClient?.id === client.id ? "border-primary" : "border-white/10 hover:border-white/30"
+                      }`}
+                    >
+                      <p className="font-primary font-semibold">{client.name}</p>
+                      <p className="text-white/60 text-sm">{client.email}</p>
+                    </button>
+                  ))}
+                  {clients.length === 0 && (
+                    <p className="text-center text-white/60 py-8">Aucun client</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Client Files */}
+              {selectedClient && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-primary font-semibold">Fichiers de {selectedClient.name}</h3>
+                    <button
+                      onClick={() => setShowAddFile(true)}
+                      className="btn-outline px-4 py-2 text-xs flex items-center gap-2"
+                    >
+                      <Plus size={14} /> Ajouter
+                    </button>
+                  </div>
+
+                  {/* Add File Modal */}
+                  {showAddFile && (
+                    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                      <div className="bg-card border border-white/10 p-6 w-full max-w-md">
+                        <h3 className="font-primary font-bold text-xl mb-4">Ajouter un fichier</h3>
+                        <div className="space-y-4">
+                          
+                          {/* Upload Section */}
+                          <div className="border-2 border-dashed border-primary/50 p-4 text-center bg-primary/5">
+                            <input
+                              type="file"
+                              ref={clientFileRef}
+                              onChange={handleClientFileUpload}
+                              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                              className="hidden"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => clientFileRef.current?.click()}
+                              disabled={uploadingClientFile}
+                              className="btn-primary px-6 py-3 w-full flex items-center justify-center gap-2"
+                            >
+                              {uploadingClientFile ? (
+                                <>
+                                  <Loader size={16} className="animate-spin" /> Upload en cours...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload size={16} /> Uploader un fichier
+                                </>
+                              )}
+                            </button>
+                            <p className="text-xs text-white/50 mt-2">JPG, PNG, MP4, WEBM, MOV (max 1 Go)</p>
+                            <p className="text-xs text-green-400 mt-1">Le client sera notifié par email !</p>
+                          </div>
+                          
+                          <div className="text-white/40 text-center text-sm">— ou lien externe —</div>
+                          
+                          <input
+                            type="text"
+                            placeholder="Titre"
+                            value={newFile.title}
+                            onChange={(e) => setNewFile({ ...newFile, title: e.target.value })}
+                            className="w-full bg-background border border-white/20 px-4 py-3"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Description (optionnel)"
+                            value={newFile.description}
+                            onChange={(e) => setNewFile({ ...newFile, description: e.target.value })}
+                            className="w-full bg-background border border-white/20 px-4 py-3"
+                          />
+                          <select
+                            value={newFile.file_type}
+                            onChange={(e) => setNewFile({ ...newFile, file_type: e.target.value })}
+                            className="w-full bg-background border border-white/20 px-4 py-3"
+                          >
+                            <option value="video">Vidéo</option>
+                            <option value="photo">Photo</option>
+                            <option value="document">Document</option>
+                          </select>
+                          <input
+                            type="url"
+                            placeholder="URL du fichier (Google Drive, Dropbox...)"
+                            value={newFile.file_url}
+                            onChange={(e) => setNewFile({ ...newFile, file_url: e.target.value })}
+                            className="w-full bg-background border border-white/20 px-4 py-3"
+                          />
+                          
+                          {/* Thumbnail upload section for client files */}
+                          <div className="space-y-2">
+                            <p className="text-sm text-white/60">Miniature (optionnel) :</p>
+                            <input
+                              type="file"
+                              id="client-file-thumbnail-upload"
+                              className="hidden"
+                              accept="image/jpeg,image/png,image/webp,image/gif"
+                              onChange={handleClientFileThumbnailUpload}
+                            />
+                            <label
+                              htmlFor="client-file-thumbnail-upload"
+                              className={`flex items-center justify-center gap-2 w-full border-2 border-dashed border-primary/50 py-3 cursor-pointer hover:bg-primary/10 transition-colors ${uploadingClientFileThumbnail ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              {uploadingClientFileThumbnail ? (
+                                <>
+                                  <Loader size={16} className="animate-spin" /> Upload en cours...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload size={16} /> Uploader une miniature
+                                </>
+                              )}
+                            </label>
+                            <p className="text-xs text-white/50">JPG, PNG, WEBP, GIF (max 50 Mo)</p>
+                            
+                            {/* Thumbnail preview */}
+                            {newFile.thumbnail_url && (
+                              <div className="relative">
+                                <img src={newFile.thumbnail_url} alt="Miniature" className="w-full h-32 object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => setNewFile({ ...newFile, thumbnail_url: '' })}
+                                  className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="flex gap-2">
+                            <button onClick={() => setShowAddFile(false)} className="btn-outline flex-1 py-3">
+                              Annuler
+                            </button>
+                            <button onClick={addFileToClient} className="btn-primary flex-1 py-3">
+                              Ajouter via lien
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    {clientFiles.map((file) => (
+                      <div key={file.id} className="bg-card border border-white/10 p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {file.file_type === "video" && <Video size={20} className="text-primary" />}
+                          {file.file_type === "photo" && <Image size={20} className="text-primary" />}
+                          {file.file_type === "document" && <FileText size={20} className="text-primary" />}
+                          <div>
+                            <p className="font-semibold text-sm">{file.title}</p>
+                            <p className="text-white/40 text-xs truncate max-w-[200px]">{file.file_url}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => deleteFile(file.id)}
+                          className="text-red-500 hover:text-red-400 text-xs"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    ))}
+                    {clientFiles.length === 0 && (
+                      <p className="text-center text-white/60 py-8">Aucun fichier</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Messages Tab */}
+        {activeTab === "messages" && (
+          <div>
+            <h2 className="font-primary font-bold text-xl mb-4">Messages reçus</h2>
+            <div className="space-y-4">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`bg-card border p-6 ${msg.is_read ? "border-white/10" : "border-primary"}`} data-testid={`message-${msg.id}`}>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="font-primary font-bold">{msg.name}</h3>
+                      <p className="text-white/60 text-sm">{msg.email} {msg.phone && `• ${msg.phone}`}</p>
+                    </div>
+                    <span className="text-white/40 text-sm">
+                      {new Date(msg.created_at).toLocaleDateString("fr-FR")}
+                    </span>
+                  </div>
+                  <p className="font-semibold mb-2">{msg.subject}</p>
+                  <p className="text-white/70 text-sm">{msg.message}</p>
+                </div>
+              ))}
+              {messages.length === 0 && (
+                <p className="text-center text-white/60 py-8">Aucun message</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Appointments Tab */}
+        {activeTab === "appointments" && (
+          <div>
+            <h2 className="font-primary font-bold text-xl mb-4">Demandes de rendez-vous</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Appointments List */}
+              <div className="space-y-4">
+                {appointments.length === 0 ? (
+                  <p className="text-center text-white/60 py-8">Aucune demande de rendez-vous</p>
+                ) : (
+                  appointments.map((apt) => (
+                    <div 
+                      key={apt.id} 
+                      onClick={() => setSelectedAppointment(apt)}
+                      className={`bg-card border p-4 cursor-pointer transition-all hover:border-primary ${selectedAppointment?.id === apt.id ? "border-primary" : "border-white/10"}`}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-primary font-bold">{apt.client_name}</h3>
+                          <p className="text-white/60 text-sm">{apt.client_email}</p>
+                        </div>
+                        <span className={`text-xs px-2 py-1 border ${appointmentStatusColors[apt.status] || "bg-white/10"}`}>
+                          {appointmentStatusLabels[apt.status] || apt.status}
+                        </span>
+                      </div>
+                      <div className="text-sm space-y-1">
+                        <p><span className="text-white/50">Motif :</span> {apt.appointment_type_label || apt.appointment_type}</p>
+                        <p><span className="text-white/50">Date souhaitée :</span> <span className="text-primary font-semibold">{apt.proposed_date} à {apt.proposed_time}</span></p>
+                        {apt.new_proposed_date && (
+                          <p><span className="text-white/50">Nouvelle date :</span> <span className="text-orange-400 font-semibold">{apt.new_proposed_date} à {apt.new_proposed_time}</span></p>
+                        )}
+                      </div>
+                      <p className="text-white/40 text-xs mt-3">
+                        Réf: RDV-{apt.id.substring(0, 8).toUpperCase()} • {new Date(apt.created_at).toLocaleDateString("fr-FR")}
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Selected Appointment Detail */}
+              {selectedAppointment && (
+                <div className="bg-card border border-primary p-6">
+                  <h3 className="font-primary font-bold text-lg mb-4">Détails du rendez-vous</h3>
+                  
+                  <div className="space-y-3 text-sm mb-6">
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Client</span>
+                      <span className="font-semibold">{selectedAppointment.client_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Email</span>
+                      <span>{selectedAppointment.client_email}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Téléphone</span>
+                      <span>{selectedAppointment.client_phone}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Motif</span>
+                      <span>{selectedAppointment.appointment_type_label || selectedAppointment.appointment_type}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Date souhaitée</span>
+                      <span className="text-primary font-bold">{selectedAppointment.proposed_date} à {selectedAppointment.proposed_time}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-white/60">Durée</span>
+                      <span>{selectedAppointment.duration} min</span>
+                    </div>
+                    {selectedAppointment.message && (
+                      <div className="bg-background p-3 mt-2">
+                        <p className="text-white/60 text-xs mb-1">Message du client :</p>
+                        <p className="text-sm">{selectedAppointment.message}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedAppointment.status === "pending" && (
+                    <div className="space-y-4 border-t border-white/10 pt-4">
+                      <h4 className="font-primary font-semibold">Répondre à la demande</h4>
+                      
+                      <textarea
+                        placeholder="Message pour le client (optionnel)"
+                        value={appointmentResponse.admin_response}
+                        onChange={(e) => setAppointmentResponse({ ...appointmentResponse, admin_response: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+                        rows={2}
+                      />
+                      
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => respondToAppointment(selectedAppointment.id, { status: "confirmed", admin_response: appointmentResponse.admin_response })}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 text-sm font-semibold"
+                        >
+                          ✓ Confirmer
+                        </button>
+                        <button
+                          onClick={() => respondToAppointment(selectedAppointment.id, { status: "refused", admin_response: appointmentResponse.admin_response })}
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 text-sm font-semibold"
+                        >
+                          ✕ Refuser
+                        </button>
+                      </div>
+                      
+                      <div className="border-t border-white/10 pt-4">
+                        <h5 className="text-sm font-semibold mb-3">Ou proposer une autre date :</h5>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          <input
+                            type="date"
+                            value={appointmentResponse.new_proposed_date}
+                            onChange={(e) => setAppointmentResponse({ ...appointmentResponse, new_proposed_date: e.target.value })}
+                            className="bg-background border border-white/20 px-3 py-2 text-sm"
+                          />
+                          <input
+                            type="time"
+                            value={appointmentResponse.new_proposed_time}
+                            onChange={(e) => setAppointmentResponse({ ...appointmentResponse, new_proposed_time: e.target.value })}
+                            className="bg-background border border-white/20 px-3 py-2 text-sm"
+                          />
+                        </div>
+                        <button
+                          onClick={() => respondToAppointment(selectedAppointment.id, { 
+                            status: "rescheduled_pending", 
+                            admin_response: appointmentResponse.admin_response,
+                            new_proposed_date: appointmentResponse.new_proposed_date,
+                            new_proposed_time: appointmentResponse.new_proposed_time
+                          })}
+                          disabled={!appointmentResponse.new_proposed_date || !appointmentResponse.new_proposed_time}
+                          className="w-full bg-orange-600 hover:bg-orange-700 text-white py-3 text-sm font-semibold disabled:opacity-50"
+                        >
+                          📅 Proposer cette date
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedAppointment.status !== "pending" && (
+                    <div className={`p-4 text-center ${appointmentStatusColors[selectedAppointment.status]}`}>
+                      <p className="font-semibold">{appointmentStatusLabels[selectedAppointment.status]}</p>
+                      {selectedAppointment.status === "rescheduled_pending" && (
+                        <p className="text-sm mt-1">En attente de confirmation du client pour le {selectedAppointment.new_proposed_date} à {selectedAppointment.new_proposed_time}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Settings Tab */}
+        {activeTab === "settings" && (
+          <div>
+            <h2 className="font-primary font-bold text-xl mb-6">Paramètres</h2>
+            
+            {/* Bank Details */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-primary">💳 Coordonnées bancaires</h3>
+              <p className="text-white/60 text-sm mb-4">Ces informations seront envoyées aux clients pour le paiement de l'acompte.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Titulaire du compte</label>
+                  <input
+                    type="text"
+                    value={bankDetails.account_holder}
+                    onChange={(e) => setBankDetails({ ...bankDetails, account_holder: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                    placeholder="CREATIVINDUSTRY FRANCE"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Nom de la banque</label>
+                  <input
+                    type="text"
+                    value={bankDetails.bank_name}
+                    onChange={(e) => setBankDetails({ ...bankDetails, bank_name: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                    placeholder="Revolut"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">IBAN</label>
+                  <input
+                    type="text"
+                    value={bankDetails.iban}
+                    onChange={(e) => setBankDetails({ ...bankDetails, iban: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3 font-mono"
+                    placeholder="FR76..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">BIC</label>
+                  <input
+                    type="text"
+                    value={bankDetails.bic}
+                    onChange={(e) => setBankDetails({ ...bankDetails, bic: e.target.value })}
+                    className="w-full bg-background border border-white/20 px-4 py-3 font-mono"
+                    placeholder="REVOFRP2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/60 mb-2">Pourcentage d'acompte (%)</label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="100"
+                    value={bankDetails.deposit_percentage}
+                    onChange={(e) => setBankDetails({ ...bankDetails, deposit_percentage: parseInt(e.target.value) })}
+                    className="w-full bg-background border border-white/20 px-4 py-3"
+                  />
+                </div>
+              </div>
+              
+              <button onClick={updateBankDetails} className="btn-primary px-6 py-3 mt-6">
+                Enregistrer les coordonnées bancaires
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Edit Service Form Component
+const EditServiceForm = ({ service, onSave, onCancel }) => {
+  const [formData, setFormData] = useState({
+    name: service.name,
+    description: service.description,
+    price: service.price,
+    duration: service.duration || "",
+    is_active: service.is_active,
+    features: service.features || []
+  });
+  const [newFeature, setNewFeature] = useState("");
+
+  const addFeature = () => {
+    if (newFeature.trim()) {
+      setFormData({ ...formData, features: [...formData.features, newFeature.trim()] });
+      setNewFeature("");
+    }
+  };
+
+  const removeFeature = (index) => {
+    setFormData({ ...formData, features: formData.features.filter((_, i) => i !== index) });
+  };
+
+  return (
+    <div className="space-y-4">
+      <input
+        type="text"
+        value={formData.name}
+        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+        className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+        placeholder="Nom"
+        data-testid="edit-service-name"
+      />
+      <textarea
+        value={formData.description}
+        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+        className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+        rows={2}
+        placeholder="Description"
+        data-testid="edit-service-description"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <input
+          type="number"
+          value={formData.price}
+          onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+          className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+          placeholder="Prix"
+          data-testid="edit-service-price"
+        />
+        <input
+          type="text"
+          value={formData.duration}
+          onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+          className="w-full bg-background border border-white/20 px-3 py-2 text-sm"
+          placeholder="Durée"
+          data-testid="edit-service-duration"
+        />
+      </div>
+      
+      {/* Features Editor */}
+      <div className="border border-white/10 p-3 space-y-2">
+        <p className="text-xs text-white/60 font-semibold uppercase tracking-wider">Prestations incluses</p>
+        {formData.features.map((feature, index) => (
+          <div key={index} className="flex items-center gap-2 bg-background/50 p-2">
+            <span className="text-sm flex-1">{feature}</span>
+            <button 
+              onClick={() => removeFeature(index)}
+              className="text-red-400 hover:text-red-300 text-xs px-2"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newFeature}
+            onChange={(e) => setNewFeature(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addFeature())}
+            className="flex-1 bg-background border border-white/20 px-3 py-2 text-sm"
+            placeholder="Ajouter une prestation..."
+          />
+          <button 
+            onClick={addFeature}
+            className="btn-primary px-4 py-2 text-xs"
+          >
+            +
+          </button>
+        </div>
+      </div>
+      
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={formData.is_active}
+          onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+          className="accent-primary"
+          data-testid="edit-service-active"
+        />
+        Service actif
+      </label>
+      <div className="flex gap-2">
+        <button onClick={onCancel} className="btn-outline flex-1 py-2 text-xs">
+          Annuler
+        </button>
+        <button onClick={() => onSave(formData)} className="btn-primary flex-1 py-2 text-xs" data-testid="save-service-btn">
+          Sauvegarder
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default AdminDashboard;
