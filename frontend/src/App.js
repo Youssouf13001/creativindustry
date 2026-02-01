@@ -2397,6 +2397,7 @@ const AdminDashboard = () => {
   const [editingPortfolio, setEditingPortfolio] = useState(null);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
+  const [uploadingClientFileThumbnail, setUploadingClientFileThumbnail] = useState(false);
   const [uploadingClientFile, setUploadingClientFile] = useState(false);
   const portfolioFileRef = useRef(null);
   const clientFileRef = useRef(null);
