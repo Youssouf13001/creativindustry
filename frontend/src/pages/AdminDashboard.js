@@ -43,6 +43,9 @@ const AdminDashboard = () => {
   const [uploadingContentImage, setUploadingContentImage] = useState(false);
   const [currentContentField, setCurrentContentField] = useState(null);
   const [bankDetails, setBankDetails] = useState({ iban: "", bic: "", account_holder: "", bank_name: "", deposit_percentage: 30 });
+  const [selectedQuote, setSelectedQuote] = useState(null);
+  const [loadingQuoteDetail, setLoadingQuoteDetail] = useState(false);
+  const quoteDetailRef = useRef(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
   // Gallery states
   const [galleries, setGalleries] = useState([]);
