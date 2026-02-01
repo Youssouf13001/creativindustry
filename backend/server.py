@@ -2030,6 +2030,343 @@ async def seed_data():
     
     return {"message": "Data seeded successfully", "services_created": len(services)}
 
+# ==================== GALLERY ROUTES (Photo Selection System) ====================
+
+# Helper function to send selection notification email
+def send_selection_notification_email(admin_email: str, client_name: str, gallery_name: str, photo_count: int):
+    """Send notification email when a client validates their photo selection"""
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><style>
+        body {{ font-family: Arial, sans-serif; background: #0a0a0a; color: #fff; margin: 0; padding: 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: #111; border: 1px solid #333; }}
+        .header {{ background: linear-gradient(135deg, #d4af37, #f5e6a3); padding: 30px; text-align: center; }}
+        .header h1 {{ color: #000; margin: 0; font-size: 24px; }}
+        .content {{ padding: 30px; }}
+        .highlight {{ color: #d4af37; font-weight: bold; }}
+        .info-box {{ background: #1a1a1a; border: 1px solid #d4af37; padding: 20px; margin: 20px 0; text-align: center; }}
+        .info-box .number {{ font-size: 48px; color: #d4af37; font-weight: bold; }}
+    </style></head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📸 Nouvelle Sélection de Photos</h1>
+            </div>
+            <div class="content">
+                <p>Bonjour,</p>
+                <p>Le client <span class="highlight">{client_name}</span> a validé sa sélection de photos pour :</p>
+                <div class="info-box">
+                    <p style="margin: 0; font-size: 18px;">{gallery_name}</p>
+                    <p class="number">{photo_count}</p>
+                    <p style="margin: 0; color: #888;">photos sélectionnées</p>
+                </div>
+                <p>Connectez-vous à votre espace admin pour voir les photos sélectionnées et commencer le travail de retouche.</p>
+                <p style="color: #888; font-size: 12px; margin-top: 30px;">— L'équipe CREATIVINDUSTRY</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    send_email(admin_email, f"📸 Sélection validée - {client_name} ({gallery_name})", html_content)
+
+# Admin: Get all galleries
+@api_router.get("/admin/galleries", response_model=List[dict])
+async def get_all_galleries(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    verify_token(credentials.credentials)
+    galleries = await db.galleries.find().to_list(1000)
+    for g in galleries:
+        g.pop("_id", None)
+        # Get client info
+        client = await db.clients.find_one({"id": g["client_id"]})
+        if client:
+            g["client_name"] = client.get("name", "")
+            g["client_email"] = client.get("email", "")
+        # Get selection info
+        selection = await db.photo_selections.find_one({"gallery_id": g["id"]})
+        if selection:
+            g["selection_count"] = len(selection.get("selected_photo_ids", []))
+            g["is_validated"] = selection.get("is_validated", False)
+        else:
+            g["selection_count"] = 0
+            g["is_validated"] = False
+    return galleries
+
+# Admin: Create a gallery for a client
+@api_router.post("/admin/galleries", response_model=dict)
+async def create_gallery(data: GalleryCreate, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    verify_token(credentials.credentials)
+    
+    # Verify client exists
+    client = await db.clients.find_one({"id": data.client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    gallery = Gallery(
+        client_id=data.client_id,
+        name=data.name,
+        description=data.description
+    )
+    
+    gallery_dict = gallery.model_dump()
+    gallery_dict["created_at"] = gallery_dict["created_at"].isoformat()
+    await db.galleries.insert_one(gallery_dict)
+    gallery_dict.pop("_id", None)
+    
+    return gallery_dict
+
+# Admin: Upload photos to a gallery
+@api_router.post("/admin/galleries/{gallery_id}/photos", response_model=dict)
+async def upload_gallery_photo(
+    gallery_id: str,
+    file: UploadFile = File(...),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    verify_token(credentials.credentials)
+    
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Gallery not found")
+    
+    # Check file type
+    allowed_types = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="File type not supported")
+    
+    # Save file
+    file_id = str(uuid.uuid4())
+    ext = Path(file.filename).suffix or ".jpg"
+    filename = f"{file_id}{ext}"
+    file_path = UPLOADS_DIR / "galleries" / filename
+    
+    with open(file_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    
+    photo = {
+        "id": file_id,
+        "url": f"/uploads/galleries/{filename}",
+        "filename": file.filename,
+        "uploaded_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Add photo to gallery
+    await db.galleries.update_one(
+        {"id": gallery_id},
+        {"$push": {"photos": photo}}
+    )
+    
+    return {"message": "Photo uploaded", "photo": photo}
+
+# Admin: Delete a photo from a gallery
+@api_router.delete("/admin/galleries/{gallery_id}/photos/{photo_id}", response_model=dict)
+async def delete_gallery_photo(
+    gallery_id: str,
+    photo_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    verify_token(credentials.credentials)
+    
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Gallery not found")
+    
+    # Find and remove photo
+    photo_to_delete = None
+    for photo in gallery.get("photos", []):
+        if photo["id"] == photo_id:
+            photo_to_delete = photo
+            break
+    
+    if not photo_to_delete:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    
+    # Delete file from disk
+    file_path = UPLOADS_DIR / "galleries" / Path(photo_to_delete["url"]).name
+    if file_path.exists():
+        file_path.unlink()
+    
+    # Remove from database
+    await db.galleries.update_one(
+        {"id": gallery_id},
+        {"$pull": {"photos": {"id": photo_id}}}
+    )
+    
+    # Also remove from any selections
+    await db.photo_selections.update_many(
+        {"gallery_id": gallery_id},
+        {"$pull": {"selected_photo_ids": photo_id}}
+    )
+    
+    return {"message": "Photo deleted"}
+
+# Admin: Delete a gallery
+@api_router.delete("/admin/galleries/{gallery_id}", response_model=dict)
+async def delete_gallery(gallery_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    verify_token(credentials.credentials)
+    
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Gallery not found")
+    
+    # Delete all photos from disk
+    for photo in gallery.get("photos", []):
+        file_path = UPLOADS_DIR / "galleries" / Path(photo["url"]).name
+        if file_path.exists():
+            file_path.unlink()
+    
+    # Delete gallery and its selections
+    await db.galleries.delete_one({"id": gallery_id})
+    await db.photo_selections.delete_many({"gallery_id": gallery_id})
+    
+    return {"message": "Gallery deleted"}
+
+# Admin: Get selection for a gallery
+@api_router.get("/admin/galleries/{gallery_id}/selection", response_model=dict)
+async def get_gallery_selection_admin(gallery_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    verify_token(credentials.credentials)
+    
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Gallery not found")
+    
+    selection = await db.photo_selections.find_one({"gallery_id": gallery_id})
+    if not selection:
+        return {"selected_photo_ids": [], "is_validated": False, "photos": []}
+    
+    selection.pop("_id", None)
+    
+    # Get selected photos details
+    selected_photos = [p for p in gallery.get("photos", []) if p["id"] in selection.get("selected_photo_ids", [])]
+    selection["photos"] = selected_photos
+    
+    return selection
+
+# Client: Get my galleries
+@api_router.get("/client/galleries", response_model=List[dict])
+async def get_client_galleries(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    galleries = await db.galleries.find({"client_id": client_id, "is_active": True}).to_list(100)
+    for g in galleries:
+        g.pop("_id", None)
+        g["photo_count"] = len(g.get("photos", []))
+        # Get selection info
+        selection = await db.photo_selections.find_one({"gallery_id": g["id"], "client_id": client_id})
+        if selection:
+            g["selection_count"] = len(selection.get("selected_photo_ids", []))
+            g["is_validated"] = selection.get("is_validated", False)
+        else:
+            g["selection_count"] = 0
+            g["is_validated"] = False
+    return galleries
+
+# Client: Get a gallery with photos
+@api_router.get("/client/galleries/{gallery_id}", response_model=dict)
+async def get_client_gallery(gallery_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    gallery = await db.galleries.find_one({"id": gallery_id, "client_id": client_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Gallery not found")
+    
+    gallery.pop("_id", None)
+    
+    # Get current selection
+    selection = await db.photo_selections.find_one({"gallery_id": gallery_id, "client_id": client_id})
+    if selection:
+        gallery["selected_photo_ids"] = selection.get("selected_photo_ids", [])
+        gallery["is_validated"] = selection.get("is_validated", False)
+    else:
+        gallery["selected_photo_ids"] = []
+        gallery["is_validated"] = False
+    
+    return gallery
+
+# Client: Save/update selection
+@api_router.post("/client/galleries/{gallery_id}/selection", response_model=dict)
+async def save_selection(
+    gallery_id: str, 
+    data: SelectionUpdate, 
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    gallery = await db.galleries.find_one({"id": gallery_id, "client_id": client_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Gallery not found")
+    
+    # Verify all photo IDs exist in gallery
+    gallery_photo_ids = [p["id"] for p in gallery.get("photos", [])]
+    for photo_id in data.selected_photo_ids:
+        if photo_id not in gallery_photo_ids:
+            raise HTTPException(status_code=400, detail=f"Photo {photo_id} not in gallery")
+    
+    # Update or create selection
+    existing = await db.photo_selections.find_one({"gallery_id": gallery_id, "client_id": client_id})
+    
+    if existing:
+        await db.photo_selections.update_one(
+            {"gallery_id": gallery_id, "client_id": client_id},
+            {"$set": {
+                "selected_photo_ids": data.selected_photo_ids,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    else:
+        selection = PhotoSelection(
+            client_id=client_id,
+            gallery_id=gallery_id,
+            selected_photo_ids=data.selected_photo_ids
+        )
+        selection_dict = selection.model_dump()
+        selection_dict["updated_at"] = selection_dict["updated_at"].isoformat()
+        await db.photo_selections.insert_one(selection_dict)
+    
+    return {"message": "Selection saved", "count": len(data.selected_photo_ids)}
+
+# Client: Validate selection (final confirmation)
+@api_router.post("/client/galleries/{gallery_id}/validate", response_model=dict)
+async def validate_selection(gallery_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    gallery = await db.galleries.find_one({"id": gallery_id, "client_id": client_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Gallery not found")
+    
+    selection = await db.photo_selections.find_one({"gallery_id": gallery_id, "client_id": client_id})
+    if not selection or len(selection.get("selected_photo_ids", [])) == 0:
+        raise HTTPException(status_code=400, detail="No photos selected")
+    
+    # Mark as validated
+    await db.photo_selections.update_one(
+        {"gallery_id": gallery_id, "client_id": client_id},
+        {"$set": {
+            "is_validated": True,
+            "validated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Get client info for email
+    client = await db.clients.find_one({"id": client_id})
+    
+    # Send notification email to admin
+    admin = await db.admins.find_one({})  # Get first admin
+    if admin and SMTP_EMAIL:
+        send_selection_notification_email(
+            admin.get("email", SMTP_EMAIL),
+            client.get("name", "Client"),
+            gallery.get("name", "Galerie"),
+            len(selection.get("selected_photo_ids", []))
+        )
+    
+    return {"message": "Selection validated", "count": len(selection.get("selected_photo_ids", []))}
+
 @api_router.get("/")
 async def root():
     return {"message": "CREATIVINDUSTRY France API"}
