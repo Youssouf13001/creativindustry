@@ -2188,6 +2188,9 @@ const AdminDashboard = () => {
   const [uploadingClientFile, setUploadingClientFile] = useState(false);
   const portfolioFileRef = useRef(null);
   const clientFileRef = useRef(null);
+  const contentFileRef = useRef(null);
+  const [uploadingContentImage, setUploadingContentImage] = useState(false);
+  const [currentContentField, setCurrentContentField] = useState(null);
   const [bankDetails, setBankDetails] = useState({ iban: "", bic: "", account_holder: "", bank_name: "", deposit_percentage: 30 });
   const navigate = useNavigate();
 
