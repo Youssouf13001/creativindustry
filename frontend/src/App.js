@@ -541,6 +541,7 @@ const WeddingQuotePage = () => {
   const [options, setOptions] = useState([]);
   const [selectedOptions, setSelectedOptions] = useState([]);
   const [step, setStep] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     client_name: "",
     client_email: "",
@@ -580,10 +581,20 @@ const WeddingQuotePage = () => {
     return getSelectedOptionsData().reduce((sum, o) => sum + o.price, 0);
   };
 
+  // Filter options based on search query
+  const filterOptions = (opts) => {
+    if (!searchQuery.trim()) return opts;
+    const query = searchQuery.toLowerCase();
+    return opts.filter(o => 
+      o.name.toLowerCase().includes(query) || 
+      o.description.toLowerCase().includes(query)
+    );
+  };
+
   const groupedOptions = {
-    coverage: options.filter(o => o.category === "coverage"),
-    extras: options.filter(o => o.category === "extras"),
-    editing: options.filter(o => o.category === "editing")
+    coverage: filterOptions(options.filter(o => o.category === "coverage")),
+    extras: filterOptions(options.filter(o => o.category === "extras")),
+    editing: filterOptions(options.filter(o => o.category === "editing"))
   };
 
   const categoryLabels = {
