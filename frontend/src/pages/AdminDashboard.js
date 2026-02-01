@@ -581,6 +581,188 @@ const AdminDashboard = () => {
           ))}
         </div>
 
+        {/* Calendar Tab */}
+        {activeTab === "calendar" && (
+          <div data-testid="admin-calendar">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">Calendrier des Rendez-vous</h2>
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() - 1, 1))}
+                  className="btn-outline px-4 py-2 text-sm"
+                >
+                  ← Mois précédent
+                </button>
+                <span className="font-primary font-bold text-lg min-w-[200px] text-center">
+                  {calendarDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }).replace(/^\w/, c => c.toUpperCase())}
+                </span>
+                <button 
+                  onClick={() => setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + 1, 1))}
+                  className="btn-outline px-4 py-2 text-sm"
+                >
+                  Mois suivant →
+                </button>
+                <button 
+                  onClick={() => setCalendarDate(new Date())}
+                  className="btn-primary px-4 py-2 text-sm"
+                >
+                  Aujourd'hui
+                </button>
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="flex gap-6 mb-6 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-yellow-500/30 border border-yellow-500"></div>
+                <span className="text-white/60">En attente</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-500/30 border border-green-500"></div>
+                <span className="text-white/60">Confirmé</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-blue-500/30 border border-blue-500"></div>
+                <span className="text-white/60">Nouvelle date proposée</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-500/30 border border-red-500"></div>
+                <span className="text-white/60">Refusé</span>
+              </div>
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="bg-card border border-white/10">
+              {/* Days Header */}
+              <div className="grid grid-cols-7 border-b border-white/10">
+                {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day) => (
+                  <div key={day} className="p-3 text-center font-primary font-bold text-sm text-white/60 border-r border-white/10 last:border-r-0">
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar Days */}
+              <div className="grid grid-cols-7">
+                {(() => {
+                  const year = calendarDate.getFullYear();
+                  const month = calendarDate.getMonth();
+                  const firstDay = new Date(year, month, 1);
+                  const lastDay = new Date(year, month + 1, 0);
+                  const daysInMonth = lastDay.getDate();
+                  
+                  // Adjust for Monday start (0 = Monday, 6 = Sunday)
+                  let startDay = firstDay.getDay() - 1;
+                  if (startDay < 0) startDay = 6;
+                  
+                  const days = [];
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  
+                  // Empty cells before first day
+                  for (let i = 0; i < startDay; i++) {
+                    days.push(
+                      <div key={`empty-${i}`} className="min-h-[120px] p-2 border-r border-b border-white/10 bg-black/20"></div>
+                    );
+                  }
+                  
+                  // Days of month
+                  for (let day = 1; day <= daysInMonth; day++) {
+                    const currentDate = new Date(year, month, day);
+                    const dateStr = currentDate.toISOString().split('T')[0];
+                    const isToday = currentDate.getTime() === today.getTime();
+                    
+                    // Get appointments for this day (check both proposed_date and confirmed dates)
+                    const dayAppointments = appointments.filter(apt => {
+                      const aptDate = apt.confirmed_date || apt.proposed_date;
+                      return aptDate === dateStr;
+                    });
+                    
+                    // Get bookings for this day
+                    const dayBookings = bookings.filter(b => b.event_date === dateStr);
+                    
+                    days.push(
+                      <div 
+                        key={day} 
+                        className={`min-h-[120px] p-2 border-r border-b border-white/10 ${isToday ? 'bg-primary/10' : ''}`}
+                      >
+                        <div className={`font-primary font-bold text-sm mb-2 ${isToday ? 'text-primary' : 'text-white/60'}`}>
+                          {day}
+                        </div>
+                        <div className="space-y-1 overflow-y-auto max-h-[90px]">
+                          {dayAppointments.map((apt) => {
+                            const statusColors = {
+                              pending: 'bg-yellow-500/30 border-yellow-500 text-yellow-300',
+                              confirmed: 'bg-green-500/30 border-green-500 text-green-300',
+                              refused: 'bg-red-500/30 border-red-500 text-red-300',
+                              proposed: 'bg-blue-500/30 border-blue-500 text-blue-300'
+                            };
+                            const color = statusColors[apt.status] || statusColors.pending;
+                            const time = apt.confirmed_time || apt.proposed_time;
+                            
+                            return (
+                              <div 
+                                key={apt.id}
+                                onClick={() => { setSelectedAppointment(apt); setActiveTab("appointments"); }}
+                                className={`text-xs p-1.5 border cursor-pointer hover:opacity-80 ${color}`}
+                                title={`${apt.client_name} - ${apt.appointment_type}`}
+                              >
+                                <div className="font-bold truncate">{time} - {apt.client_name}</div>
+                                <div className="truncate text-[10px] opacity-80">{apt.appointment_type}</div>
+                              </div>
+                            );
+                          })}
+                          {dayBookings.map((booking) => (
+                            <div 
+                              key={booking.id}
+                              className="text-xs p-1.5 border bg-purple-500/30 border-purple-500 text-purple-300"
+                              title={`Réservation: ${booking.client_name}`}
+                            >
+                              <div className="font-bold truncate">📷 {booking.client_name}</div>
+                              <div className="truncate text-[10px] opacity-80">{booking.service_name || 'Réservation'}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Fill remaining cells to complete the grid
+                  const totalCells = days.length;
+                  const remainingCells = (7 - (totalCells % 7)) % 7;
+                  for (let i = 0; i < remainingCells; i++) {
+                    days.push(
+                      <div key={`empty-end-${i}`} className="min-h-[120px] p-2 border-r border-b border-white/10 bg-black/20"></div>
+                    );
+                  }
+                  
+                  return days;
+                })()}
+              </div>
+            </div>
+
+            {/* Stats summary */}
+            <div className="grid grid-cols-4 gap-4 mt-6">
+              <div className="bg-card border border-white/10 p-4 text-center">
+                <p className="text-3xl font-bold text-yellow-500">{appointments.filter(a => a.status === 'pending').length}</p>
+                <p className="text-white/60 text-sm">En attente</p>
+              </div>
+              <div className="bg-card border border-white/10 p-4 text-center">
+                <p className="text-3xl font-bold text-green-500">{appointments.filter(a => a.status === 'confirmed').length}</p>
+                <p className="text-white/60 text-sm">Confirmés</p>
+              </div>
+              <div className="bg-card border border-white/10 p-4 text-center">
+                <p className="text-3xl font-bold text-blue-500">{appointments.filter(a => a.status === 'proposed').length}</p>
+                <p className="text-white/60 text-sm">Date proposée</p>
+              </div>
+              <div className="bg-card border border-white/10 p-4 text-center">
+                <p className="text-3xl font-bold text-purple-500">{bookings.length}</p>
+                <p className="text-white/60 text-sm">Réservations</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Site Content Tab */}
         {activeTab === "content" && siteContent && (
           <div>
