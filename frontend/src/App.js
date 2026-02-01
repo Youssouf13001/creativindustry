@@ -2240,6 +2240,29 @@ const AdminDashboard = () => {
     }
   };
 
+  const createWeddingOption = async (optionData) => {
+    try {
+      await axios.post(`${API}/wedding-options`, optionData, { headers });
+      toast.success("Option ajoutée");
+      setShowAddOption(false);
+      setNewOption({ name: "", description: "", price: 0, category: "coverage" });
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de l'ajout");
+    }
+  };
+
+  const deleteWeddingOption = async (id) => {
+    if (!window.confirm("Supprimer cette option ?")) return;
+    try {
+      await axios.delete(`${API}/wedding-options/${id}`, { headers });
+      toast.success("Option supprimée");
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
   const createClient = async () => {
     try {
       await axios.post(`${API}/admin/clients`, newClient, { headers });
