@@ -2378,6 +2378,46 @@ const AdminDashboard = () => {
     }
   };
 
+  // Upload Content Image
+  const handleContentImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !currentContentField) return;
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Type de fichier non supporté. Utilisez JPG, PNG, WEBP ou GIF.");
+      return;
+    }
+    
+    if (file.size > 1024 * 1024 * 1024) {
+      toast.error("Le fichier est trop volumineux (max 1 Go)");
+      return;
+    }
+    
+    setUploadingContentImage(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      const res = await axios.post(`${API}/upload/content`, formData, {
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+      });
+      const uploadedUrl = `${BACKEND_URL}${res.data.url}`;
+      setEditingContent({ ...editingContent, [currentContentField]: uploadedUrl });
+      toast.success("Image uploadée !");
+    } catch (e) {
+      toast.error("Erreur lors de l'upload");
+    } finally {
+      setUploadingContentImage(false);
+      setCurrentContentField(null);
+    }
+  };
+
+  const triggerContentUpload = (fieldName) => {
+    setCurrentContentField(fieldName);
+    contentFileRef.current?.click();
+  };
+
   // Portfolio Functions
   // Upload Portfolio File
   const handlePortfolioFileUpload = async (e) => {
