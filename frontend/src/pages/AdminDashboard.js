@@ -3120,7 +3120,7 @@ const AdminDashboard = () => {
                               type="file"
                               ref={clientFileRef}
                               onChange={handleClientFileUpload}
-                              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,application/zip,application/x-zip-compressed,application/x-rar-compressed,application/pdf,.zip,.rar,.pdf"
                               className="hidden"
                             />
                             <button
@@ -3139,7 +3139,7 @@ const AdminDashboard = () => {
                                 </>
                               )}
                             </button>
-                            <p className="text-xs text-white/50 mt-2">JPG, PNG, MP4, WEBM, MOV (max 1 Go)</p>
+                            <p className="text-xs text-white/50 mt-2">JPG, PNG, MP4, WEBM, MOV, ZIP, RAR, PDF (max 1 Go)</p>
                             <p className="text-xs text-green-400 mt-1">Le client sera notifié par email !</p>
                           </div>
                           
