@@ -663,12 +663,31 @@ class AdminCreate(BaseModel):
 class AdminLogin(BaseModel):
     email: EmailStr
     password: str
+    totp_code: Optional[str] = None  # Code MFA si activé
 
 class AdminResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str
     email: str
     name: str
+    mfa_enabled: bool = False
+
+# MFA Models
+class MFASetupResponse(BaseModel):
+    secret: str
+    qr_code: str  # Base64 encoded QR code image
+    backup_codes: List[str]
+
+class MFAVerifyRequest(BaseModel):
+    totp_code: str
+
+class MFADisableRequest(BaseModel):
+    password: str
+    totp_code: Optional[str] = None
+    backup_code: Optional[str] = None
+
+class MFAResetRequest(BaseModel):
+    backup_code: str
 
 class ServicePackage(BaseModel):
     model_config = ConfigDict(extra="ignore")
