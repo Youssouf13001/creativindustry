@@ -125,6 +125,9 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - `/api/appointment-types` - Types et durées de RDV
 - `/api/appointments` - CRUD rendez-vous
 - `/api/appointments/confirm/:id/:token` - Confirmation lien email
+- `/api/admin/backup` - Téléchargement sauvegarde ZIP (auth admin)
+- `/api/auth/mfa/*` - Endpoints MFA (generate, verify, disable, reset)
+- `/api/stories/{id}/view` - Enregistrement vue story
 
 ## Backlog
 - P1: Refactoring AdminDashboard.js (2000+ lignes) en composants séparés
