@@ -611,9 +611,18 @@ const AdminDashboard = () => {
       return;
     }
     
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Type de fichier non supporté. Utilisez JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.");
+    // Extended allowed types including documents
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/webp', 'image/gif', 
+      'video/mp4', 'video/webm', 'video/quicktime',
+      'application/zip', 'application/x-zip-compressed', 'application/x-rar-compressed', 
+      'application/pdf', 'application/octet-stream'
+    ];
+    const allowedExtensions = ['.zip', '.rar', '.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.webm', '.mov'];
+    const fileExt = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    
+    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExt)) {
+      toast.error("Type de fichier non supporté. Utilisez JPG, PNG, WEBP, GIF, MP4, WEBM, MOV, ZIP, RAR ou PDF.");
       return;
     }
     
@@ -626,6 +635,8 @@ const AdminDashboard = () => {
     if (!title) return;
     
     setUploadingClientFile(true);
+    setUploadProgress(0);
+    
     const formData = new FormData();
     formData.append('file', file);
     formData.append('title', title);
@@ -633,14 +644,19 @@ const AdminDashboard = () => {
     
     try {
       await axios.post(`${API}/upload/client/${selectedClient.id}`, formData, {
-        headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+        headers: { ...headers, 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percentCompleted);
+        }
       });
       toast.success("Fichier uploadé et client notifié par email !");
       selectClient(selectedClient);
     } catch (e) {
-      toast.error("Erreur lors de l'upload");
+      toast.error("Erreur lors de l'upload: " + (e.response?.data?.detail || e.message));
     } finally {
       setUploadingClientFile(false);
+      setUploadProgress(0);
     }
   };
 
