@@ -3526,24 +3526,33 @@ const AdminDashboard = () => {
               </ul>
               <button 
                 onClick={async () => {
-                  toast.info("Création de la sauvegarde en cours...");
+                  toast.info("Création de la sauvegarde en cours... Cela peut prendre quelques minutes.");
                   try {
-                    const response = await axios.get(`${API}/admin/backup`, {
-                      headers,
-                      responseType: 'blob'
-                    });
-                    const url = window.URL.createObjectURL(new Blob([response.data]));
-                    const link = document.createElement('a');
-                    link.href = url;
-                    const timestamp = new Date().toISOString().slice(0, 10);
-                    link.setAttribute('download', `creativindustry_backup_${timestamp}.zip`);
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    window.URL.revokeObjectURL(url);
-                    toast.success("Sauvegarde téléchargée !");
+                    // Step 1: Create the backup file
+                    const createResponse = await axios.post(`${API}/admin/backup/create`, {}, { headers });
+                    
+                    if (createResponse.data.success) {
+                      toast.success(`Sauvegarde créée (${createResponse.data.size_mb} MB). Téléchargement...`);
+                      
+                      // Step 2: Download the file
+                      const downloadResponse = await axios.get(`${API}${createResponse.data.download_url}`, {
+                        headers,
+                        responseType: 'blob'
+                      });
+                      
+                      const url = window.URL.createObjectURL(new Blob([downloadResponse.data]));
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.setAttribute('download', createResponse.data.filename);
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      window.URL.revokeObjectURL(url);
+                      toast.success("Sauvegarde téléchargée avec succès !");
+                    }
                   } catch (e) {
-                    toast.error("Erreur lors de la création de la sauvegarde");
+                    console.error('Backup error:', e);
+                    toast.error("Erreur lors de la création de la sauvegarde. Vérifiez les permissions du serveur.");
                   }
                 }}
                 className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 font-bold flex items-center gap-2"
