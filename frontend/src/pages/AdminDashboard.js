@@ -34,10 +34,13 @@ const AdminDashboard = () => {
   const [newOption, setNewOption] = useState({ name: "", description: "", price: 0, category: "coverage" });
   const [editingPortfolio, setEditingPortfolio] = useState(null);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
+  const [uploadingMultiplePhotos, setUploadingMultiplePhotos] = useState(false);
+  const [multiplePhotosProgress, setMultiplePhotosProgress] = useState({ current: 0, total: 0 });
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const [uploadingClientFileThumbnail, setUploadingClientFileThumbnail] = useState(false);
   const [uploadingClientFile, setUploadingClientFile] = useState(false);
   const portfolioFileRef = useRef(null);
+  const multiplePhotosRef = useRef(null);
   const clientFileRef = useRef(null);
   const contentFileRef = useRef(null);
   const [uploadingContentImage, setUploadingContentImage] = useState(false);
