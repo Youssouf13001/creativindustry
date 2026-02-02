@@ -1636,7 +1636,45 @@ const AdminDashboard = () => {
                       <option value="tv_set">Plateau TV</option>
                     </select>
                     
-                    {/* Upload Section */}
+                    {/* Upload Multiple Photos Section */}
+                    <div className="border-2 border-dashed border-green-500/50 p-4 text-center bg-green-500/5">
+                      <input
+                        type="file"
+                        ref={multiplePhotosRef}
+                        onChange={handleMultiplePhotosUpload}
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        multiple
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!newPortfolioItem.client_name.trim()) {
+                            toast.error("Veuillez d'abord renseigner le nom du client");
+                            return;
+                          }
+                          multiplePhotosRef.current?.click();
+                        }}
+                        disabled={uploadingMultiplePhotos}
+                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 w-full flex items-center justify-center gap-2 font-bold"
+                      >
+                        {uploadingMultiplePhotos ? (
+                          <>
+                            <Loader size={16} className="animate-spin" /> 
+                            Upload {multiplePhotosProgress.current}/{multiplePhotosProgress.total}...
+                          </>
+                        ) : (
+                          <>
+                            <Upload size={16} /> 📸 Uploader PLUSIEURS photos
+                          </>
+                        )}
+                      </button>
+                      <p className="text-xs text-white/50 mt-2">Sélectionnez plusieurs photos d'un coup (JPG, PNG, WEBP, GIF)</p>
+                    </div>
+                    
+                    <div className="text-white/40 text-center text-sm">— OU une seule photo/vidéo —</div>
+                    
+                    {/* Upload Single File Section */}
                     <div className="border-2 border-dashed border-primary/50 p-4 text-center bg-primary/5">
                       <input
                         type="file"
@@ -1676,7 +1714,7 @@ const AdminDashboard = () => {
                       </div>
                     )}
                     
-                    <div className="text-white/40 text-center text-sm">— ou —</div>
+                    <div className="text-white/40 text-center text-sm">— ou URL externe —</div>
                     
                     <input
                       type="url"
