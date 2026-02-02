@@ -3804,6 +3804,20 @@ async def validate_selection(gallery_id: str, credentials: HTTPAuthorizationCred
 async def root():
     return {"message": "CREATIVINDUSTRY France API"}
 
+
+@api_router.get("/download/social-media-zip")
+async def download_social_media_zip():
+    """Download all social media visuals as ZIP"""
+    zip_path = UPLOADS_DIR / "visuels_reseaux_sociaux.zip"
+    if not zip_path.exists():
+        raise HTTPException(status_code=404, detail="ZIP non trouvé")
+    return FileResponse(
+        path=zip_path,
+        filename="visuels_reseaux_sociaux.zip",
+        media_type="application/zip"
+    )
+
+
 app.include_router(api_router)
 
 # Mount static files for uploads
