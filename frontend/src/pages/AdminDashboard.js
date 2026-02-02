@@ -21,7 +21,7 @@ const AdminDashboard = () => {
   const [showAddPortfolio, setShowAddPortfolio] = useState(false);
   const [newClient, setNewClient] = useState({ name: "", email: "", password: "", phone: "" });
   const [newFile, setNewFile] = useState({ title: "", description: "", file_type: "video", file_url: "", thumbnail_url: "" });
-  const [newPortfolioItem, setNewPortfolioItem] = useState({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", client_name: "", is_featured: false });
+  const [newPortfolioItem, setNewPortfolioItem] = useState({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", client_name: "", is_featured: false, story_duration: 3 });
   const [siteContent, setSiteContent] = useState(null);
   const [editingContent, setEditingContent] = useState({});
   const [activeTab, setActiveTab] = useState("overview");
