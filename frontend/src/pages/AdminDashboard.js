@@ -382,6 +382,8 @@ const AdminDashboard = () => {
     try {
       const res = await axios.get(`${API}/admin/clients/${client.id}/files`, { headers });
       setClientFiles(res.data);
+      // Also fetch downloads for this client
+      fetchClientDownloads(client.id);
     } catch (e) {
       toast.error("Erreur");
     }
