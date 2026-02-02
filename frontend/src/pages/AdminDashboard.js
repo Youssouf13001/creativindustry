@@ -2094,12 +2094,18 @@ const AdminDashboard = () => {
             
             {/* Filter and View Toggle */}
             <div className="flex flex-wrap gap-4 mb-6 items-center">
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => setPortfolioFilterCategory("all")}
                   className={`px-4 py-2 text-xs font-bold ${portfolioFilterCategory === "all" ? "bg-primary text-black" : "bg-card border border-white/20 text-white/60"}`}
                 >
                   Tous
+                </button>
+                <button
+                  onClick={() => setPortfolioFilterCategory("stories")}
+                  className={`px-4 py-2 text-xs font-bold ${portfolioFilterCategory === "stories" ? "bg-gradient-to-r from-pink-500 to-purple-500 text-white" : "bg-card border border-white/20 text-white/60"}`}
+                >
+                  📱 Stories ({portfolio.filter(p => p.media_type === "story").length})
                 </button>
                 <button
                   onClick={() => setPortfolioFilterCategory("wedding")}
@@ -2136,8 +2142,61 @@ const AdminDashboard = () => {
               </div>
             </div>
 
+            {/* Stories Section - Quick Access */}
+            {portfolioFilterCategory === "stories" && (
+              <div className="mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {portfolio.filter(p => p.media_type === "story").map((item) => (
+                    <div key={item.id} className="bg-card border border-purple-500/30 overflow-hidden" data-testid={`story-admin-${item.id}`}>
+                      <div className="relative aspect-video bg-black/50">
+                        {item.thumbnail_url ? (
+                          <img src={item.thumbnail_url} alt={item.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <video src={item.media_url} className="w-full h-full object-cover" muted />
+                        )}
+                        <span className="absolute top-2 left-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white text-xs px-2 py-1 font-bold">
+                          📱 Story
+                        </span>
+                        <span className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 font-mono">
+                          {item.story_duration >= 60 
+                            ? `${Math.floor(item.story_duration / 60)}m${item.story_duration % 60 > 0 ? item.story_duration % 60 + 's' : ''}`
+                            : `${item.story_duration || 3}s`}
+                        </span>
+                        <span className={`absolute bottom-2 left-2 text-xs px-2 py-1 font-bold ${
+                          item.category === "wedding" ? "bg-pink-500" : item.category === "podcast" ? "bg-blue-500" : "bg-purple-500"
+                        }`}>
+                          {item.category === "wedding" ? "Mariage" : item.category === "podcast" ? "Podcast" : "TV"}
+                        </span>
+                      </div>
+                      <div className="p-4">
+                        <p className="text-primary text-xs font-bold mb-1 uppercase tracking-wider">{item.client_name || "Sans client"}</p>
+                        <h3 className="font-primary font-semibold text-sm truncate mb-3">{item.title}</h3>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setEditingPortfolio(item)}
+                            className="flex-1 py-2 text-xs bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500/30"
+                          >
+                            ✎ Modifier
+                          </button>
+                          <button
+                            onClick={() => deletePortfolioItem(item.id)}
+                            className="flex-1 py-2 text-xs bg-red-500/20 text-red-500 border border-red-500/50 hover:bg-red-500/30"
+                          >
+                            🗑️ Supprimer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {portfolio.filter(p => p.media_type === "story").length === 0 && (
+                  <p className="text-center text-white/60 py-12">Aucune story. Cliquez sur "+ Ajouter" et sélectionnez "📱 Story"</p>
+                )}
+              </div>
+            )}
+
             {/* Client View */}
-            {portfolioViewMode === "clients" && !selectedPortfolioClient && (
+            {portfolioViewMode === "clients" && !selectedPortfolioClient && portfolioFilterCategory !== "stories" && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {(() => {
                   // Group portfolio by client
