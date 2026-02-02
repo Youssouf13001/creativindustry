@@ -1321,7 +1321,7 @@ async def disable_mfa(data: MFADisableRequest, admin: dict = Depends(get_current
     # Disable MFA
     await db.admins.update_one(
         {"id": admin["id"]},
-        {"$set": {"mfa_enabled": False, "mfa_secret": None, "backup_codes": []}}
+        {"$set": {"mfa_enabled": False, "mfa_secret": None, "backup_codes": [], "mfa_reset_code": None, "mfa_reset_expiry": None}}
     )
     
     return {"success": True, "message": "MFA désactivé"}
@@ -1356,6 +1356,102 @@ async def get_mfa_status(admin: dict = Depends(get_current_admin)):
         "mfa_enabled": admin_full.get("mfa_enabled", False),
         "backup_codes_remaining": len(backup_codes)
     }
+
+@api_router.post("/auth/mfa/send-reset-email")
+async def send_mfa_reset_email(data: MFAEmailResetRequest):
+    """Send MFA reset code via email (for when user loses phone and backup codes)"""
+    admin = await db.admins.find_one({"email": data.email}, {"_id": 0})
+    if not admin:
+        # Don't reveal if email exists
+        return {"success": True, "message": "Si cet email existe, un code de réinitialisation a été envoyé"}
+    
+    if not admin.get("mfa_enabled"):
+        raise HTTPException(status_code=400, detail="MFA n'est pas activé sur ce compte")
+    
+    # Generate reset code (6 digits)
+    reset_code = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
+    expiry = datetime.now(timezone.utc).timestamp() + 900  # 15 minutes
+    
+    # Store reset code
+    await db.admins.update_one(
+        {"email": data.email},
+        {"$set": {"mfa_reset_code": reset_code, "mfa_reset_expiry": expiry}}
+    )
+    
+    # Send email
+    try:
+        smtp_host = os.environ.get('SMTP_HOST', 'smtp.ionos.fr')
+        smtp_port = int(os.environ.get('SMTP_PORT', 587))
+        smtp_user = os.environ.get('SMTP_USER')
+        smtp_pass = os.environ.get('SMTP_PASS')
+        
+        if smtp_user and smtp_pass:
+            msg = MIMEMultipart()
+            msg['From'] = smtp_user
+            msg['To'] = data.email
+            msg['Subject'] = "🔐 Code de réinitialisation MFA - CREATIVINDUSTRY France"
+            
+            body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; padding: 30px; border-radius: 10px;">
+                    <h1 style="color: #D4AF37; margin-bottom: 20px;">🔐 Réinitialisation MFA</h1>
+                    <p>Vous avez demandé un code pour désactiver la double authentification sur votre compte.</p>
+                    <div style="background-color: #3a3a3a; padding: 20px; text-align: center; margin: 20px 0; border-radius: 5px;">
+                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #D4AF37;">{reset_code}</span>
+                    </div>
+                    <p style="color: #888;">Ce code expire dans <strong>15 minutes</strong>.</p>
+                    <p style="color: #888;">Si vous n'avez pas demandé ce code, ignorez cet email et votre compte restera sécurisé.</p>
+                    <hr style="border-color: #444; margin: 20px 0;">
+                    <p style="color: #666; font-size: 12px;">CREATIVINDUSTRY France - Sécurité du compte</p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            msg.attach(MIMEText(body, 'html'))
+            
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+            
+            logging.info(f"MFA reset email sent to {data.email}")
+    except Exception as e:
+        logging.error(f"Failed to send MFA reset email: {e}")
+        # Don't fail the request, just log the error
+    
+    return {"success": True, "message": "Si cet email existe, un code de réinitialisation a été envoyé"}
+
+@api_router.post("/auth/mfa/verify-reset-email")
+async def verify_mfa_reset_email(data: MFAEmailResetVerify):
+    """Verify email reset code and disable MFA"""
+    admin = await db.admins.find_one({"email": data.email}, {"_id": 0})
+    if not admin:
+        raise HTTPException(status_code=401, detail="Code invalide ou expiré")
+    
+    stored_code = admin.get("mfa_reset_code")
+    expiry = admin.get("mfa_reset_expiry", 0)
+    
+    if not stored_code or stored_code != data.reset_code:
+        raise HTTPException(status_code=401, detail="Code invalide")
+    
+    if datetime.now(timezone.utc).timestamp() > expiry:
+        raise HTTPException(status_code=401, detail="Code expiré")
+    
+    # Disable MFA
+    await db.admins.update_one(
+        {"email": data.email},
+        {"$set": {
+            "mfa_enabled": False, 
+            "mfa_secret": None, 
+            "backup_codes": [],
+            "mfa_reset_code": None,
+            "mfa_reset_expiry": None
+        }}
+    )
+    
+    return {"success": True, "message": "MFA désactivé avec succès. Vous pouvez maintenant vous connecter."}
 
 # ==================== CLIENT AUTH ROUTES ====================
 
