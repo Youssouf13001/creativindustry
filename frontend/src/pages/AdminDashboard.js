@@ -3534,8 +3534,9 @@ const AdminDashboard = () => {
                     if (createResponse.data.success) {
                       toast.success(`Sauvegarde créée (${createResponse.data.size_mb} MB). Téléchargement...`);
                       
-                      // Step 2: Download the file
-                      const downloadResponse = await axios.get(`${API}${createResponse.data.download_url}`, {
+                      // Step 2: Download the file (download_url already includes /api prefix)
+                      const downloadUrl = createResponse.data.download_url.replace('/api', '');
+                      const downloadResponse = await axios.get(`${API}${downloadUrl}`, {
                         headers,
                         responseType: 'blob'
                       });
