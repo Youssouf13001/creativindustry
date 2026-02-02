@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -13,6 +13,31 @@ const ContactPage = () => {
     message: ""
   });
   const [loading, setLoading] = useState(false);
+  const [contactInfo, setContactInfo] = useState({
+    phone: "+33 1 23 45 67 89",
+    email: "contact@creativindustry.fr",
+    address: "123 Rue de la Création\n75001 Paris, France",
+    hours: "Lun - Ven: 9h - 19h\nSam: Sur rendez-vous"
+  });
+
+  useEffect(() => {
+    const fetchContactInfo = async () => {
+      try {
+        const res = await axios.get(`${API}/site-content`);
+        if (res.data) {
+          setContactInfo({
+            phone: res.data.phone || "+33 1 23 45 67 89",
+            email: res.data.email || "contact@creativindustry.fr",
+            address: res.data.address || "123 Rue de la Création, 75001 Paris, France",
+            hours: res.data.hours || "Lun - Ven: 9h - 19h, Sam: Sur rendez-vous"
+          });
+        }
+      } catch (e) {
+        // Keep default values
+      }
+    };
+    fetchContactInfo();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -26,6 +51,13 @@ const ContactPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Format address and hours for display (replace commas with line breaks)
+  const formatMultiline = (text) => {
+    return text.split(/,\s*/).map((line, i) => (
+      <span key={i}>{line}{i < text.split(/,\s*/).length - 1 && <br />}</span>
+    ));
   };
 
   return (
@@ -44,28 +76,28 @@ const ContactPage = () => {
                 <Phone className="text-primary mt-1" size={20} />
                 <div>
                   <p className="font-primary font-semibold">Téléphone</p>
-                  <p className="text-white/60">+33 1 23 45 67 89</p>
+                  <p className="text-white/60">{contactInfo.phone}</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
                 <Mail className="text-primary mt-1" size={20} />
                 <div>
                   <p className="font-primary font-semibold">Email</p>
-                  <p className="text-white/60">contact@creativindustry.fr</p>
+                  <p className="text-white/60">{contactInfo.email}</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
                 <MapPin className="text-primary mt-1" size={20} />
                 <div>
                   <p className="font-primary font-semibold">Adresse</p>
-                  <p className="text-white/60">123 Rue de la Création<br />75001 Paris, France</p>
+                  <p className="text-white/60">{formatMultiline(contactInfo.address)}</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
                 <Clock className="text-primary mt-1" size={20} />
                 <div>
                   <p className="font-primary font-semibold">Horaires</p>
-                  <p className="text-white/60">Lun - Ven: 9h - 19h<br />Sam: Sur rendez-vous</p>
+                  <p className="text-white/60">{formatMultiline(contactInfo.hours)}</p>
                 </div>
               </div>
             </div>
