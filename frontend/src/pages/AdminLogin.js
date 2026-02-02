@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import { Shield, Smartphone } from "lucide-react";
+import { Shield, Smartphone, Mail } from "lucide-react";
 import { API } from "../config/api";
 
 const AdminLogin = () => {
@@ -11,6 +11,9 @@ const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
+  const [showEmailReset, setShowEmailReset] = useState(false);
+  const [emailResetCode, setEmailResetCode] = useState("");
+  const [emailResetSent, setEmailResetSent] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -50,7 +53,132 @@ const AdminLogin = () => {
   const handleBackToLogin = () => {
     setMfaRequired(false);
     setMfaCode("");
+    setShowEmailReset(false);
+    setEmailResetSent(false);
+    setEmailResetCode("");
   };
+
+  const handleSendEmailCode = async () => {
+    if (!formData.email) {
+      toast.error("Veuillez entrer votre email");
+      return;
+    }
+    setLoading(true);
+    try {
+      await axios.post(`${API}/auth/mfa/send-reset-email`, { email: formData.email });
+      setEmailResetSent(true);
+      toast.success("Code envoyé par email ! Vérifiez votre boîte de réception.");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de l'envoi");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyEmailCode = async () => {
+    setLoading(true);
+    try {
+      await axios.post(`${API}/auth/mfa/verify-reset-email`, { 
+        email: formData.email, 
+        reset_code: emailResetCode 
+      });
+      toast.success("MFA désactivé ! Vous pouvez maintenant vous connecter.");
+      handleBackToLogin();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Code invalide ou expiré");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Email Reset Screen
+  if (showEmailReset) {
+    return (
+      <div className="pt-20 min-h-screen flex items-center justify-center" data-testid="admin-email-reset-page">
+        <div className="w-full max-w-md p-8">
+          <div className="flex justify-center mb-6">
+            <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center">
+              <Mail size={32} className="text-blue-500" />
+            </div>
+          </div>
+          <h1 className="font-primary font-black text-2xl tracking-tighter uppercase mb-2 text-center">
+            <span className="text-gold-gradient">Réinitialisation par Email</span>
+          </h1>
+          <p className="font-secondary text-white/60 text-center mb-8">
+            {emailResetSent 
+              ? "Entrez le code à 6 chiffres reçu par email" 
+              : "Nous allons vous envoyer un code par email pour désactiver le MFA"}
+          </p>
+
+          {!emailResetSent ? (
+            <div className="space-y-6">
+              <div>
+                <label className="block font-primary text-sm mb-2">Email du compte</label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  placeholder="votre@email.com"
+                />
+              </div>
+              <button
+                onClick={handleSendEmailCode}
+                disabled={loading || !formData.email}
+                className="btn-primary w-full py-4 text-sm disabled:opacity-50"
+              >
+                {loading ? "Envoi en cours..." : "📧 Envoyer le code par email"}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div>
+                <label className="block font-primary text-sm mb-2 flex items-center gap-2">
+                  <Mail size={16} className="text-blue-500" />
+                  Code reçu par email
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  placeholder="000000"
+                  value={emailResetCode}
+                  onChange={(e) => setEmailResetCode(e.target.value.replace(/\D/g, ''))}
+                  className="w-full bg-background border border-white/20 px-4 py-4 text-center text-2xl tracking-widest font-mono focus:border-primary focus:outline-none"
+                  autoFocus
+                />
+                <p className="text-xs text-white/40 mt-2 text-center">
+                  Le code expire dans 15 minutes
+                </p>
+              </div>
+              <button
+                onClick={handleVerifyEmailCode}
+                disabled={loading || emailResetCode.length !== 6}
+                className="btn-primary w-full py-4 text-sm disabled:opacity-50"
+              >
+                {loading ? "Vérification..." : "Désactiver le MFA"}
+              </button>
+              <button
+                onClick={handleSendEmailCode}
+                disabled={loading}
+                className="btn-outline w-full py-3 text-sm"
+              >
+                Renvoyer le code
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={handleBackToLogin}
+            className="w-full text-center text-white/60 text-sm mt-6 hover:text-primary"
+          >
+            ← Retour à la connexion
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // MFA Code Entry Screen
   if (mfaRequired) {
@@ -99,6 +227,20 @@ const AdminLogin = () => {
               {loading ? "Vérification..." : "Vérifier"}
             </button>
           </form>
+
+          {/* Lost phone option */}
+          <div className="mt-8 p-4 bg-card border border-white/10 rounded">
+            <p className="text-sm text-white/60 mb-3 text-center">
+              📱 Vous avez perdu l'accès à votre téléphone ?
+            </p>
+            <button
+              onClick={() => setShowEmailReset(true)}
+              className="w-full text-center text-blue-400 text-sm hover:text-blue-300 flex items-center justify-center gap-2"
+            >
+              <Mail size={16} />
+              Recevoir un code par email
+            </button>
+          </div>
 
           <button
             onClick={handleBackToLogin}
