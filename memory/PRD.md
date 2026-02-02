@@ -20,6 +20,16 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V14 - Réorganisation Portfolio (02 Fév 2026)
+- ✅ **Structure par catégories** : Vue principale avec 3 catégories (Mariages, Podcast, Plateau TV)
+- ✅ **Icônes et compteurs** : Chaque catégorie affiche une icône colorée et le nombre de clients/médias
+- ✅ **Vue clients** : Clic sur une catégorie → liste des clients avec photo de couverture
+- ✅ **Galerie client** : Clic sur un client → toutes ses photos et vidéos
+- ✅ **Navigation intuitive** : Fil d'Ariane avec boutons "Retour aux clients" / "Retour aux catégories"
+- ✅ **Lightbox** : Vue agrandie des photos avec navigation
+- ✅ **Admin - Champ "Nom du client"** : Nouveau champ dans le formulaire d'ajout portfolio
+- ✅ **Admin - Affichage client** : Le nom du client s'affiche en doré sur chaque élément
+
 ### V13 - Améliorations Devis Mariage (01 Fév 2026)
 - ✅ **Vue détaillée du devis** : Modal avec toutes les infos client et prestations
 - ✅ **Bouton "Imprimer / PDF"** : Génère une version imprimable
@@ -103,7 +113,8 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - `/api/appointments/confirm/:id/:token` - Confirmation lien email
 
 ## Backlog
-- P2: Calendrier visuel des disponibilités admin
+- P1: Refactoring AdminDashboard.js (2000+ lignes) en composants séparés
+- P1: Refactoring server.py en plusieurs routers FastAPI
 - P2: Rappels automatiques 24h avant le RDV
 - P2: Compression automatique des images à l'upload
 
