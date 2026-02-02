@@ -1615,6 +1615,16 @@ async def login_client(data: ClientLogin):
 
 @api_router.get("/client/me", response_model=ClientResponse)
 async def get_client_me(client: dict = Depends(get_current_client)):
+    # Fetch full client data from database to get profile_photo
+    full_client = await db.clients.find_one({"id": client["id"]}, {"_id": 0, "password": 0})
+    if full_client:
+        return ClientResponse(
+            id=full_client["id"], 
+            email=full_client["email"], 
+            name=full_client["name"], 
+            phone=full_client.get("phone"),
+            profile_photo=full_client.get("profile_photo")
+        )
     return ClientResponse(id=client["id"], email=client["email"], name=client["name"], phone=client.get("phone"))
 
 
