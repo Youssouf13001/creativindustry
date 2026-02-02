@@ -528,23 +528,25 @@ const ClientDashboard = () => {
                         </h2>
                         <div className="space-y-4">
                           {documents.map((file) => (
-                            <a
+                            <button
                               key={file.id}
-                              href={file.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block bg-card border border-white/10 p-4 card-hover flex items-center justify-between"
+                              onClick={() => handleDownload(file)}
+                              className="w-full text-left bg-card border border-white/10 p-4 card-hover flex items-center justify-between"
                               data-testid={`file-${file.id}`}
                             >
                               <div className="flex items-center gap-4">
-                                <FileText className="text-primary" size={24} />
+                                {file.file_url.endsWith('.zip') || file.file_url.endsWith('.rar') ? (
+                                  <FileArchive className="text-primary" size={24} />
+                                ) : (
+                                  <FileText className="text-primary" size={24} />
+                                )}
                                 <div>
                                   <h3 className="font-primary font-semibold">{file.title}</h3>
                                   {file.description && <p className="text-white/60 text-sm">{file.description}</p>}
                                 </div>
                               </div>
                               <Download size={20} className="text-white/60" />
-                            </a>
+                            </button>
                           ))}
                         </div>
                       </section>
