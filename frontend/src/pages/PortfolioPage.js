@@ -226,15 +226,23 @@ const StoryViewer = ({ stories, initialIndex, onClose }) => {
       
       {/* Story content */}
       <div className="w-full h-full max-w-lg mx-auto flex items-center justify-center">
-        <video
-          ref={videoRef}
-          src={currentStory?.media_url}
-          className="max-h-[80vh] max-w-full object-contain"
-          autoPlay
-          muted
-          playsInline
-          loop={false}
-        />
+        {currentStory?.media_url?.match(/\.(mp4|webm|mov|avi)$/i) || currentStory?.media_url?.includes('video') ? (
+          <video
+            ref={videoRef}
+            src={currentStory?.media_url}
+            className="max-h-[80vh] max-w-full object-contain"
+            autoPlay
+            muted
+            playsInline
+            loop={false}
+          />
+        ) : (
+          <img
+            src={currentStory?.media_url}
+            alt={currentStory?.title}
+            className="max-h-[80vh] max-w-full object-contain"
+          />
+        )}
       </div>
       
       {/* Navigation arrows */}
