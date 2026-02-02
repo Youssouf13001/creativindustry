@@ -417,6 +417,87 @@ const AdminDashboard = () => {
     }
   };
 
+  // Upload Multiple Photos at once
+  const handleMultiplePhotosUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+    
+    // Validate client name
+    if (!newPortfolioItem.client_name.trim()) {
+      toast.error("Veuillez d'abord renseigner le nom du client");
+      return;
+    }
+    
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const validFiles = files.filter(file => allowedTypes.includes(file.type));
+    
+    if (validFiles.length === 0) {
+      toast.error("Aucun fichier image valide sélectionné");
+      return;
+    }
+    
+    if (validFiles.length !== files.length) {
+      toast.warning(`${files.length - validFiles.length} fichier(s) ignoré(s) (format non supporté)`);
+    }
+    
+    setUploadingMultiplePhotos(true);
+    setMultiplePhotosProgress({ current: 0, total: validFiles.length });
+    
+    let successCount = 0;
+    
+    for (let i = 0; i < validFiles.length; i++) {
+      const file = validFiles[i];
+      setMultiplePhotosProgress({ current: i + 1, total: validFiles.length });
+      
+      try {
+        // Upload the file
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const uploadRes = await axios.post(`${API}/upload/portfolio`, formData, {
+          headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+        });
+        
+        const uploadedUrl = `${BACKEND_URL}${uploadRes.data.url}`;
+        
+        // Create portfolio item
+        const portfolioItem = {
+          title: file.name.replace(/\.[^/.]+$/, ""), // Remove extension for title
+          description: "",
+          media_type: "photo",
+          media_url: uploadedUrl,
+          thumbnail_url: "",
+          category: newPortfolioItem.category,
+          client_name: newPortfolioItem.client_name,
+          is_featured: false
+        };
+        
+        await axios.post(`${API}/admin/portfolio`, portfolioItem, { headers });
+        successCount++;
+        
+      } catch (err) {
+        console.error(`Erreur upload ${file.name}:`, err);
+      }
+    }
+    
+    setUploadingMultiplePhotos(false);
+    setMultiplePhotosProgress({ current: 0, total: 0 });
+    
+    if (successCount > 0) {
+      toast.success(`${successCount} photo(s) ajoutée(s) avec succès !`);
+      setShowAddPortfolio(false);
+      setNewPortfolioItem({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", client_name: "", is_featured: false });
+      fetchData();
+    } else {
+      toast.error("Aucune photo n'a pu être uploadée");
+    }
+    
+    // Reset file input
+    if (multiplePhotosRef.current) {
+      multiplePhotosRef.current.value = '';
+    }
+  };
+
   // Upload Client File
   const handleClientFileUpload = async (e) => {
     const file = e.target.files[0];
