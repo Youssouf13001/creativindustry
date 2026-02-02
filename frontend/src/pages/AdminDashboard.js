@@ -158,6 +158,24 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchStoryViews = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/stories/all-views`, { headers });
+      setStoryViews(res.data);
+    } catch (e) {
+      console.error("Error fetching story views");
+    }
+  };
+
+  const fetchStoryViewDetails = async (storyId) => {
+    try {
+      const res = await axios.get(`${API}/stories/${storyId}/views`, { headers });
+      setSelectedStoryViews({ storyId, ...res.data });
+    } catch (e) {
+      toast.error("Erreur lors du chargement des vues");
+    }
+  };
+
   const updateBankDetails = async () => {
     try {
       await axios.put(`${API}/bank-details`, bankDetails, { headers });
