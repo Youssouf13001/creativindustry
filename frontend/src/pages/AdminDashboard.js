@@ -1854,20 +1854,23 @@ const AdminDashboard = () => {
                     {newPortfolioItem.media_type === "story" && (
                       <div className="bg-purple-500/10 border border-purple-500/30 p-4 rounded">
                         <label className="block text-sm text-purple-400 mb-2">
-                          ⏱️ Durée de la story : {newPortfolioItem.story_duration} seconde{newPortfolioItem.story_duration > 1 ? 's' : ''}
+                          ⏱️ Durée de la story : {newPortfolioItem.story_duration >= 60 
+                            ? `${Math.floor(newPortfolioItem.story_duration / 60)}m${newPortfolioItem.story_duration % 60 > 0 ? ` ${newPortfolioItem.story_duration % 60}s` : ''}`
+                            : `${newPortfolioItem.story_duration}s`}
                         </label>
                         <input
                           type="range"
                           min="1"
-                          max="10"
+                          max="90"
                           value={newPortfolioItem.story_duration}
                           onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, story_duration: parseInt(e.target.value) })}
                           className="w-full accent-purple-500"
                         />
                         <div className="flex justify-between text-xs text-white/40 mt-1">
                           <span>1s</span>
-                          <span>5s</span>
-                          <span>10s</span>
+                          <span>30s</span>
+                          <span>1m</span>
+                          <span>1m30</span>
                         </div>
                         <p className="text-xs text-purple-300/60 mt-2">
                           💡 Les stories apparaissent en haut de la page Portfolio, comme sur Instagram
