@@ -232,7 +232,6 @@ const StoryViewer = ({ stories, initialIndex, onClose }) => {
             src={currentStory?.media_url}
             className="max-h-[80vh] max-w-full object-contain"
             autoPlay
-            muted
             playsInline
             loop={false}
           />
