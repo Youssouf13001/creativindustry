@@ -62,6 +62,13 @@ const AdminDashboard = () => {
   const [uploadingGalleryPhoto, setUploadingGalleryPhoto] = useState(false);
   const [gallerySelection, setGallerySelection] = useState(null);
   const galleryFileRef = useRef(null);
+  // MFA states
+  const [mfaStatus, setMfaStatus] = useState({ mfa_enabled: false, backup_codes_remaining: 0 });
+  const [mfaSetupData, setMfaSetupData] = useState(null);
+  const [mfaVerifyCode, setMfaVerifyCode] = useState("");
+  const [showBackupCodes, setShowBackupCodes] = useState(false);
+  const [disableMfaData, setDisableMfaData] = useState({ password: "", code: "" });
+  const [showDisableMfa, setShowDisableMfa] = useState(false);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
