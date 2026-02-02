@@ -1703,13 +1703,22 @@ const AdminDashboard = () => {
                     {item.description && (
                       <p className="text-white/60 text-xs mb-3 line-clamp-2">{item.description}</p>
                     )}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 mb-2">
+                      <button
+                        onClick={() => setEditingPortfolio(item)}
+                        className="flex-1 py-2 text-xs bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500/30"
+                        data-testid={`edit-portfolio-${item.id}`}
+                      >
+                        ✎ Modifier
+                      </button>
                       <button
                         onClick={() => updatePortfolioItem(item.id, { is_featured: !item.is_featured })}
                         className={`flex-1 py-2 text-xs ${item.is_featured ? "btn-primary" : "btn-outline"}`}
                       >
                         {item.is_featured ? "★ Featured" : "☆ Feature"}
                       </button>
+                    </div>
+                    <div className="flex gap-2">
                       <button
                         onClick={() => updatePortfolioItem(item.id, { is_active: !item.is_active })}
                         className={`flex-1 py-2 text-xs ${item.is_active !== false ? "bg-green-500/20 text-green-500 border border-green-500/50" : "bg-red-500/20 text-red-500 border border-red-500/50"}`}
@@ -1720,7 +1729,7 @@ const AdminDashboard = () => {
                         onClick={() => deletePortfolioItem(item.id)}
                         className="px-3 py-2 text-xs bg-red-500/20 text-red-500 border border-red-500/50"
                       >
-                        ✕
+                        ✕ Supprimer
                       </button>
                     </div>
                   </div>
