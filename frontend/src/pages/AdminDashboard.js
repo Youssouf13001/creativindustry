@@ -1989,69 +1989,251 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {/* Portfolio Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {portfolio.map((item) => (
-                <div key={item.id} className="bg-card border border-white/10 overflow-hidden" data-testid={`portfolio-admin-${item.id}`}>
-                  <div className="relative aspect-video bg-black/50">
-                    {item.media_type === "photo" ? (
-                      <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <img src={item.thumbnail_url || item.media_url} alt={item.title} className="w-full h-full object-cover" />
-                    )}
-                    {item.is_featured && (
-                      <span className="absolute top-2 right-2 bg-primary text-black text-xs px-2 py-1 font-bold">Featured</span>
-                    )}
-                    <span className={`absolute top-2 left-2 text-xs px-2 py-1 font-bold ${
-                      item.category === "wedding" ? "bg-pink-500" : item.category === "podcast" ? "bg-blue-500" : "bg-purple-500"
-                    }`}>
-                      {item.category === "wedding" ? "Mariage" : item.category === "podcast" ? "Podcast" : "Plateau TV"}
-                    </span>
-                  </div>
-                  <div className="p-4">
-                    {item.client_name && (
-                      <p className="text-primary text-xs font-bold mb-1 uppercase tracking-wider">{item.client_name}</p>
-                    )}
-                    <div className="flex items-center gap-2 mb-2">
-                      {item.media_type === "photo" ? <Image size={16} className="text-primary" /> : <Video size={16} className="text-primary" />}
-                      <h3 className="font-primary font-semibold text-sm truncate">{item.title}</h3>
-                    </div>
-                    {item.description && (
-                      <p className="text-white/60 text-xs mb-3 line-clamp-2">{item.description}</p>
-                    )}
-                    <div className="flex gap-2 mb-2">
-                      <button
-                        onClick={() => setEditingPortfolio(item)}
-                        className="flex-1 py-2 text-xs bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500/30"
-                        data-testid={`edit-portfolio-${item.id}`}
-                      >
-                        ✎ Modifier
-                      </button>
-                      <button
-                        onClick={() => updatePortfolioItem(item.id, { is_featured: !item.is_featured })}
-                        className={`flex-1 py-2 text-xs ${item.is_featured ? "btn-primary" : "btn-outline"}`}
-                      >
-                        {item.is_featured ? "★ Featured" : "☆ Feature"}
-                      </button>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => updatePortfolioItem(item.id, { is_active: !item.is_active })}
-                        className={`flex-1 py-2 text-xs ${item.is_active !== false ? "bg-green-500/20 text-green-500 border border-green-500/50" : "bg-red-500/20 text-red-500 border border-red-500/50"}`}
-                      >
-                        {item.is_active !== false ? "Actif" : "Inactif"}
-                      </button>
-                      <button
-                        onClick={() => deletePortfolioItem(item.id)}
-                        className="px-3 py-2 text-xs bg-red-500/20 text-red-500 border border-red-500/50"
-                      >
-                        ✕ Supprimer
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            {/* Portfolio Grid - Organized by Client */}
+            
+            {/* Filter and View Toggle */}
+            <div className="flex flex-wrap gap-4 mb-6 items-center">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPortfolioFilterCategory("all")}
+                  className={`px-4 py-2 text-xs font-bold ${portfolioFilterCategory === "all" ? "bg-primary text-black" : "bg-card border border-white/20 text-white/60"}`}
+                >
+                  Tous
+                </button>
+                <button
+                  onClick={() => setPortfolioFilterCategory("wedding")}
+                  className={`px-4 py-2 text-xs font-bold ${portfolioFilterCategory === "wedding" ? "bg-pink-500 text-white" : "bg-card border border-white/20 text-white/60"}`}
+                >
+                  Mariages
+                </button>
+                <button
+                  onClick={() => setPortfolioFilterCategory("podcast")}
+                  className={`px-4 py-2 text-xs font-bold ${portfolioFilterCategory === "podcast" ? "bg-blue-500 text-white" : "bg-card border border-white/20 text-white/60"}`}
+                >
+                  Podcast
+                </button>
+                <button
+                  onClick={() => setPortfolioFilterCategory("tv_set")}
+                  className={`px-4 py-2 text-xs font-bold ${portfolioFilterCategory === "tv_set" ? "bg-purple-500 text-white" : "bg-card border border-white/20 text-white/60"}`}
+                >
+                  Plateau TV
+                </button>
+              </div>
+              <div className="flex gap-2 ml-auto">
+                <button
+                  onClick={() => { setPortfolioViewMode("clients"); setSelectedPortfolioClient(null); }}
+                  className={`px-4 py-2 text-xs ${portfolioViewMode === "clients" ? "btn-primary" : "btn-outline"}`}
+                >
+                  👥 Par Client
+                </button>
+                <button
+                  onClick={() => setPortfolioViewMode("all")}
+                  className={`px-4 py-2 text-xs ${portfolioViewMode === "all" ? "btn-primary" : "btn-outline"}`}
+                >
+                  📋 Tout Afficher
+                </button>
+              </div>
             </div>
+
+            {/* Client View */}
+            {portfolioViewMode === "clients" && !selectedPortfolioClient && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {(() => {
+                  // Group portfolio by client
+                  const filteredPortfolio = portfolioFilterCategory === "all" 
+                    ? portfolio 
+                    : portfolio.filter(p => p.category === portfolioFilterCategory);
+                  
+                  const clientsMap = {};
+                  filteredPortfolio.forEach(item => {
+                    const clientName = item.client_name || "Sans client";
+                    if (!clientsMap[clientName]) {
+                      clientsMap[clientName] = {
+                        name: clientName,
+                        items: [],
+                        coverPhoto: null,
+                        categories: new Set()
+                      };
+                    }
+                    clientsMap[clientName].items.push(item);
+                    clientsMap[clientName].categories.add(item.category);
+                    if (!clientsMap[clientName].coverPhoto) {
+                      if (item.media_type === "photo") {
+                        clientsMap[clientName].coverPhoto = item.media_url;
+                      } else if (item.thumbnail_url) {
+                        clientsMap[clientName].coverPhoto = item.thumbnail_url;
+                      }
+                    }
+                  });
+                  
+                  const clients = Object.values(clientsMap);
+                  
+                  if (clients.length === 0) {
+                    return <p className="text-center text-white/60 py-12 col-span-full">Aucun élément dans le portfolio</p>;
+                  }
+                  
+                  return clients.map(client => (
+                    <div 
+                      key={client.name} 
+                      className="bg-card border border-white/10 overflow-hidden cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => setSelectedPortfolioClient(client.name)}
+                    >
+                      <div className="relative aspect-video bg-black/50">
+                        {client.coverPhoto ? (
+                          <img src={client.coverPhoto} alt={client.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white/5 to-white/10">
+                            <Users size={48} className="text-white/30" />
+                          </div>
+                        )}
+                        <div className="absolute top-2 left-2 flex gap-1">
+                          {Array.from(client.categories).map(cat => (
+                            <span key={cat} className={`text-xs px-2 py-1 font-bold ${
+                              cat === "wedding" ? "bg-pink-500" : cat === "podcast" ? "bg-blue-500" : "bg-purple-500"
+                            }`}>
+                              {cat === "wedding" ? "Mariage" : cat === "podcast" ? "Podcast" : "TV"}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-primary font-bold text-lg mb-2">{client.name}</h3>
+                        <div className="flex items-center gap-4 text-white/60 text-sm">
+                          <span className="flex items-center gap-1">
+                            <Image size={14} />
+                            {client.items.filter(i => i.media_type === "photo").length} photos
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Video size={14} />
+                            {client.items.filter(i => i.media_type === "video").length} vidéos
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+
+            {/* Selected Client Detail View */}
+            {portfolioViewMode === "clients" && selectedPortfolioClient && (
+              <div>
+                <button
+                  onClick={() => setSelectedPortfolioClient(null)}
+                  className="flex items-center gap-2 text-white/60 hover:text-primary transition-colors mb-6"
+                >
+                  <ArrowLeft size={20} />
+                  <span>Retour aux clients</span>
+                </button>
+                <h3 className="font-primary font-bold text-2xl mb-6 text-primary">{selectedPortfolioClient}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {portfolio
+                    .filter(item => (item.client_name || "Sans client") === selectedPortfolioClient)
+                    .filter(item => portfolioFilterCategory === "all" || item.category === portfolioFilterCategory)
+                    .map((item) => (
+                    <div key={item.id} className="bg-card border border-white/10 overflow-hidden" data-testid={`portfolio-admin-${item.id}`}>
+                      <div className="relative aspect-video bg-black/50">
+                        {item.media_type === "photo" ? (
+                          <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <img src={item.thumbnail_url || item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                        )}
+                        {item.is_featured && (
+                          <span className="absolute top-2 right-2 bg-primary text-black text-xs px-2 py-1 font-bold">Featured</span>
+                        )}
+                        <span className={`absolute top-2 left-2 text-xs px-2 py-1 font-bold ${
+                          item.category === "wedding" ? "bg-pink-500" : item.category === "podcast" ? "bg-blue-500" : "bg-purple-500"
+                        }`}>
+                          {item.category === "wedding" ? "Mariage" : item.category === "podcast" ? "Podcast" : "Plateau TV"}
+                        </span>
+                      </div>
+                      <div className="p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          {item.media_type === "photo" ? <Image size={16} className="text-primary" /> : <Video size={16} className="text-primary" />}
+                          <h3 className="font-primary font-semibold text-sm truncate">{item.title}</h3>
+                        </div>
+                        <div className="flex gap-2 mb-2">
+                          <button
+                            onClick={() => setEditingPortfolio(item)}
+                            className="flex-1 py-2 text-xs bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500/30"
+                          >
+                            ✎ Modifier
+                          </button>
+                          <button
+                            onClick={() => updatePortfolioItem(item.id, { is_featured: !item.is_featured })}
+                            className={`flex-1 py-2 text-xs ${item.is_featured ? "btn-primary" : "btn-outline"}`}
+                          >
+                            {item.is_featured ? "★" : "☆"}
+                          </button>
+                          <button
+                            onClick={() => deletePortfolioItem(item.id)}
+                            className="px-3 py-2 text-xs bg-red-500/20 text-red-500 border border-red-500/50"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* All Items View */}
+            {portfolioViewMode === "all" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {portfolio
+                  .filter(item => portfolioFilterCategory === "all" || item.category === portfolioFilterCategory)
+                  .map((item) => (
+                  <div key={item.id} className="bg-card border border-white/10 overflow-hidden" data-testid={`portfolio-admin-${item.id}`}>
+                    <div className="relative aspect-video bg-black/50">
+                      {item.media_type === "photo" ? (
+                        <img src={item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <img src={item.thumbnail_url || item.media_url} alt={item.title} className="w-full h-full object-cover" />
+                      )}
+                      {item.is_featured && (
+                        <span className="absolute top-2 right-2 bg-primary text-black text-xs px-2 py-1 font-bold">Featured</span>
+                      )}
+                      <span className={`absolute top-2 left-2 text-xs px-2 py-1 font-bold ${
+                        item.category === "wedding" ? "bg-pink-500" : item.category === "podcast" ? "bg-blue-500" : "bg-purple-500"
+                      }`}>
+                        {item.category === "wedding" ? "Mariage" : item.category === "podcast" ? "Podcast" : "Plateau TV"}
+                      </span>
+                    </div>
+                    <div className="p-4">
+                      {item.client_name && (
+                        <p className="text-primary text-xs font-bold mb-1 uppercase tracking-wider">{item.client_name}</p>
+                      )}
+                      <div className="flex items-center gap-2 mb-2">
+                        {item.media_type === "photo" ? <Image size={16} className="text-primary" /> : <Video size={16} className="text-primary" />}
+                        <h3 className="font-primary font-semibold text-sm truncate">{item.title}</h3>
+                      </div>
+                      <div className="flex gap-2 mb-2">
+                        <button
+                          onClick={() => setEditingPortfolio(item)}
+                          className="flex-1 py-2 text-xs bg-blue-500/20 text-blue-400 border border-blue-500/50 hover:bg-blue-500/30"
+                        >
+                          ✎ Modifier
+                        </button>
+                        <button
+                          onClick={() => updatePortfolioItem(item.id, { is_featured: !item.is_featured })}
+                          className={`flex-1 py-2 text-xs ${item.is_featured ? "btn-primary" : "btn-outline"}`}
+                        >
+                          {item.is_featured ? "★" : "☆"}
+                        </button>
+                        <button
+                          onClick={() => deletePortfolioItem(item.id)}
+                          className="px-3 py-2 text-xs bg-red-500/20 text-red-500 border border-red-500/50"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {portfolio.length === 0 && (
               <p className="text-center text-white/60 py-12">Aucun élément dans le portfolio</p>
