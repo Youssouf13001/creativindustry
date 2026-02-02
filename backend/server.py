@@ -1096,6 +1096,7 @@ class ClientResponse(BaseModel):
     email: str
     name: str
     phone: Optional[str] = None
+    profile_photo: Optional[str] = None
 
 class ClientFile(BaseModel):
     model_config = ConfigDict(extra="ignore")
