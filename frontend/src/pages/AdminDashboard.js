@@ -50,6 +50,10 @@ const AdminDashboard = () => {
   const [loadingQuoteDetail, setLoadingQuoteDetail] = useState(false);
   const quoteDetailRef = useRef(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
+  // Portfolio view states
+  const [portfolioViewMode, setPortfolioViewMode] = useState("clients"); // "clients" or "all"
+  const [selectedPortfolioClient, setSelectedPortfolioClient] = useState(null);
+  const [portfolioFilterCategory, setPortfolioFilterCategory] = useState("all");
   // Gallery states
   const [galleries, setGalleries] = useState([]);
   const [selectedGallery, setSelectedGallery] = useState(null);
