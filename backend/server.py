@@ -685,9 +685,17 @@ class MFADisableRequest(BaseModel):
     password: str
     totp_code: Optional[str] = None
     backup_code: Optional[str] = None
+    email_code: Optional[str] = None  # Code reçu par email
 
 class MFAResetRequest(BaseModel):
     backup_code: str
+
+class MFAEmailResetRequest(BaseModel):
+    email: EmailStr
+
+class MFAEmailResetVerify(BaseModel):
+    email: EmailStr
+    reset_code: str
 
 class ServicePackage(BaseModel):
     model_config = ConfigDict(extra="ignore")
