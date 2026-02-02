@@ -3148,7 +3148,7 @@ const AdminDashboard = () => {
                             >
                               {uploadingClientFile ? (
                                 <>
-                                  <Loader size={16} className="animate-spin" /> Upload en cours...
+                                  <Loader size={16} className="animate-spin" /> Upload en cours... {uploadProgress}%
                                 </>
                               ) : (
                                 <>
@@ -3156,6 +3156,20 @@ const AdminDashboard = () => {
                                 </>
                               )}
                             </button>
+                            
+                            {/* Progress Bar */}
+                            {uploadingClientFile && (
+                              <div className="mt-3">
+                                <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+                                  <div 
+                                    className="bg-primary h-full rounded-full transition-all duration-300 ease-out"
+                                    style={{ width: `${uploadProgress}%` }}
+                                  />
+                                </div>
+                                <p className="text-xs text-primary mt-1 font-bold">{uploadProgress}% uploadé</p>
+                              </div>
+                            )}
+                            
                             <p className="text-xs text-white/50 mt-2">JPG, PNG, MP4, WEBM, MOV, ZIP, RAR, PDF (max 1 Go)</p>
                             <p className="text-xs text-green-400 mt-1">Le client sera notifié par email !</p>
                           </div>
