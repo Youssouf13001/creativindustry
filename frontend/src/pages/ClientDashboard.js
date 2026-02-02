@@ -472,14 +472,12 @@ const ClientDashboard = () => {
                               <div className="p-4">
                                 <h3 className="font-primary font-semibold mb-1">{file.title}</h3>
                                 {file.description && <p className="text-white/60 text-sm mb-3">{file.description}</p>}
-                                <a
-                                  href={file.file_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
+                                <button
+                                  onClick={() => handleDownload(file)}
                                   className="btn-primary w-full py-2 text-xs inline-flex items-center justify-center gap-2"
                                 >
                                   <Download size={14} /> Télécharger / Voir
-                                </a>
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -495,12 +493,10 @@ const ClientDashboard = () => {
                         </h2>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                           {photos.map((file) => (
-                            <a
+                            <button
                               key={file.id}
-                              href={file.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="block bg-card border border-white/10 overflow-hidden card-hover group"
+                              onClick={() => handleDownload(file)}
+                              className="block bg-card border border-white/10 overflow-hidden card-hover group text-left"
                               data-testid={`file-${file.id}`}
                             >
                               <div className="relative aspect-square bg-black/50">
@@ -518,7 +514,7 @@ const ClientDashboard = () => {
                               <div className="p-3">
                                 <h3 className="font-primary font-semibold text-sm truncate">{file.title}</h3>
                               </div>
-                            </a>
+                            </button>
                           ))}
                         </div>
                       </section>
