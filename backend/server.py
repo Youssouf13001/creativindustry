@@ -1842,23 +1842,29 @@ async def upload_client_file(
     description: str = Form(""),
     admin: dict = Depends(get_current_admin)
 ):
-    """Upload a file for a client (images or videos)"""
+    """Upload a file for a client (images, videos, or documents like ZIP, RAR, PDF)"""
     # Verify client exists
     client_data = await db.clients.find_one({"id": client_id})
     if not client_data:
         raise HTTPException(status_code=404, detail="Client non trouvé")
     
-    # Check file type
+    # Check file type - now includes documents
     content_type = file.content_type
-    if content_type not in ALLOWED_IMAGE_TYPES + ALLOWED_VIDEO_TYPES:
-        raise HTTPException(status_code=400, detail="Type de fichier non supporté. Utilisez JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.")
+    file_ext = Path(file.filename).suffix.lower()
+    
+    # Allow by extension for ZIP/RAR files (sometimes content_type is application/octet-stream)
+    allowed_extensions = [".zip", ".rar", ".pdf"]
+    is_allowed_by_ext = file_ext in allowed_extensions
+    is_allowed_by_type = content_type in ALLOWED_IMAGE_TYPES + ALLOWED_VIDEO_TYPES + ALLOWED_DOC_TYPES
+    
+    if not (is_allowed_by_ext or is_allowed_by_type):
+        raise HTTPException(status_code=400, detail="Type de fichier non supporté. Utilisez JPG, PNG, WEBP, GIF, MP4, WEBM, MOV, ZIP, RAR ou PDF.")
     
     # Create client folder if not exists
     client_folder = UPLOADS_DIR / "clients" / client_id
     client_folder.mkdir(exist_ok=True)
     
     # Generate unique filename
-    file_ext = Path(file.filename).suffix.lower()
     unique_filename = f"{uuid.uuid4()}{file_ext}"
     file_path = client_folder / unique_filename
     
@@ -1870,7 +1876,12 @@ async def upload_client_file(
         raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload: {str(e)}")
     
     # Determine file type
-    file_type = "photo" if content_type in ALLOWED_IMAGE_TYPES else "video"
+    if content_type in ALLOWED_IMAGE_TYPES:
+        file_type = "photo"
+    elif content_type in ALLOWED_VIDEO_TYPES:
+        file_type = "video"
+    else:
+        file_type = "document"
     
     # Create file record
     file_url = f"/uploads/clients/{client_id}/{unique_filename}"
