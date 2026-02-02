@@ -1693,6 +1693,9 @@ const AdminDashboard = () => {
                     </span>
                   </div>
                   <div className="p-4">
+                    {item.client_name && (
+                      <p className="text-primary text-xs font-bold mb-1 uppercase tracking-wider">{item.client_name}</p>
+                    )}
                     <div className="flex items-center gap-2 mb-2">
                       {item.media_type === "photo" ? <Image size={16} className="text-primary" /> : <Video size={16} className="text-primary" />}
                       <h3 className="font-primary font-semibold text-sm truncate">{item.title}</h3>
