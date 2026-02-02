@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
+import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight, FileArchive } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 
@@ -21,6 +21,16 @@ const ClientDashboard = () => {
   const token = localStorage.getItem("client_token");
   const headers = { Authorization: `Bearer ${token}` };
 
+  // Heartbeat to track online status
+  const sendHeartbeat = useCallback(async () => {
+    if (!token) return;
+    try {
+      await axios.post(`${API}/client/activity/heartbeat`, {}, { headers: { Authorization: `Bearer ${token}` } });
+    } catch (e) {
+      // Silently fail
+    }
+  }, [token]);
+
   useEffect(() => {
     if (!token) {
       navigate("/client");
@@ -29,6 +39,12 @@ const ClientDashboard = () => {
     const user = JSON.parse(localStorage.getItem("client_user") || "{}");
     setClientUser(user);
     fetchData();
+    
+    // Send heartbeat immediately and then every 2 minutes
+    sendHeartbeat();
+    const heartbeatInterval = setInterval(sendHeartbeat, 120000);
+    
+    return () => clearInterval(heartbeatInterval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, navigate]);
 
@@ -48,6 +64,24 @@ const ClientDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Track file download
+  const trackDownload = async (fileId) => {
+    try {
+      await axios.post(`${API}/client/files/${fileId}/download`, {}, { headers });
+    } catch (e) {
+      // Silently fail
+    }
+  };
+
+  const handleDownload = (file) => {
+    // Track the download
+    trackDownload(file.id);
+    
+    // Open the file URL
+    const url = file.file_url.startsWith('http') ? file.file_url : `${BACKEND_URL}${file.file_url}`;
+    window.open(url, '_blank');
   };
 
   const openGallery = async (gallery) => {
