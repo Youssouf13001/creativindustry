@@ -2175,7 +2175,9 @@ const AdminDashboard = () => {
             {portfolioFilterCategory === "stories" && (
               <div className="mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {portfolio.filter(p => p.media_type === "story").map((item) => (
+                  {portfolio.filter(p => p.media_type === "story").map((item) => {
+                    const views = storyViews[item.id] || { total: 0, clients: 0, anonymous: 0 };
+                    return (
                     <div key={item.id} className="bg-card border border-purple-500/30 overflow-hidden" data-testid={`story-admin-${item.id}`}>
                       <div className="relative aspect-video bg-black/50">
                         {item.thumbnail_url ? (
@@ -2199,7 +2201,28 @@ const AdminDashboard = () => {
                       </div>
                       <div className="p-4">
                         <p className="text-primary text-xs font-bold mb-1 uppercase tracking-wider">{item.client_name || "Sans client"}</p>
-                        <h3 className="font-primary font-semibold text-sm truncate mb-3">{item.title}</h3>
+                        <h3 className="font-primary font-semibold text-sm truncate mb-2">{item.title}</h3>
+                        
+                        {/* Views Stats */}
+                        <div 
+                          className="bg-black/30 p-2 rounded mb-3 cursor-pointer hover:bg-black/50 transition-colors"
+                          onClick={() => fetchStoryViewDetails(item.id)}
+                        >
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-white/60">👁️ Vues</span>
+                            <span className="font-bold text-white">{views.total}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs mt-1">
+                            <span className="text-green-400">👤 Clients</span>
+                            <span className="text-green-400">{views.clients}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs mt-1">
+                            <span className="text-gray-400">👻 Anonymes</span>
+                            <span className="text-gray-400">{views.anonymous}</span>
+                          </div>
+                          <p className="text-[10px] text-white/40 mt-1 text-center">Cliquer pour détails</p>
+                        </div>
+                        
                         <div className="flex gap-2">
                           <button
                             onClick={() => setEditingPortfolio(item)}
@@ -2216,10 +2239,81 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
                 {portfolio.filter(p => p.media_type === "story").length === 0 && (
                   <p className="text-center text-white/60 py-12">Aucune story. Cliquez sur "+ Ajouter" et sélectionnez "📱 Story"</p>
+                )}
+
+                {/* Story Views Detail Modal */}
+                {selectedStoryViews && (
+                  <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                    <div className="bg-card border border-white/10 p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-primary font-bold text-lg">👁️ Détails des vues</h3>
+                        <button onClick={() => setSelectedStoryViews(null)} className="text-white/60 hover:text-white">
+                          <X size={24} />
+                        </button>
+                      </div>
+                      
+                      {/* Stats Summary */}
+                      <div className="grid grid-cols-3 gap-3 mb-6">
+                        <div className="bg-black/30 p-3 text-center rounded">
+                          <p className="text-2xl font-bold">{selectedStoryViews.total_views}</p>
+                          <p className="text-xs text-white/60">Total</p>
+                        </div>
+                        <div className="bg-green-500/20 p-3 text-center rounded">
+                          <p className="text-2xl font-bold text-green-400">{selectedStoryViews.client_views?.length || 0}</p>
+                          <p className="text-xs text-green-400">Clients</p>
+                        </div>
+                        <div className="bg-gray-500/20 p-3 text-center rounded">
+                          <p className="text-2xl font-bold text-gray-400">{selectedStoryViews.anonymous_views}</p>
+                          <p className="text-xs text-gray-400">Anonymes</p>
+                        </div>
+                      </div>
+                      
+                      {/* Client Views List */}
+                      {selectedStoryViews.client_views?.length > 0 && (
+                        <div>
+                          <h4 className="font-primary font-bold text-sm mb-3 text-green-400">👤 Clients qui ont vu</h4>
+                          <div className="space-y-2">
+                            {selectedStoryViews.client_views.map((view, index) => (
+                              <div key={index} className="flex justify-between items-center bg-green-500/10 p-2 rounded">
+                                <span className="font-medium">{view.name}</span>
+                                <span className="text-xs text-white/60">
+                                  {new Date(view.viewed_at).toLocaleDateString('fr-FR', { 
+                                    day: '2-digit', 
+                                    month: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {selectedStoryViews.anonymous_views > 0 && (
+                        <div className="mt-4 p-3 bg-gray-500/10 rounded">
+                          <p className="text-sm text-gray-400">
+                            👻 {selectedStoryViews.anonymous_views} visiteur{selectedStoryViews.anonymous_views > 1 ? 's' : ''} anonyme{selectedStoryViews.anonymous_views > 1 ? 's' : ''} ont également vu cette story
+                          </p>
+                        </div>
+                      )}
+                      
+                      {selectedStoryViews.total_views === 0 && (
+                        <p className="text-center text-white/60 py-8">Aucune vue pour le moment</p>
+                      )}
+                      
+                      <button
+                        onClick={() => setSelectedStoryViews(null)}
+                        className="btn-primary w-full py-3 mt-6"
+                      >
+                        Fermer
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
