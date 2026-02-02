@@ -885,6 +885,7 @@ class PortfolioItemUpdate(BaseModel):
     description: Optional[str] = None
     media_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    category: Optional[str] = None
     client_name: Optional[str] = None
     cover_photo: Optional[str] = None
     is_featured: Optional[bool] = None
