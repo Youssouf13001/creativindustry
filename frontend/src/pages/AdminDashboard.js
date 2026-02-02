@@ -85,7 +85,15 @@ const AdminDashboard = () => {
     fetchData();
     fetchBankDetails();
     fetchMfaStatus();
+    fetchStoryViews();
   }, [token]);
+
+  // Refresh story views when switching to stories filter
+  useEffect(() => {
+    if (portfolioFilterCategory === "stories") {
+      fetchStoryViews();
+    }
+  }, [portfolioFilterCategory]);
 
   const fetchMfaStatus = async () => {
     try {
