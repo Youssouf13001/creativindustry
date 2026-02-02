@@ -164,7 +164,9 @@ const ClientDashboard = () => {
       const res = await axios.post(`${API}/client/profile/photo`, formData, {
         headers: { ...headers, 'Content-Type': 'multipart/form-data' }
       });
-      setClientUser(prev => ({ ...prev, profile_photo: res.data.photo_url }));
+      const updatedUser = { ...clientUser, profile_photo: res.data.photo_url };
+      setClientUser(updatedUser);
+      localStorage.setItem("client_user", JSON.stringify(updatedUser));
       toast.success("Photo de profil mise à jour !");
     } catch (e) {
       toast.error("Erreur lors de l'upload de la photo");
