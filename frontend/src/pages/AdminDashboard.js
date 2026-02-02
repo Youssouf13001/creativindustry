@@ -1522,6 +1522,14 @@ const AdminDashboard = () => {
                   <div className="space-y-4">
                     <input
                       type="text"
+                      placeholder="Nom du client *"
+                      value={newPortfolioItem.client_name}
+                      onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, client_name: e.target.value })}
+                      className="w-full bg-background border border-white/20 px-4 py-3"
+                      data-testid="portfolio-client-name"
+                    />
+                    <input
+                      type="text"
                       placeholder="Titre"
                       value={newPortfolioItem.title}
                       onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, title: e.target.value })}
