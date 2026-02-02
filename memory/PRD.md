@@ -20,6 +20,20 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V15 - Sauvegarde Complète & Stories (02 Fév 2026)
+- ✅ **Sauvegarde complète ZIP** : Téléchargement depuis l'admin (Paramètres)
+  - Base de données MongoDB exportée en JSON (toutes les collections)
+  - Fichiers uploadés inclus (portfolio, galeries, clients)
+  - README.txt avec instructions de restauration
+  - Endpoint : `GET /api/admin/backup` (authentification requise)
+- ✅ **Stories style Instagram** : Vidéos de 1 à 90 secondes en haut du portfolio
+  - Durée personnalisable, son activé par défaut
+  - Comptage de vues (clients vs anonymes)
+  - Gestion dans l'admin (filtre dédié)
+- ✅ **MFA complet** : Double authentification pour les admins
+  - QR code TOTP, codes de secours
+  - Récupération par email
+
 ### V14 - Réorganisation Portfolio (02 Fév 2026)
 - ✅ **Structure par catégories** : Vue principale avec 3 catégories (Mariages, Podcast, Plateau TV)
 - ✅ **Icônes et compteurs** : Chaque catégorie affiche une icône colorée et le nombre de clients/médias
