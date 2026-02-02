@@ -499,7 +499,7 @@ const AdminDashboard = () => {
       await axios.post(`${API}/admin/portfolio`, newPortfolioItem, { headers });
       toast.success("Élément ajouté au portfolio");
       setShowAddPortfolio(false);
-      setNewPortfolioItem({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", is_featured: false });
+      setNewPortfolioItem({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", client_name: "", is_featured: false });
       fetchData();
     } catch (e) {
       toast.error("Erreur");
