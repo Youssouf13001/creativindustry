@@ -460,6 +460,15 @@ const AdminLogin = () => {
               className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
               data-testid="admin-password-input"
             />
+            {!isRegister && (
+              <button
+                type="button"
+                onClick={() => setShowPasswordReset(true)}
+                className="text-primary text-sm mt-2 hover:underline"
+              >
+                Mot de passe oublié ?
+              </button>
+            )}
           </div>
           <button
             type="submit"
