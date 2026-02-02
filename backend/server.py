@@ -912,6 +912,7 @@ class PortfolioItemCreate(BaseModel):
     client_name: Optional[str] = None
     cover_photo: Optional[str] = None
     is_featured: bool = False
+    story_duration: Optional[int] = 3
 
 class PortfolioItemUpdate(BaseModel):
     title: Optional[str] = None
@@ -923,6 +924,7 @@ class PortfolioItemUpdate(BaseModel):
     cover_photo: Optional[str] = None
     is_featured: Optional[bool] = None
     is_active: Optional[bool] = None
+    story_duration: Optional[int] = None
 
 # ==================== SITE CONTENT MODELS ====================
 
