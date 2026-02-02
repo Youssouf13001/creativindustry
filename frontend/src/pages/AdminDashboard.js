@@ -3338,6 +3338,30 @@ const AdminDashboard = () => {
                       <p className="text-center text-white/60 py-8">Aucun fichier</p>
                     )}
                   </div>
+
+                  {/* Download History for this client */}
+                  <div className="mt-6 border-t border-white/10 pt-6">
+                    <h4 className="font-primary font-semibold mb-3 flex items-center gap-2">
+                      <Download size={16} className="text-blue-400" />
+                      Historique des téléchargements
+                    </h4>
+                    {clientDownloads.length > 0 ? (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {clientDownloads.map((dl) => (
+                          <div key={dl.id} className="bg-blue-500/10 border border-blue-500/30 p-3 text-sm">
+                            <div className="flex justify-between items-center">
+                              <span className="text-white/80">Fichier téléchargé</span>
+                              <span className="text-blue-400 text-xs">
+                                {new Date(dl.downloaded_at).toLocaleString("fr-FR")}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-white/40 text-sm">Aucun téléchargement enregistré</p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
