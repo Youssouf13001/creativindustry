@@ -3355,6 +3355,16 @@ const AdminDashboard = () => {
                                 {new Date(dl.downloaded_at).toLocaleString("fr-FR")}
                               </span>
                             </div>
+                            <p className="text-white font-semibold mt-1">{dl.file_title || "Fichier"}</p>
+                            {dl.file_type && (
+                              <span className={`text-xs px-2 py-0.5 rounded ${
+                                dl.file_type === 'video' ? 'bg-purple-500/20 text-purple-400' :
+                                dl.file_type === 'photo' ? 'bg-green-500/20 text-green-400' :
+                                'bg-orange-500/20 text-orange-400'
+                              }`}>
+                                {dl.file_type === 'video' ? 'Vidéo' : dl.file_type === 'photo' ? 'Photo' : 'Document'}
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>
