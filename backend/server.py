@@ -10,6 +10,8 @@ import logging
 import shutil
 import zipfile
 import io
+import secrets
+import base64
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
@@ -17,6 +19,9 @@ import uuid
 from datetime import datetime, timezone
 import jwt
 import bcrypt
+import pyotp
+import qrcode
+from io import BytesIO
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 import smtplib
 from email.mime.text import MIMEText
