@@ -863,6 +863,8 @@ class PortfolioItem(BaseModel):
     media_url: str
     thumbnail_url: Optional[str] = None
     category: str  # wedding, podcast, tv_set
+    client_name: Optional[str] = None  # Nom du client pour regroupement
+    cover_photo: Optional[str] = None  # Photo de couverture pour le client
     is_featured: bool = False
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -874,6 +876,8 @@ class PortfolioItemCreate(BaseModel):
     media_url: str
     thumbnail_url: Optional[str] = None
     category: str
+    client_name: Optional[str] = None
+    cover_photo: Optional[str] = None
     is_featured: bool = False
 
 class PortfolioItemUpdate(BaseModel):
@@ -881,6 +885,8 @@ class PortfolioItemUpdate(BaseModel):
     description: Optional[str] = None
     media_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    client_name: Optional[str] = None
+    cover_photo: Optional[str] = None
     is_featured: Optional[bool] = None
     is_active: Optional[bool] = None
 
