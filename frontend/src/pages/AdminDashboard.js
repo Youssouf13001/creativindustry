@@ -3293,6 +3293,209 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
+
+        {/* Security Tab - MFA */}
+        {activeTab === "security" && (
+          <div data-testid="admin-security">
+            <h2 className="font-primary font-bold text-xl mb-6">🔐 Sécurité du compte</h2>
+            
+            {/* MFA Status Card */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${mfaStatus.mfa_enabled ? 'bg-green-500/20' : 'bg-yellow-500/20'}`}>
+                    <Shield size={24} className={mfaStatus.mfa_enabled ? 'text-green-500' : 'text-yellow-500'} />
+                  </div>
+                  <div>
+                    <h3 className="font-primary font-bold text-lg">Double Authentification (MFA)</h3>
+                    <p className={`text-sm ${mfaStatus.mfa_enabled ? 'text-green-500' : 'text-yellow-500'}`}>
+                      {mfaStatus.mfa_enabled ? '✓ Activée' : '⚠ Non activée'}
+                    </p>
+                  </div>
+                </div>
+                {mfaStatus.mfa_enabled && (
+                  <div className="text-right">
+                    <p className="text-sm text-white/60">Codes de secours restants</p>
+                    <p className={`font-bold ${mfaStatus.backup_codes_remaining <= 2 ? 'text-red-500' : 'text-green-500'}`}>
+                      {mfaStatus.backup_codes_remaining}
+                    </p>
+                  </div>
+                )}
+              </div>
+              
+              <p className="text-white/60 text-sm mb-6">
+                La double authentification ajoute une couche de sécurité supplémentaire en demandant un code temporaire 
+                de votre application d'authentification (Google Authenticator, Authy, etc.) lors de la connexion.
+              </p>
+              
+              {!mfaStatus.mfa_enabled ? (
+                <button onClick={setupMfa} className="btn-primary px-6 py-3">
+                  Activer la double authentification
+                </button>
+              ) : (
+                <div className="flex gap-3">
+                  <button onClick={regenerateBackupCodes} className="btn-outline px-6 py-3">
+                    Régénérer les codes de secours
+                  </button>
+                  <button onClick={() => setShowDisableMfa(true)} className="bg-red-500/20 text-red-500 border border-red-500/50 px-6 py-3 hover:bg-red-500/30">
+                    Désactiver MFA
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* MFA Setup Modal */}
+            {mfaSetupData && !mfaStatus.mfa_enabled && (
+              <div className="bg-card border border-primary/30 p-6 mb-6">
+                <h3 className="font-primary font-bold text-lg mb-4 text-primary">Configuration MFA</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* QR Code */}
+                  <div className="text-center">
+                    <p className="text-sm text-white/60 mb-4">1. Scannez ce QR code avec votre application d'authentification</p>
+                    <div className="bg-white p-4 inline-block rounded">
+                      <img 
+                        src={`data:image/png;base64,${mfaSetupData.qr_code}`} 
+                        alt="QR Code MFA" 
+                        className="w-48 h-48"
+                      />
+                    </div>
+                    <p className="text-xs text-white/40 mt-2">Ou entrez manuellement: <code className="bg-black/50 px-2 py-1 rounded text-xs">{mfaSetupData.secret}</code></p>
+                  </div>
+                  
+                  {/* Verify Code */}
+                  <div>
+                    <p className="text-sm text-white/60 mb-4">2. Entrez le code à 6 chiffres pour vérifier</p>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      placeholder="000000"
+                      value={mfaVerifyCode}
+                      onChange={(e) => setMfaVerifyCode(e.target.value.replace(/\D/g, ''))}
+                      className="w-full bg-background border border-white/20 px-4 py-4 text-center text-2xl tracking-widest font-mono mb-4"
+                    />
+                    <button 
+                      onClick={verifyMfaSetup} 
+                      disabled={mfaVerifyCode.length !== 6}
+                      className="btn-primary w-full py-3 disabled:opacity-50"
+                    >
+                      Vérifier et activer
+                    </button>
+                    <button 
+                      onClick={() => { setMfaSetupData(null); setMfaVerifyCode(""); }}
+                      className="btn-outline w-full py-3 mt-2"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Backup Codes Display */}
+            {showBackupCodes && mfaSetupData?.backup_codes && (
+              <div className="bg-card border border-yellow-500/30 p-6 mb-6">
+                <h3 className="font-primary font-bold text-lg mb-2 text-yellow-500">⚠️ Codes de secours</h3>
+                <p className="text-white/60 text-sm mb-4">
+                  Conservez ces codes dans un endroit sûr. Chaque code ne peut être utilisé qu'une seule fois 
+                  pour récupérer l'accès à votre compte si vous perdez votre téléphone.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                  {mfaSetupData.backup_codes.map((code, index) => (
+                    <div key={index} className="bg-black/50 px-3 py-2 text-center font-mono text-sm">
+                      {code}
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  onClick={() => {
+                    const codes = mfaSetupData.backup_codes.join('\n');
+                    navigator.clipboard.writeText(codes);
+                    toast.success("Codes copiés dans le presse-papier !");
+                  }}
+                  className="btn-outline px-4 py-2 text-sm mr-2"
+                >
+                  📋 Copier les codes
+                </button>
+                <button 
+                  onClick={() => setShowBackupCodes(false)}
+                  className="btn-primary px-4 py-2 text-sm"
+                >
+                  J'ai sauvegardé mes codes
+                </button>
+              </div>
+            )}
+
+            {/* Disable MFA Modal */}
+            {showDisableMfa && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-card border border-red-500/30 p-6 w-full max-w-md">
+                  <h3 className="font-primary font-bold text-lg mb-4 text-red-500">⚠️ Désactiver MFA</h3>
+                  <p className="text-white/60 text-sm mb-6">
+                    Attention ! La désactivation de MFA réduit la sécurité de votre compte.
+                  </p>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Mot de passe</label>
+                      <input
+                        type="password"
+                        value={disableMfaData.password}
+                        onChange={(e) => setDisableMfaData({ ...disableMfaData, password: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Code MFA ou code de secours</label>
+                      <input
+                        type="text"
+                        maxLength={8}
+                        placeholder="123456 ou ABCD1234"
+                        value={disableMfaData.code}
+                        onChange={(e) => setDisableMfaData({ ...disableMfaData, code: e.target.value.toUpperCase() })}
+                        className="w-full bg-background border border-white/20 px-4 py-3 font-mono"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowDisableMfa(false)} className="btn-outline flex-1 py-3">
+                        Annuler
+                      </button>
+                      <button 
+                        onClick={disableMfa} 
+                        disabled={!disableMfaData.password || disableMfaData.code.length < 6}
+                        className="bg-red-500 text-white flex-1 py-3 hover:bg-red-600 disabled:opacity-50"
+                      >
+                        Désactiver
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Security Tips */}
+            <div className="bg-card border border-white/10 p-6">
+              <h3 className="font-primary font-bold text-lg mb-4">💡 Conseils de sécurité</h3>
+              <ul className="space-y-3 text-white/60 text-sm">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500">✓</span>
+                  Utilisez un mot de passe unique et complexe (minimum 12 caractères)
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500">✓</span>
+                  Activez la double authentification (MFA) pour protéger votre compte
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500">✓</span>
+                  Conservez vos codes de secours dans un endroit sûr (coffre-fort, gestionnaire de mots de passe)
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500">✓</span>
+                  Ne partagez jamais vos identifiants de connexion
+                </li>
+              </ul>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
