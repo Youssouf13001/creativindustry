@@ -1673,6 +1673,196 @@ const AdminDashboard = () => {
               </div>
             )}
 
+            {/* Edit Portfolio Modal */}
+            {editingPortfolio && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-card border border-white/10 p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+                  <h3 className="font-primary font-bold text-xl mb-4">Modifier l'élément</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm text-white/60 mb-1 block">Nom du client</label>
+                      <input
+                        type="text"
+                        placeholder="Nom du client"
+                        value={editingPortfolio.client_name || ""}
+                        onChange={(e) => setEditingPortfolio({ ...editingPortfolio, client_name: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-white/60 mb-1 block">Titre</label>
+                      <input
+                        type="text"
+                        placeholder="Titre"
+                        value={editingPortfolio.title || ""}
+                        onChange={(e) => setEditingPortfolio({ ...editingPortfolio, title: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-white/60 mb-1 block">Description</label>
+                      <textarea
+                        placeholder="Description"
+                        value={editingPortfolio.description || ""}
+                        onChange={(e) => setEditingPortfolio({ ...editingPortfolio, description: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                        rows={2}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-white/60 mb-1 block">Catégorie</label>
+                      <select
+                        value={editingPortfolio.category || "wedding"}
+                        onChange={(e) => setEditingPortfolio({ ...editingPortfolio, category: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3"
+                      >
+                        <option value="wedding">Mariage</option>
+                        <option value="podcast">Podcast</option>
+                        <option value="tv_set">Plateau TV</option>
+                      </select>
+                    </div>
+                    
+                    {/* Current Media Preview */}
+                    <div>
+                      <label className="text-sm text-white/60 mb-1 block">Média actuel</label>
+                      <div className="relative aspect-video bg-black/30 mb-2">
+                        {editingPortfolio.media_type === "photo" ? (
+                          <img src={editingPortfolio.media_url} alt="Aperçu" className="w-full h-full object-contain" />
+                        ) : (
+                          <img src={editingPortfolio.thumbnail_url || editingPortfolio.media_url} alt="Aperçu" className="w-full h-full object-contain" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Upload New Media */}
+                    <div>
+                      <label className="text-sm text-white/60 mb-1 block">Changer le média (optionnel)</label>
+                      <input
+                        type="file"
+                        id="edit-portfolio-media"
+                        className="hidden"
+                        accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          const formData = new FormData();
+                          formData.append('file', file);
+                          try {
+                            const res = await axios.post(`${API}/upload/portfolio`, formData, {
+                              headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+                            });
+                            const uploadedUrl = `${BACKEND_URL}${res.data.url}`;
+                            setEditingPortfolio({ 
+                              ...editingPortfolio, 
+                              media_url: uploadedUrl,
+                              media_type: res.data.media_type
+                            });
+                            toast.success("Média mis à jour !");
+                          } catch (err) {
+                            toast.error("Erreur lors de l'upload");
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor="edit-portfolio-media"
+                        className="flex items-center justify-center gap-2 w-full border-2 border-dashed border-primary/50 py-3 cursor-pointer hover:bg-primary/10 transition-colors"
+                      >
+                        <Upload size={16} /> Uploader un nouveau média
+                      </label>
+                    </div>
+                    
+                    {/* Upload New Thumbnail */}
+                    {editingPortfolio.media_type === "video" && (
+                      <div>
+                        <label className="text-sm text-white/60 mb-1 block">Miniature vidéo</label>
+                        {editingPortfolio.thumbnail_url && (
+                          <div className="relative mb-2">
+                            <img src={editingPortfolio.thumbnail_url} alt="Miniature" className="w-full h-32 object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setEditingPortfolio({ ...editingPortfolio, thumbnail_url: '' })}
+                              className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          id="edit-portfolio-thumbnail"
+                          className="hidden"
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            try {
+                              const res = await axios.post(`${API}/upload/portfolio`, formData, {
+                                headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+                              });
+                              const uploadedUrl = `${BACKEND_URL}${res.data.url}`;
+                              setEditingPortfolio({ ...editingPortfolio, thumbnail_url: uploadedUrl });
+                              toast.success("Miniature mise à jour !");
+                            } catch (err) {
+                              toast.error("Erreur lors de l'upload");
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="edit-portfolio-thumbnail"
+                          className="flex items-center justify-center gap-2 w-full border-2 border-dashed border-primary/50 py-3 cursor-pointer hover:bg-primary/10 transition-colors"
+                        >
+                          <Upload size={16} /> {editingPortfolio.thumbnail_url ? "Changer la miniature" : "Ajouter une miniature"}
+                        </label>
+                      </div>
+                    )}
+                    
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={editingPortfolio.is_featured || false}
+                        onChange={(e) => setEditingPortfolio({ ...editingPortfolio, is_featured: e.target.checked })}
+                        className="accent-primary"
+                      />
+                      <span className="text-sm">Mettre en avant (Featured)</span>
+                    </label>
+                    
+                    <div className="flex gap-2 pt-4">
+                      <button 
+                        onClick={() => setEditingPortfolio(null)} 
+                        className="btn-outline flex-1 py-3"
+                      >
+                        Annuler
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          try {
+                            await updatePortfolioItem(editingPortfolio.id, {
+                              title: editingPortfolio.title,
+                              description: editingPortfolio.description,
+                              client_name: editingPortfolio.client_name,
+                              category: editingPortfolio.category,
+                              media_url: editingPortfolio.media_url,
+                              thumbnail_url: editingPortfolio.thumbnail_url,
+                              is_featured: editingPortfolio.is_featured
+                            });
+                            setEditingPortfolio(null);
+                            toast.success("Élément modifié !");
+                          } catch (err) {
+                            toast.error("Erreur lors de la modification");
+                          }
+                        }} 
+                        className="btn-primary flex-1 py-3"
+                      >
+                        Enregistrer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Portfolio Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {portfolio.map((item) => (
