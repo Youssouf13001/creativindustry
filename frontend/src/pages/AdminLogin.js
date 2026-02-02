@@ -145,7 +145,115 @@ const AdminLogin = () => {
     }
   };
 
-  // Email Reset Screen
+  // Password Reset Screen
+  if (showPasswordReset) {
+    return (
+      <div className="pt-20 min-h-screen flex items-center justify-center" data-testid="admin-password-reset-page">
+        <div className="w-full max-w-md p-8">
+          <div className="flex justify-center mb-6">
+            <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center">
+              <KeyRound size={32} className="text-primary" />
+            </div>
+          </div>
+          <h1 className="font-primary font-black text-2xl tracking-tighter uppercase mb-2 text-center">
+            <span className="text-gold-gradient">Mot de passe oublié</span>
+          </h1>
+          <p className="font-secondary text-white/60 text-center mb-8">
+            {passwordResetSent 
+              ? "Entrez le code reçu par email et votre nouveau mot de passe" 
+              : "Entrez votre email pour recevoir un code de réinitialisation"}
+          </p>
+
+          {!passwordResetSent ? (
+            <div className="space-y-6">
+              <div>
+                <label className="block font-primary text-sm mb-2">Email du compte</label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  placeholder="votre@email.com"
+                />
+              </div>
+              <button
+                onClick={handleSendPasswordResetCode}
+                disabled={loading || !formData.email}
+                className="btn-primary w-full py-4 text-sm disabled:opacity-50"
+              >
+                {loading ? "Envoi en cours..." : "📧 Envoyer le code par email"}
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div>
+                <label className="block font-primary text-sm mb-2 flex items-center gap-2">
+                  <Mail size={16} className="text-primary" />
+                  Code reçu par email
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={6}
+                  placeholder="000000"
+                  value={passwordResetCode}
+                  onChange={(e) => setPasswordResetCode(e.target.value.replace(/\D/g, ''))}
+                  className="w-full bg-background border border-white/20 px-4 py-4 text-center text-2xl tracking-widest font-mono focus:border-primary focus:outline-none"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Nouveau mot de passe</label>
+                <input
+                  type="password"
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  placeholder="••••••••"
+                />
+              </div>
+              <div>
+                <label className="block font-primary text-sm mb-2">Confirmer le mot de passe</label>
+                <input
+                  type="password"
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  placeholder="••••••••"
+                />
+              </div>
+              <button
+                onClick={handleResetPassword}
+                disabled={loading || passwordResetCode.length !== 6 || !newPassword || !confirmPassword}
+                className="btn-primary w-full py-4 text-sm disabled:opacity-50"
+              >
+                {loading ? "Modification..." : "🔑 Modifier le mot de passe"}
+              </button>
+              <button
+                onClick={handleSendPasswordResetCode}
+                disabled={loading}
+                className="btn-outline w-full py-3 text-sm"
+              >
+                Renvoyer le code
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={handleBackToLogin}
+            className="w-full text-center text-white/60 text-sm mt-6 hover:text-primary"
+          >
+            ← Retour à la connexion
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Email Reset Screen (MFA)
   if (showEmailReset) {
     return (
       <div className="pt-20 min-h-screen flex items-center justify-center" data-testid="admin-email-reset-page">
