@@ -62,6 +62,54 @@ const AdminLogin = () => {
     setShowEmailReset(false);
     setEmailResetSent(false);
     setEmailResetCode("");
+    setShowPasswordReset(false);
+    setPasswordResetSent(false);
+    setPasswordResetCode("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+  // Password Reset Functions
+  const handleSendPasswordResetCode = async () => {
+    if (!formData.email) {
+      toast.error("Veuillez entrer votre email");
+      return;
+    }
+    setLoading(true);
+    try {
+      await axios.post(`${API}/auth/password/request-reset`, { email: formData.email });
+      setPasswordResetSent(true);
+      toast.success("Code envoyé par email ! Vérifiez votre boîte de réception.");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de l'envoi");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+    setLoading(true);
+    try {
+      await axios.post(`${API}/auth/password/reset`, { 
+        email: formData.email, 
+        reset_code: passwordResetCode,
+        new_password: newPassword
+      });
+      toast.success("Mot de passe modifié ! Vous pouvez maintenant vous connecter.");
+      handleBackToLogin();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Code invalide ou expiré");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSendEmailCode = async () => {
