@@ -69,6 +69,9 @@ const AdminDashboard = () => {
   const [showBackupCodes, setShowBackupCodes] = useState(false);
   const [disableMfaData, setDisableMfaData] = useState({ password: "", code: "" });
   const [showDisableMfa, setShowDisableMfa] = useState(false);
+  // Story views state
+  const [storyViews, setStoryViews] = useState({});
+  const [selectedStoryViews, setSelectedStoryViews] = useState(null);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
