@@ -58,9 +58,16 @@ const PortfolioPage = () => {
         };
       }
       clientsMap[clientName].items.push(item);
-      // Use first photo as cover if not set
-      if (!clientsMap[clientName].coverPhoto && item.media_type === "photo") {
-        clientsMap[clientName].coverPhoto = item.cover_photo || item.media_url;
+      
+      // Set cover photo: prioritize cover_photo > photo media > video thumbnail
+      if (!clientsMap[clientName].coverPhoto) {
+        if (item.cover_photo) {
+          clientsMap[clientName].coverPhoto = item.cover_photo;
+        } else if (item.media_type === "photo") {
+          clientsMap[clientName].coverPhoto = item.media_url;
+        } else if (item.media_type === "video" && item.thumbnail_url) {
+          clientsMap[clientName].coverPhoto = item.thumbnail_url;
+        }
       }
     });
     
