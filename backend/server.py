@@ -1141,6 +1141,35 @@ class SelectionUpdate(BaseModel):
 
 # ==================== AUTH ROUTES ====================
 
+# MFA Helper Functions
+def generate_mfa_secret():
+    return pyotp.random_base32()
+
+def generate_backup_codes(count=8):
+    """Generate backup codes for MFA recovery"""
+    return [secrets.token_hex(4).upper() for _ in range(count)]
+
+def verify_totp(secret: str, code: str) -> bool:
+    """Verify a TOTP code"""
+    totp = pyotp.TOTP(secret)
+    return totp.verify(code, valid_window=1)  # Allow 30 seconds window
+
+def generate_qr_code(secret: str, email: str) -> str:
+    """Generate QR code for authenticator app"""
+    totp = pyotp.TOTP(secret)
+    uri = totp.provisioning_uri(name=email, issuer_name="CREATIVINDUSTRY France")
+    
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(uri)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="black", back_color="white")
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+    
+    return base64.b64encode(buffer.getvalue()).decode()
+
 @api_router.post("/auth/register", response_model=dict)
 async def register_admin(data: AdminCreate):
     existing = await db.admins.find_one({"email": data.email})
@@ -1153,11 +1182,14 @@ async def register_admin(data: AdminCreate):
         "email": data.email,
         "password": hash_password(data.password),
         "name": data.name,
+        "mfa_enabled": False,
+        "mfa_secret": None,
+        "backup_codes": [],
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.admins.insert_one(admin_doc)
     token = create_token(admin_id, "admin")
-    return {"token": token, "admin": {"id": admin_id, "email": data.email, "name": data.name}}
+    return {"token": token, "admin": {"id": admin_id, "email": data.email, "name": data.name, "mfa_enabled": False}}
 
 @api_router.post("/auth/login", response_model=dict)
 async def login_admin(data: AdminLogin):
@@ -1165,12 +1197,157 @@ async def login_admin(data: AdminLogin):
     if not admin or not verify_password(data.password, admin["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    # Check if MFA is enabled
+    mfa_enabled = admin.get("mfa_enabled", False)
+    
+    if mfa_enabled:
+        if not data.totp_code:
+            # Return that MFA is required
+            return {"mfa_required": True, "message": "Code MFA requis"}
+        
+        # Verify TOTP code or backup code
+        mfa_secret = admin.get("mfa_secret")
+        backup_codes = admin.get("backup_codes", [])
+        
+        is_valid_totp = verify_totp(mfa_secret, data.totp_code)
+        is_valid_backup = data.totp_code.upper() in [code.upper() for code in backup_codes]
+        
+        if not is_valid_totp and not is_valid_backup:
+            raise HTTPException(status_code=401, detail="Code MFA invalide")
+        
+        # If backup code used, remove it
+        if is_valid_backup:
+            backup_codes = [code for code in backup_codes if code.upper() != data.totp_code.upper()]
+            await db.admins.update_one({"id": admin["id"]}, {"$set": {"backup_codes": backup_codes}})
+    
     token = create_token(admin["id"], "admin")
-    return {"token": token, "admin": {"id": admin["id"], "email": admin["email"], "name": admin["name"]}}
+    return {
+        "token": token, 
+        "admin": {
+            "id": admin["id"], 
+            "email": admin["email"], 
+            "name": admin["name"],
+            "mfa_enabled": mfa_enabled
+        }
+    }
 
 @api_router.get("/auth/me", response_model=AdminResponse)
 async def get_me(admin: dict = Depends(get_current_admin)):
-    return AdminResponse(id=admin["id"], email=admin["email"], name=admin["name"])
+    return AdminResponse(
+        id=admin["id"], 
+        email=admin["email"], 
+        name=admin["name"],
+        mfa_enabled=admin.get("mfa_enabled", False)
+    )
+
+# ==================== MFA ROUTES ====================
+
+@api_router.post("/auth/mfa/setup", response_model=MFASetupResponse)
+async def setup_mfa(admin: dict = Depends(get_current_admin)):
+    """Generate MFA secret and QR code for setup"""
+    if admin.get("mfa_enabled"):
+        raise HTTPException(status_code=400, detail="MFA déjà activé")
+    
+    # Generate new secret
+    secret = generate_mfa_secret()
+    backup_codes = generate_backup_codes()
+    
+    # Generate QR code
+    qr_code = generate_qr_code(secret, admin["email"])
+    
+    # Store secret temporarily (not enabled yet)
+    await db.admins.update_one(
+        {"id": admin["id"]},
+        {"$set": {"mfa_secret": secret, "backup_codes": backup_codes}}
+    )
+    
+    return MFASetupResponse(
+        secret=secret,
+        qr_code=qr_code,
+        backup_codes=backup_codes
+    )
+
+@api_router.post("/auth/mfa/verify")
+async def verify_mfa_setup(data: MFAVerifyRequest, admin: dict = Depends(get_current_admin)):
+    """Verify TOTP code and enable MFA"""
+    mfa_secret = admin.get("mfa_secret")
+    
+    if not mfa_secret:
+        raise HTTPException(status_code=400, detail="Veuillez d'abord configurer MFA")
+    
+    if not verify_totp(mfa_secret, data.totp_code):
+        raise HTTPException(status_code=401, detail="Code invalide")
+    
+    # Enable MFA
+    await db.admins.update_one(
+        {"id": admin["id"]},
+        {"$set": {"mfa_enabled": True}}
+    )
+    
+    return {"success": True, "message": "MFA activé avec succès"}
+
+@api_router.post("/auth/mfa/disable")
+async def disable_mfa(data: MFADisableRequest, admin: dict = Depends(get_current_admin)):
+    """Disable MFA (requires password and TOTP or backup code)"""
+    if not admin.get("mfa_enabled"):
+        raise HTTPException(status_code=400, detail="MFA n'est pas activé")
+    
+    # Verify password
+    admin_full = await db.admins.find_one({"id": admin["id"]}, {"_id": 0})
+    if not verify_password(data.password, admin_full["password"]):
+        raise HTTPException(status_code=401, detail="Mot de passe incorrect")
+    
+    # Verify TOTP or backup code
+    mfa_secret = admin_full.get("mfa_secret")
+    backup_codes = admin_full.get("backup_codes", [])
+    
+    is_valid = False
+    if data.totp_code and verify_totp(mfa_secret, data.totp_code):
+        is_valid = True
+    elif data.backup_code and data.backup_code.upper() in [code.upper() for code in backup_codes]:
+        is_valid = True
+    
+    if not is_valid:
+        raise HTTPException(status_code=401, detail="Code MFA ou code de secours invalide")
+    
+    # Disable MFA
+    await db.admins.update_one(
+        {"id": admin["id"]},
+        {"$set": {"mfa_enabled": False, "mfa_secret": None, "backup_codes": []}}
+    )
+    
+    return {"success": True, "message": "MFA désactivé"}
+
+@api_router.post("/auth/mfa/backup-codes")
+async def regenerate_backup_codes(data: MFAVerifyRequest, admin: dict = Depends(get_current_admin)):
+    """Regenerate backup codes (requires valid TOTP)"""
+    if not admin.get("mfa_enabled"):
+        raise HTTPException(status_code=400, detail="MFA n'est pas activé")
+    
+    mfa_secret = admin.get("mfa_secret")
+    if not verify_totp(mfa_secret, data.totp_code):
+        raise HTTPException(status_code=401, detail="Code invalide")
+    
+    # Generate new backup codes
+    new_backup_codes = generate_backup_codes()
+    
+    await db.admins.update_one(
+        {"id": admin["id"]},
+        {"$set": {"backup_codes": new_backup_codes}}
+    )
+    
+    return {"backup_codes": new_backup_codes}
+
+@api_router.get("/auth/mfa/status")
+async def get_mfa_status(admin: dict = Depends(get_current_admin)):
+    """Get MFA status and remaining backup codes count"""
+    admin_full = await db.admins.find_one({"id": admin["id"]}, {"_id": 0})
+    backup_codes = admin_full.get("backup_codes", [])
+    
+    return {
+        "mfa_enabled": admin_full.get("mfa_enabled", False),
+        "backup_codes_remaining": len(backup_codes)
+    }
 
 # ==================== CLIENT AUTH ROUTES ====================
 
