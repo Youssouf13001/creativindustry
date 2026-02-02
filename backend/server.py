@@ -1707,6 +1707,14 @@ async def track_file_download(file_id: str, client: dict = Depends(get_current_c
         "client_email": client.get("email", ""),
         "downloaded_at": datetime.now(timezone.utc).isoformat()
     }
+    
+    # Get the file info to store the title
+    file_info = await db.client_files.find_one({"id": file_id}, {"_id": 0})
+    if file_info:
+        download_record["file_title"] = file_info.get("title", "Fichier inconnu")
+        download_record["file_type"] = file_info.get("file_type", "document")
+        download_record["file_url"] = file_info.get("file_url", "")
+    
     await db.file_downloads.insert_one(download_record)
     
     # Also update the file with download count
