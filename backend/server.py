@@ -891,7 +891,7 @@ class PortfolioItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
     description: Optional[str] = None
-    media_type: str  # photo, video
+    media_type: str  # photo, video, story
     media_url: str
     thumbnail_url: Optional[str] = None
     category: str  # wedding, podcast, tv_set
@@ -899,6 +899,7 @@ class PortfolioItem(BaseModel):
     cover_photo: Optional[str] = None  # Photo de couverture pour le client
     is_featured: bool = False
     is_active: bool = True
+    story_duration: Optional[int] = 3  # Durée en secondes pour les stories (1-10)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class PortfolioItemCreate(BaseModel):
