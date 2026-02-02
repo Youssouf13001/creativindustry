@@ -2601,6 +2601,117 @@ async def get_all_stories_views(admin: dict = Depends(get_current_admin)):
     
     return result
 
+# ==================== BACKUP ROUTE ====================
+
+@api_router.get("/admin/backup")
+async def create_backup(admin: dict = Depends(get_current_admin)):
+    """Create a complete backup of the site (database + uploads) as a ZIP file"""
+    import json
+    from datetime import datetime
+    
+    # Create a temporary directory for backup
+    backup_dir = UPLOADS_DIR / "backup_temp"
+    backup_dir.mkdir(exist_ok=True)
+    
+    try:
+        # Export all collections
+        collections = [
+            "admins", "clients", "services", "bookings", "contacts", 
+            "portfolio", "site_content", "wedding_options", "wedding_quotes",
+            "appointments", "bank_details", "galleries", "story_views"
+        ]
+        
+        db_backup_dir = backup_dir / "database"
+        db_backup_dir.mkdir(exist_ok=True)
+        
+        for collection_name in collections:
+            try:
+                collection = db[collection_name]
+                documents = await collection.find({}, {"_id": 0}).to_list(10000)
+                
+                # Convert datetime objects to strings
+                for doc in documents:
+                    for key, value in doc.items():
+                        if isinstance(value, datetime):
+                            doc[key] = value.isoformat()
+                
+                with open(db_backup_dir / f"{collection_name}.json", "w", encoding="utf-8") as f:
+                    json.dump(documents, f, ensure_ascii=False, indent=2, default=str)
+            except Exception as e:
+                logging.error(f"Error backing up {collection_name}: {e}")
+        
+        # Create the ZIP file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        zip_filename = f"creativindustry_backup_{timestamp}.zip"
+        zip_path = UPLOADS_DIR / zip_filename
+        
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Add database exports
+            for json_file in db_backup_dir.glob("*.json"):
+                zipf.write(json_file, f"database/{json_file.name}")
+            
+            # Add uploaded files
+            for upload_subdir in ["portfolio", "galleries", "clients"]:
+                upload_path = UPLOADS_DIR / upload_subdir
+                if upload_path.exists():
+                    for file in upload_path.rglob("*"):
+                        if file.is_file():
+                            arcname = f"uploads/{upload_subdir}/{file.relative_to(upload_path)}"
+                            zipf.write(file, arcname)
+            
+            # Add a readme file
+            readme_content = f"""
+CREATIVINDUSTRY France - Sauvegarde du {datetime.now().strftime("%d/%m/%Y à %H:%M")}
+
+CONTENU DE LA SAUVEGARDE :
+==========================
+
+📁 database/
+   - Toutes les collections MongoDB en format JSON
+   - admins.json : Comptes administrateurs
+   - clients.json : Comptes clients
+   - portfolio.json : Éléments du portfolio (photos, vidéos, stories)
+   - bookings.json : Réservations
+   - etc.
+
+📁 uploads/
+   - portfolio/ : Photos et vidéos du portfolio
+   - galleries/ : Photos des galeries clients
+   - clients/ : Fichiers livrés aux clients
+
+RESTAURATION :
+==============
+
+1. Importer les fichiers JSON dans MongoDB :
+   mongoimport --db creativindustry --collection <nom> --file database/<nom>.json --jsonArray
+
+2. Copier le dossier uploads/ vers /var/www/creativindustry/backend/uploads/
+
+3. Redémarrer le serveur :
+   sudo systemctl restart creativindustry
+
+Pour toute question : infos@creativindustry.com
+"""
+            zipf.writestr("README.txt", readme_content)
+        
+        # Clean up temp directory
+        shutil.rmtree(backup_dir)
+        
+        # Return the file
+        return FileResponse(
+            path=zip_path,
+            filename=zip_filename,
+            media_type="application/zip",
+            background=None
+        )
+        
+    except Exception as e:
+        # Clean up on error
+        if backup_dir.exists():
+            shutil.rmtree(backup_dir)
+        logging.error(f"Backup error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la sauvegarde: {str(e)}")
+
 # ==================== STATS ROUTE ====================
 
 @api_router.get("/stats")
