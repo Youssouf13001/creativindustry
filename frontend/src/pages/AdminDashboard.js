@@ -560,7 +560,7 @@ const AdminDashboard = () => {
     if (successCount > 0) {
       toast.success(`${successCount} photo(s) ajoutée(s) avec succès !`);
       setShowAddPortfolio(false);
-      setNewPortfolioItem({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", client_name: "", is_featured: false });
+      setNewPortfolioItem({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", client_name: "", is_featured: false, story_duration: 3 });
       fetchData();
     } else {
       toast.error("Aucune photo n'a pu être uploadée");
@@ -657,7 +657,7 @@ const AdminDashboard = () => {
       await axios.post(`${API}/admin/portfolio`, newPortfolioItem, { headers });
       toast.success("Élément ajouté au portfolio");
       setShowAddPortfolio(false);
-      setNewPortfolioItem({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", client_name: "", is_featured: false });
+      setNewPortfolioItem({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", client_name: "", is_featured: false, story_duration: 3 });
       fetchData();
     } catch (e) {
       toast.error("Erreur");
