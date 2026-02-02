@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { Image, Video, Play, X, ArrowLeft, Users, Heart, Mic, Tv } from "lucide-react";
+import { Image, Video, Play, X, ArrowLeft, Users, Heart, Mic, Tv, ChevronLeft, ChevronRight, Pause } from "lucide-react";
 import { API } from "../config/api";
 
 const CATEGORIES = [
@@ -11,12 +11,260 @@ const CATEGORIES = [
   { id: "tv_set", label: "Plateau TV", icon: Tv, color: "from-purple-500 to-violet-600" }
 ];
 
+// Stories Component (Instagram-like)
+const StoriesSection = ({ stories, onStoryClick }) => {
+  const scrollRef = useRef(null);
+  
+  if (!stories || stories.length === 0) return null;
+  
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const scrollAmount = 200;
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+  
+  return (
+    <div className="mb-12">
+      <h2 className="font-primary font-bold text-lg mb-4 flex items-center gap-2">
+        <Play className="text-primary" size={20} /> Stories
+      </h2>
+      <div className="relative">
+        {/* Scroll buttons */}
+        <button 
+          onClick={() => scroll('left')}
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/80 p-2 rounded-full hover:bg-primary transition-colors hidden md:block"
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <button 
+          onClick={() => scroll('right')}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/80 p-2 rounded-full hover:bg-primary transition-colors hidden md:block"
+        >
+          <ChevronRight size={20} />
+        </button>
+        
+        {/* Stories container */}
+        <div 
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide px-2"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {stories.map((story, index) => (
+            <motion.div
+              key={story.id}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.05 }}
+              className="flex-shrink-0 cursor-pointer group"
+              onClick={() => onStoryClick(index)}
+            >
+              <div className="w-20 h-20 md:w-24 md:h-24 rounded-full p-[3px] bg-gradient-to-br from-primary via-pink-500 to-purple-500">
+                <div className="w-full h-full rounded-full overflow-hidden border-2 border-background">
+                  {story.thumbnail_url ? (
+                    <img 
+                      src={story.thumbnail_url} 
+                      alt={story.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                  ) : (
+                    <video 
+                      src={story.media_url} 
+                      className="w-full h-full object-cover"
+                      muted
+                    />
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-center mt-2 text-white/70 truncate w-20 md:w-24">
+                {story.client_name || story.title}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Story Viewer (Full screen like Instagram)
+const StoryViewer = ({ stories, initialIndex, onClose }) => {
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [progress, setProgress] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const videoRef = useRef(null);
+  const progressInterval = useRef(null);
+  
+  const currentStory = stories[currentIndex];
+  const duration = (currentStory?.story_duration || 3) * 1000; // Convert to ms
+  
+  useEffect(() => {
+    if (isPaused) return;
+    
+    setProgress(0);
+    const startTime = Date.now();
+    
+    progressInterval.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const newProgress = Math.min((elapsed / duration) * 100, 100);
+      setProgress(newProgress);
+      
+      if (newProgress >= 100) {
+        goToNext();
+      }
+    }, 50);
+    
+    return () => clearInterval(progressInterval.current);
+  }, [currentIndex, isPaused, duration]);
+  
+  useEffect(() => {
+    if (videoRef.current) {
+      if (isPaused) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+    }
+  }, [isPaused, currentIndex]);
+  
+  const goToNext = () => {
+    if (currentIndex < stories.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      onClose();
+    }
+  };
+  
+  const goToPrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+    }
+  };
+  
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowRight') goToNext();
+    if (e.key === 'ArrowLeft') goToPrev();
+    if (e.key === 'Escape') onClose();
+    if (e.key === ' ') setIsPaused(!isPaused);
+  };
+  
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, isPaused]);
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black flex items-center justify-center"
+      data-testid="story-viewer"
+    >
+      {/* Close button */}
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 z-20 text-white/70 hover:text-white p-2"
+      >
+        <X size={32} />
+      </button>
+      
+      {/* Progress bars */}
+      <div className="absolute top-4 left-4 right-16 flex gap-1 z-20">
+        {stories.map((_, index) => (
+          <div key={index} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-white transition-all duration-100"
+              style={{ 
+                width: index < currentIndex ? '100%' : index === currentIndex ? `${progress}%` : '0%' 
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      
+      {/* Story info */}
+      <div className="absolute top-12 left-4 z-20 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-pink-500 p-[2px]">
+          <div className="w-full h-full rounded-full bg-black overflow-hidden">
+            {currentStory?.thumbnail_url && (
+              <img src={currentStory.thumbnail_url} alt="" className="w-full h-full object-cover" />
+            )}
+          </div>
+        </div>
+        <div>
+          <p className="font-primary font-bold text-sm">{currentStory?.client_name || currentStory?.title}</p>
+          <p className="text-xs text-white/60">{currentStory?.category === 'wedding' ? 'Mariage' : currentStory?.category === 'podcast' ? 'Podcast' : 'Plateau TV'}</p>
+        </div>
+      </div>
+      
+      {/* Navigation areas */}
+      <div 
+        className="absolute left-0 top-0 w-1/3 h-full z-10 cursor-pointer"
+        onClick={goToPrev}
+      />
+      <div 
+        className="absolute right-0 top-0 w-1/3 h-full z-10 cursor-pointer"
+        onClick={goToNext}
+      />
+      <div 
+        className="absolute left-1/3 top-0 w-1/3 h-full z-10 cursor-pointer"
+        onClick={() => setIsPaused(!isPaused)}
+      />
+      
+      {/* Pause indicator */}
+      {isPaused && (
+        <div className="absolute inset-0 flex items-center justify-center z-5 pointer-events-none">
+          <div className="bg-black/50 rounded-full p-4">
+            <Pause size={48} className="text-white" />
+          </div>
+        </div>
+      )}
+      
+      {/* Story content */}
+      <div className="w-full h-full max-w-lg mx-auto flex items-center justify-center">
+        <video
+          ref={videoRef}
+          src={currentStory?.media_url}
+          className="max-h-[80vh] max-w-full object-contain"
+          autoPlay
+          muted
+          playsInline
+          loop={false}
+        />
+      </div>
+      
+      {/* Navigation arrows */}
+      {currentIndex > 0 && (
+        <button
+          onClick={goToPrev}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/10 hover:bg-white/20 p-3 rounded-full hidden md:block"
+        >
+          <ChevronLeft size={24} />
+        </button>
+      )}
+      {currentIndex < stories.length - 1 && (
+        <button
+          onClick={goToNext}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/10 hover:bg-white/20 p-3 rounded-full hidden md:block"
+        >
+          <ChevronRight size={24} />
+        </button>
+      )}
+    </motion.div>
+  );
+};
+
 const PortfolioPage = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [storyViewerIndex, setStoryViewerIndex] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -43,9 +291,16 @@ const PortfolioPage = () => {
     if (client) setSelectedClient(decodeURIComponent(client));
   }, [location]);
 
-  // Group items by category and client
+  // Get all stories
+  const stories = items.filter(i => i.media_type === "story" && i.is_active !== false);
+
+  // Group items by category and client (excluding stories)
   const getClientsByCategory = (category) => {
-    const categoryItems = items.filter(i => i.category === category && i.is_active !== false);
+    const categoryItems = items.filter(i => 
+      i.category === category && 
+      i.is_active !== false && 
+      i.media_type !== "story"
+    );
     const clientsMap = {};
     
     categoryItems.forEach(item => {
@@ -78,7 +333,8 @@ const PortfolioPage = () => {
     return items.filter(i => 
       i.category === category && 
       (i.client_name || "Autres") === clientName &&
-      i.is_active !== false
+      i.is_active !== false &&
+      i.media_type !== "story"
     );
   };
 
@@ -253,6 +509,7 @@ const PortfolioPage = () => {
   if (selectedCategory) {
     const clients = getClientsByCategory(selectedCategory);
     const categoryInfo = CATEGORIES.find(c => c.id === selectedCategory);
+    const categoryStories = stories.filter(s => s.category === selectedCategory);
 
     return (
       <div className="pt-20 min-h-screen" data-testid="portfolio-clients-list">
@@ -281,6 +538,14 @@ const PortfolioPage = () => {
               <p className="font-secondary text-white/60">{clients.length} projet{clients.length > 1 ? 's' : ''}</p>
             </div>
           </motion.div>
+
+          {/* Category Stories */}
+          {categoryStories.length > 0 && (
+            <StoriesSection 
+              stories={categoryStories} 
+              onStoryClick={(index) => setStoryViewerIndex(index)}
+            />
+          )}
 
           {/* Clients Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -328,6 +593,17 @@ const PortfolioPage = () => {
             <div className="text-center text-white/60 py-20">Aucun projet dans cette catégorie</div>
           )}
         </div>
+
+        {/* Story Viewer */}
+        <AnimatePresence>
+          {storyViewerIndex !== null && (
+            <StoryViewer 
+              stories={categoryStories} 
+              initialIndex={storyViewerIndex} 
+              onClose={() => setStoryViewerIndex(null)} 
+            />
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -346,6 +622,14 @@ const PortfolioPage = () => {
           </h1>
           <p className="font-secondary text-white/60 text-lg">Découvrez nos réalisations par catégorie</p>
         </motion.div>
+
+        {/* Stories Section (all stories) */}
+        {stories.length > 0 && (
+          <StoriesSection 
+            stories={stories} 
+            onStoryClick={(index) => setStoryViewerIndex(index)}
+          />
+        )}
 
         {/* Categories Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -399,6 +683,17 @@ const PortfolioPage = () => {
           })}
         </div>
       </div>
+
+      {/* Story Viewer */}
+      <AnimatePresence>
+        {storyViewerIndex !== null && (
+          <StoryViewer 
+            stories={stories} 
+            initialIndex={storyViewerIndex} 
+            onClose={() => setStoryViewerIndex(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
