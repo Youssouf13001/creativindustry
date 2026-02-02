@@ -199,7 +199,7 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes, clientsRes, contentRes, appointmentsRes, galleriesRes] = await Promise.all([
+      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes, clientsRes, contentRes, appointmentsRes, galleriesRes, onlineRes, downloadsRes] = await Promise.all([
         axios.get(`${API}/stats`, { headers }),
         axios.get(`${API}/bookings`, { headers }),
         axios.get(`${API}/wedding-quotes`, { headers }),
@@ -210,7 +210,9 @@ const AdminDashboard = () => {
         axios.get(`${API}/admin/clients`, { headers }),
         axios.get(`${API}/content`),
         axios.get(`${API}/appointments`, { headers }),
-        axios.get(`${API}/admin/galleries`, { headers })
+        axios.get(`${API}/admin/galleries`, { headers }),
+        axios.get(`${API}/admin/users/online`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API}/admin/downloads`, { headers }).catch(() => ({ data: [] }))
       ]);
       setStats(statsRes.data);
       setBookings(bookingsRes.data);
@@ -224,11 +226,23 @@ const AdminDashboard = () => {
       setEditingContent(contentRes.data);
       setAppointments(appointmentsRes.data);
       setGalleries(galleriesRes.data);
+      setOnlineUsers(onlineRes.data);
+      setRecentDownloads(downloadsRes.data);
     } catch (e) {
       if (e.response?.status === 401) {
         localStorage.removeItem("admin_token");
         navigate("/admin");
       }
+    }
+  };
+
+  // Fetch client downloads when selecting a client
+  const fetchClientDownloads = async (clientId) => {
+    try {
+      const res = await axios.get(`${API}/admin/clients/${clientId}/downloads`, { headers });
+      setClientDownloads(res.data);
+    } catch (e) {
+      setClientDownloads([]);
     }
   };
 
