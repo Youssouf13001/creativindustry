@@ -1473,6 +1473,115 @@ async def verify_mfa_reset_email(data: MFAEmailResetVerify):
     
     return {"success": True, "message": "MFA désactivé avec succès. Vous pouvez maintenant vous connecter."}
 
+
+# ==================== PASSWORD RESET ====================
+
+class PasswordResetRequest(BaseModel):
+    email: str
+
+class PasswordResetVerify(BaseModel):
+    email: str
+    reset_code: str
+    new_password: str
+
+@api_router.post("/auth/password/request-reset")
+async def request_password_reset(data: PasswordResetRequest):
+    """Send password reset code via email"""
+    admin = await db.admins.find_one({"email": data.email}, {"_id": 0})
+    
+    # Always return success to not reveal if email exists
+    if not admin:
+        return {"success": True, "message": "Si cet email existe, un code de réinitialisation a été envoyé"}
+    
+    # Generate reset code (6 digits)
+    reset_code = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
+    expiry = datetime.now(timezone.utc).timestamp() + 1800  # 30 minutes
+    
+    # Store reset code
+    await db.admins.update_one(
+        {"email": data.email},
+        {"$set": {"password_reset_code": reset_code, "password_reset_expiry": expiry}}
+    )
+    
+    # Send email
+    try:
+        smtp_host = os.environ.get('SMTP_HOST', 'smtp.ionos.fr')
+        smtp_port = int(os.environ.get('SMTP_PORT', 587))
+        smtp_email = os.environ.get('SMTP_EMAIL')
+        smtp_pass = os.environ.get('SMTP_PASSWORD')
+        
+        if smtp_email and smtp_pass:
+            msg = MIMEMultipart()
+            msg['From'] = smtp_email
+            msg['To'] = data.email
+            msg['Subject'] = "🔑 Réinitialisation de mot de passe - CREATIVINDUSTRY France"
+            
+            body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; padding: 30px; border-radius: 10px;">
+                    <h1 style="color: #D4AF37; margin-bottom: 20px;">🔑 Réinitialisation de mot de passe</h1>
+                    <p>Vous avez demandé à réinitialiser votre mot de passe administrateur.</p>
+                    <p>Voici votre code de vérification :</p>
+                    <div style="background-color: #3a3a3a; padding: 20px; text-align: center; margin: 20px 0; border-radius: 5px;">
+                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #D4AF37;">{reset_code}</span>
+                    </div>
+                    <p style="color: #888;">Ce code expire dans <strong>30 minutes</strong>.</p>
+                    <p style="color: #888;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email. Votre mot de passe restera inchangé.</p>
+                    <hr style="border-color: #444; margin: 20px 0;">
+                    <p style="color: #666; font-size: 12px;">CREATIVINDUSTRY France - Sécurité du compte</p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            msg.attach(MIMEText(body, 'html'))
+            
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_email, smtp_pass)
+                server.send_message(msg)
+            
+            logging.info(f"Password reset email sent to {data.email}")
+    except Exception as e:
+        logging.error(f"Failed to send password reset email: {e}")
+    
+    return {"success": True, "message": "Si cet email existe, un code de réinitialisation a été envoyé"}
+
+
+@api_router.post("/auth/password/reset")
+async def reset_password(data: PasswordResetVerify):
+    """Verify code and reset password"""
+    admin = await db.admins.find_one({"email": data.email}, {"_id": 0})
+    if not admin:
+        raise HTTPException(status_code=401, detail="Code invalide ou expiré")
+    
+    stored_code = admin.get("password_reset_code")
+    expiry = admin.get("password_reset_expiry", 0)
+    
+    if not stored_code or stored_code != data.reset_code:
+        raise HTTPException(status_code=401, detail="Code invalide")
+    
+    if datetime.now(timezone.utc).timestamp() > expiry:
+        raise HTTPException(status_code=401, detail="Code expiré")
+    
+    # Validate new password
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Le mot de passe doit contenir au moins 6 caractères")
+    
+    # Update password
+    await db.admins.update_one(
+        {"email": data.email},
+        {"$set": {
+            "password": hash_password(data.new_password),
+            "password_reset_code": None,
+            "password_reset_expiry": None
+        }}
+    )
+    
+    logging.info(f"Password reset successful for {data.email}")
+    return {"success": True, "message": "Mot de passe modifié avec succès. Vous pouvez maintenant vous connecter."}
+
 # ==================== CLIENT AUTH ROUTES ====================
 
 @api_router.post("/client/register", response_model=dict)
