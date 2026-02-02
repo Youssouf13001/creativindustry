@@ -2204,8 +2204,11 @@ const AdminDashboard = () => {
                     ? portfolio 
                     : portfolio.filter(p => p.category === portfolioFilterCategory);
                   
+                  // Exclude stories from client view
+                  const nonStoryPortfolio = filteredPortfolio.filter(p => p.media_type !== "story");
+                  
                   const clientsMap = {};
-                  filteredPortfolio.forEach(item => {
+                  nonStoryPortfolio.forEach(item => {
                     const clientName = item.client_name || "Sans client";
                     if (!clientsMap[clientName]) {
                       clientsMap[clientName] = {
