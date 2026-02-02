@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import { Shield, Smartphone, Mail } from "lucide-react";
+import { Shield, Smartphone, Mail, KeyRound } from "lucide-react";
 import { API } from "../config/api";
 
 const AdminLogin = () => {
@@ -14,6 +14,12 @@ const AdminLogin = () => {
   const [showEmailReset, setShowEmailReset] = useState(false);
   const [emailResetCode, setEmailResetCode] = useState("");
   const [emailResetSent, setEmailResetSent] = useState(false);
+  // Password reset states
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [passwordResetCode, setPasswordResetCode] = useState("");
+  const [passwordResetSent, setPasswordResetSent] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
