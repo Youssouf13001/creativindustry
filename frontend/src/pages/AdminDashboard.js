@@ -807,7 +807,8 @@ const AdminDashboard = () => {
             { id: "options", label: "Options Mariage" },
             { id: "messages", label: "Messages" },
             { id: "appointments", label: "Rendez-vous" },
-            { id: "settings", label: "Paramètres" }
+            { id: "settings", label: "Paramètres" },
+            { id: "security", label: "🔐 Sécurité" }
           ].map((tab) => (
             <button
               key={tab.id}
