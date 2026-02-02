@@ -81,7 +81,70 @@ const AdminDashboard = () => {
     }
     fetchData();
     fetchBankDetails();
+    fetchMfaStatus();
   }, [token]);
+
+  const fetchMfaStatus = async () => {
+    try {
+      const res = await axios.get(`${API}/auth/mfa/status`, { headers });
+      setMfaStatus(res.data);
+    } catch (e) {
+      console.error("Error fetching MFA status");
+    }
+  };
+
+  const setupMfa = async () => {
+    try {
+      const res = await axios.post(`${API}/auth/mfa/setup`, {}, { headers });
+      setMfaSetupData(res.data);
+      setShowBackupCodes(true);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la configuration MFA");
+    }
+  };
+
+  const verifyMfaSetup = async () => {
+    try {
+      await axios.post(`${API}/auth/mfa/verify`, { totp_code: mfaVerifyCode }, { headers });
+      toast.success("MFA activé avec succès !");
+      setMfaSetupData(null);
+      setMfaVerifyCode("");
+      setShowBackupCodes(false);
+      fetchMfaStatus();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Code invalide");
+    }
+  };
+
+  const disableMfa = async () => {
+    try {
+      await axios.post(`${API}/auth/mfa/disable`, {
+        password: disableMfaData.password,
+        totp_code: disableMfaData.code.length === 6 ? disableMfaData.code : null,
+        backup_code: disableMfaData.code.length === 8 ? disableMfaData.code : null
+      }, { headers });
+      toast.success("MFA désactivé");
+      setShowDisableMfa(false);
+      setDisableMfaData({ password: "", code: "" });
+      fetchMfaStatus();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur");
+    }
+  };
+
+  const regenerateBackupCodes = async () => {
+    const code = prompt("Entrez votre code MFA actuel pour régénérer les codes de secours:");
+    if (!code) return;
+    try {
+      const res = await axios.post(`${API}/auth/mfa/backup-codes`, { totp_code: code }, { headers });
+      setMfaSetupData({ ...mfaSetupData, backup_codes: res.data.backup_codes });
+      setShowBackupCodes(true);
+      toast.success("Nouveaux codes de secours générés !");
+      fetchMfaStatus();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Code invalide");
+    }
+  };
 
   const fetchBankDetails = async () => {
     try {
