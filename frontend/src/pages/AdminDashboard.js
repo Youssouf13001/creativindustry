@@ -3107,23 +3107,57 @@ const AdminDashboard = () => {
               </div>
             )}
 
+            {/* Online Users Summary */}
+            <div className="bg-card border border-green-500/30 p-4 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-3 flex items-center gap-2">
+                <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+                Clients connectés ({onlineUsers.filter(u => u.is_online).length})
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {onlineUsers.filter(u => u.is_online).map(user => (
+                  <span key={user.id} className="bg-green-500/20 text-green-400 px-3 py-1 text-sm rounded-full">
+                    {user.name}
+                  </span>
+                ))}
+                {onlineUsers.filter(u => u.is_online).length === 0 && (
+                  <span className="text-white/40 text-sm">Aucun client connecté actuellement</span>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Client List */}
               <div>
                 <h3 className="font-primary font-semibold mb-4">Liste des clients ({clients.length})</h3>
                 <div className="space-y-2">
-                  {clients.map((client) => (
-                    <button
-                      key={client.id}
-                      onClick={() => selectClient(client)}
-                      className={`w-full text-left bg-card border p-4 transition-colors ${
-                        selectedClient?.id === client.id ? "border-primary" : "border-white/10 hover:border-white/30"
-                      }`}
-                    >
-                      <p className="font-primary font-semibold">{client.name}</p>
-                      <p className="text-white/60 text-sm">{client.email}</p>
-                    </button>
-                  ))}
+                  {clients.map((client) => {
+                    const userOnline = onlineUsers.find(u => u.id === client.id);
+                    const isOnline = userOnline?.is_online;
+                    return (
+                      <button
+                        key={client.id}
+                        onClick={() => selectClient(client)}
+                        className={`w-full text-left bg-card border p-4 transition-colors ${
+                          selectedClient?.id === client.id ? "border-primary" : "border-white/10 hover:border-white/30"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-primary font-semibold flex items-center gap-2">
+                              {client.name}
+                              {isOnline && (
+                                <span className="w-2 h-2 bg-green-500 rounded-full" title="En ligne"></span>
+                              )}
+                            </p>
+                            <p className="text-white/60 text-sm">{client.email}</p>
+                          </div>
+                          {isOnline && (
+                            <span className="text-xs text-green-400 bg-green-500/20 px-2 py-1 rounded">En ligne</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                   {clients.length === 0 && (
                     <p className="text-center text-white/60 py-8">Aucun client</p>
                   )}
