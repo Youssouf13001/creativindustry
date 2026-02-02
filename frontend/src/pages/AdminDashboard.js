@@ -3506,6 +3506,54 @@ const AdminDashboard = () => {
                 Enregistrer les coordonnées bancaires
               </button>
             </div>
+
+            {/* Backup Section */}
+            <div className="bg-card border border-green-500/30 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-green-400">💾 Sauvegarde complète</h3>
+              <p className="text-white/60 text-sm mb-4">
+                Téléchargez une sauvegarde complète de votre site incluant :
+              </p>
+              <ul className="text-white/60 text-sm mb-6 space-y-2">
+                <li className="flex items-center gap-2">
+                  <span className="text-green-400">✓</span> Base de données (clients, réservations, devis, portfolio...)
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-400">✓</span> Fichiers uploadés (photos, vidéos, stories...)
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="text-green-400">✓</span> Instructions de restauration
+                </li>
+              </ul>
+              <button 
+                onClick={async () => {
+                  toast.info("Création de la sauvegarde en cours...");
+                  try {
+                    const response = await axios.get(`${API}/admin/backup`, {
+                      headers,
+                      responseType: 'blob'
+                    });
+                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    const timestamp = new Date().toISOString().slice(0, 10);
+                    link.setAttribute('download', `creativindustry_backup_${timestamp}.zip`);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+                    toast.success("Sauvegarde téléchargée !");
+                  } catch (e) {
+                    toast.error("Erreur lors de la création de la sauvegarde");
+                  }
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 font-bold flex items-center gap-2"
+              >
+                <Download size={20} /> Télécharger la sauvegarde ZIP
+              </button>
+              <p className="text-xs text-white/40 mt-3">
+                💡 Conseil : Faites une sauvegarde régulière (1x/semaine) et conservez-la sur un disque externe ou cloud.
+              </p>
+            </div>
           </div>
         )}
 
