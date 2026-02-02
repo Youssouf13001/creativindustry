@@ -39,6 +39,7 @@ const AdminDashboard = () => {
   const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
   const [uploadingClientFileThumbnail, setUploadingClientFileThumbnail] = useState(false);
   const [uploadingClientFile, setUploadingClientFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const portfolioFileRef = useRef(null);
   const multiplePhotosRef = useRef(null);
   const clientFileRef = useRef(null);
