@@ -2603,9 +2603,9 @@ async def get_all_stories_views(admin: dict = Depends(get_current_admin)):
 
 # ==================== BACKUP ROUTE ====================
 
-@api_router.get("/admin/backup")
+@api_router.post("/admin/backup/create")
 async def create_backup(admin: dict = Depends(get_current_admin)):
-    """Create a complete backup of the site (database + uploads) as a ZIP file"""
+    """Create a backup file and return its download URL (avoids timeout)"""
     import json
     from datetime import datetime
     
@@ -2640,17 +2640,18 @@ async def create_backup(admin: dict = Depends(get_current_admin)):
             except Exception as e:
                 logging.error(f"Error backing up {collection_name}: {e}")
         
-        # Create the ZIP file
+        # Create the ZIP file with faster compression
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         zip_filename = f"creativindustry_backup_{timestamp}.zip"
         zip_path = UPLOADS_DIR / zip_filename
         
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            # Add database exports
+        # Use ZIP_STORED (no compression) for speed - files are already compressed (jpg, mp4, etc)
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_STORED) as zipf:
+            # Add database exports (small files, compress these)
             for json_file in db_backup_dir.glob("*.json"):
                 zipf.write(json_file, f"database/{json_file.name}")
             
-            # Add uploaded files
+            # Add uploaded files without compression (already compressed media)
             for upload_subdir in ["portfolio", "galleries", "clients"]:
                 upload_path = UPLOADS_DIR / upload_subdir
                 if upload_path.exists():
@@ -2697,16 +2698,108 @@ Pour toute question : infos@creativindustry.com
         # Clean up temp directory
         shutil.rmtree(backup_dir)
         
-        # Return the file
-        return FileResponse(
-            path=zip_path,
-            filename=zip_filename,
-            media_type="application/zip",
-            background=None
-        )
+        # Get file size
+        file_size = zip_path.stat().st_size
+        file_size_mb = round(file_size / (1024 * 1024), 2)
+        
+        # Return download URL instead of file (to avoid timeout)
+        return {
+            "success": True,
+            "filename": zip_filename,
+            "download_url": f"/api/admin/backup/download/{zip_filename}",
+            "size_mb": file_size_mb,
+            "created_at": datetime.now().isoformat()
+        }
         
     except Exception as e:
         # Clean up on error
+        if backup_dir.exists():
+            shutil.rmtree(backup_dir)
+        logging.error(f"Backup error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la sauvegarde: {str(e)}")
+
+
+@api_router.get("/admin/backup/download/{filename}")
+async def download_backup(filename: str, admin: dict = Depends(get_current_admin)):
+    """Download a previously created backup file"""
+    # Validate filename to prevent path traversal
+    if ".." in filename or "/" in filename or not filename.startswith("creativindustry_backup_"):
+        raise HTTPException(status_code=400, detail="Nom de fichier invalide")
+    
+    zip_path = UPLOADS_DIR / filename
+    
+    if not zip_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier de sauvegarde non trouvé. Créez d'abord une nouvelle sauvegarde.")
+    
+    return FileResponse(
+        path=zip_path,
+        filename=filename,
+        media_type="application/zip"
+    )
+
+
+@api_router.get("/admin/backup")
+async def create_backup_legacy(admin: dict = Depends(get_current_admin)):
+    """Legacy endpoint - redirects to new 2-step process"""
+    # For backwards compatibility, create backup and return file directly
+    # But use ZIP_STORED for speed
+    import json
+    from datetime import datetime
+    
+    backup_dir = UPLOADS_DIR / "backup_temp"
+    backup_dir.mkdir(exist_ok=True)
+    
+    try:
+        collections = [
+            "admins", "clients", "services", "bookings", "contacts", 
+            "portfolio", "site_content", "wedding_options", "wedding_quotes",
+            "appointments", "bank_details", "galleries", "story_views"
+        ]
+        
+        db_backup_dir = backup_dir / "database"
+        db_backup_dir.mkdir(exist_ok=True)
+        
+        for collection_name in collections:
+            try:
+                collection = db[collection_name]
+                documents = await collection.find({}, {"_id": 0}).to_list(10000)
+                for doc in documents:
+                    for key, value in doc.items():
+                        if isinstance(value, datetime):
+                            doc[key] = value.isoformat()
+                with open(db_backup_dir / f"{collection_name}.json", "w", encoding="utf-8") as f:
+                    json.dump(documents, f, ensure_ascii=False, indent=2, default=str)
+            except Exception as e:
+                logging.error(f"Error backing up {collection_name}: {e}")
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        zip_filename = f"creativindustry_backup_{timestamp}.zip"
+        zip_path = UPLOADS_DIR / zip_filename
+        
+        # Use ZIP_STORED for speed
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_STORED) as zipf:
+            for json_file in db_backup_dir.glob("*.json"):
+                zipf.write(json_file, f"database/{json_file.name}")
+            
+            for upload_subdir in ["portfolio", "galleries", "clients"]:
+                upload_path = UPLOADS_DIR / upload_subdir
+                if upload_path.exists():
+                    for file in upload_path.rglob("*"):
+                        if file.is_file():
+                            arcname = f"uploads/{upload_subdir}/{file.relative_to(upload_path)}"
+                            zipf.write(file, arcname)
+            
+            zipf.writestr("README.txt", f"CREATIVINDUSTRY Backup - {datetime.now().strftime('%d/%m/%Y')}")
+        
+        shutil.rmtree(backup_dir)
+        
+        return FileResponse(
+            path=zip_path,
+            filename=zip_filename,
+            media_type="application/zip"
+        )
+        
+    except Exception as e:
         if backup_dir.exists():
             shutil.rmtree(backup_dir)
         logging.error(f"Backup error: {e}")
