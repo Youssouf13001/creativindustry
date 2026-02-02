@@ -97,9 +97,22 @@ const StoryViewer = ({ stories, initialIndex, onClose }) => {
   const [isPaused, setIsPaused] = useState(false);
   const videoRef = useRef(null);
   const progressInterval = useRef(null);
+  const viewRecorded = useRef(new Set()); // Track which stories have been viewed
   
   const currentStory = stories[currentIndex];
   const duration = (currentStory?.story_duration || 3) * 1000; // Convert to ms
+  
+  // Record view when story changes
+  useEffect(() => {
+    if (currentStory && !viewRecorded.current.has(currentStory.id)) {
+      // Record the view
+      const clientToken = localStorage.getItem("client_token");
+      axios.post(`${API}/stories/${currentStory.id}/view`, null, {
+        params: { client_token: clientToken }
+      }).catch(() => {}); // Silently fail
+      viewRecorded.current.add(currentStory.id);
+    }
+  }, [currentStory]);
   
   useEffect(() => {
     if (isPaused) return;
