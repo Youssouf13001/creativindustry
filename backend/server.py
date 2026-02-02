@@ -2473,7 +2473,133 @@ async def delete_portfolio_item(item_id: str, admin: dict = Depends(get_current_
     result = await db.portfolio.delete_one({"id": item_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Item not found")
+    # Also delete associated views
+    await db.story_views.delete_many({"story_id": item_id})
     return {"message": "Item deleted"}
+
+# ==================== STORY VIEWS ROUTES ====================
+
+@api_router.post("/stories/{story_id}/view")
+async def record_story_view(story_id: str, request: Request, client_token: Optional[str] = None):
+    """Record a view for a story - works for both clients and anonymous visitors"""
+    import hashlib
+    
+    # Check if story exists
+    story = await db.portfolio.find_one({"id": story_id, "media_type": "story"})
+    if not story:
+        raise HTTPException(status_code=404, detail="Story not found")
+    
+    # Get client info if token provided
+    viewer_type = "anonymous"
+    viewer_id = None
+    viewer_name = None
+    
+    if client_token:
+        try:
+            payload = jwt.decode(client_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            client = await db.clients.find_one({"id": payload.get("sub")}, {"_id": 0})
+            if client:
+                viewer_type = "client"
+                viewer_id = client["id"]
+                viewer_name = client.get("name", client.get("email", "Client"))
+        except:
+            pass
+    
+    # Create IP hash for anonymous deduplication
+    client_ip = request.client.host if request.client else "unknown"
+    ip_hash = hashlib.sha256(f"{client_ip}{story_id}".encode()).hexdigest()[:16]
+    
+    # Check if this viewer already viewed this story (within last 24h)
+    twenty_four_hours_ago = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    
+    if viewer_type == "client":
+        existing = await db.story_views.find_one({
+            "story_id": story_id,
+            "viewer_id": viewer_id,
+            "viewed_at": {"$gte": twenty_four_hours_ago}
+        })
+    else:
+        existing = await db.story_views.find_one({
+            "story_id": story_id,
+            "ip_hash": ip_hash,
+            "viewed_at": {"$gte": twenty_four_hours_ago}
+        })
+    
+    if existing:
+        return {"message": "View already recorded", "new_view": False}
+    
+    # Record the view
+    view = StoryView(
+        story_id=story_id,
+        viewer_type=viewer_type,
+        viewer_id=viewer_id,
+        viewer_name=viewer_name,
+        ip_hash=ip_hash if viewer_type == "anonymous" else None
+    )
+    
+    view_doc = view.model_dump()
+    view_doc['viewed_at'] = view_doc['viewed_at'].isoformat()
+    await db.story_views.insert_one(view_doc)
+    
+    return {"message": "View recorded", "new_view": True}
+
+@api_router.get("/stories/{story_id}/views")
+async def get_story_views(story_id: str, admin: dict = Depends(get_current_admin)):
+    """Get view statistics for a story (admin only)"""
+    views = await db.story_views.find({"story_id": story_id}, {"_id": 0}).to_list(1000)
+    
+    total_views = len(views)
+    
+    # Get unique views (by viewer_id for clients, by ip_hash for anonymous)
+    unique_client_ids = set()
+    unique_ip_hashes = set()
+    client_views = []
+    
+    for view in views:
+        if view.get("viewer_type") == "client":
+            if view.get("viewer_id") not in unique_client_ids:
+                unique_client_ids.add(view.get("viewer_id"))
+                client_views.append({
+                    "name": view.get("viewer_name", "Client"),
+                    "viewed_at": view.get("viewed_at")
+                })
+        else:
+            if view.get("ip_hash"):
+                unique_ip_hashes.add(view.get("ip_hash"))
+    
+    return {
+        "total_views": total_views,
+        "unique_views": len(unique_client_ids) + len(unique_ip_hashes),
+        "client_views": client_views,
+        "anonymous_views": len(unique_ip_hashes)
+    }
+
+@api_router.get("/admin/stories/all-views")
+async def get_all_stories_views(admin: dict = Depends(get_current_admin)):
+    """Get view counts for all stories"""
+    stories = await db.portfolio.find({"media_type": "story"}, {"_id": 0, "id": 1, "title": 1}).to_list(100)
+    
+    result = {}
+    for story in stories:
+        views = await db.story_views.find({"story_id": story["id"]}, {"_id": 0}).to_list(1000)
+        
+        unique_client_ids = set()
+        unique_ip_hashes = set()
+        
+        for view in views:
+            if view.get("viewer_type") == "client":
+                unique_client_ids.add(view.get("viewer_id"))
+            else:
+                if view.get("ip_hash"):
+                    unique_ip_hashes.add(view.get("ip_hash"))
+        
+        result[story["id"]] = {
+            "total": len(views),
+            "clients": len(unique_client_ids),
+            "anonymous": len(unique_ip_hashes)
+        }
+    
+    return result
 
 # ==================== STATS ROUTE ====================
 
