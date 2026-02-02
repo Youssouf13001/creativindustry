@@ -1616,6 +1616,198 @@ async def login_client(data: ClientLogin):
 async def get_client_me(client: dict = Depends(get_current_client)):
     return ClientResponse(id=client["id"], email=client["email"], name=client["name"], phone=client.get("phone"))
 
+
+# ==================== CLIENT PROFILE MANAGEMENT ====================
+
+class ClientProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+
+class ClientPasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+class ClientPasswordResetRequest(BaseModel):
+    email: str
+
+class ClientPasswordResetVerify(BaseModel):
+    email: str
+    reset_code: str
+    new_password: str
+
+
+@api_router.put("/client/profile")
+async def update_client_profile(data: ClientProfileUpdate, client: dict = Depends(get_current_client)):
+    """Update client profile (name, phone)"""
+    update_data = {}
+    if data.name:
+        update_data["name"] = data.name
+    if data.phone is not None:
+        update_data["phone"] = data.phone
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Aucune donnée à mettre à jour")
+    
+    await db.clients.update_one({"id": client["id"]}, {"$set": update_data})
+    
+    # Get updated client
+    updated_client = await db.clients.find_one({"id": client["id"]}, {"_id": 0, "password": 0})
+    return {"success": True, "client": updated_client}
+
+
+@api_router.post("/client/profile/photo")
+async def upload_client_photo(
+    file: UploadFile = File(...),
+    client: dict = Depends(get_current_client)
+):
+    """Upload client profile photo"""
+    # Check file type
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="Type de fichier non supporté. Utilisez JPG, PNG ou WEBP.")
+    
+    # Create client folder
+    client_folder = UPLOADS_DIR / "clients" / client["id"]
+    client_folder.mkdir(exist_ok=True, parents=True)
+    
+    # Save file
+    file_ext = Path(file.filename).suffix.lower()
+    photo_filename = f"profile{file_ext}"
+    file_path = client_folder / photo_filename
+    
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur lors de l'upload: {str(e)}")
+    
+    # Update client with photo URL
+    photo_url = f"/uploads/clients/{client['id']}/{photo_filename}"
+    await db.clients.update_one({"id": client["id"]}, {"$set": {"profile_photo": photo_url}})
+    
+    return {"success": True, "photo_url": photo_url}
+
+
+@api_router.put("/client/password")
+async def change_client_password(data: ClientPasswordChange, client: dict = Depends(get_current_client)):
+    """Change client password (requires current password)"""
+    # Verify current password
+    client_data = await db.clients.find_one({"id": client["id"]})
+    if not verify_password(data.current_password, client_data["password"]):
+        raise HTTPException(status_code=401, detail="Mot de passe actuel incorrect")
+    
+    # Validate new password
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit contenir au moins 6 caractères")
+    
+    # Update password
+    await db.clients.update_one(
+        {"id": client["id"]},
+        {"$set": {"password": hash_password(data.new_password)}}
+    )
+    
+    return {"success": True, "message": "Mot de passe modifié avec succès"}
+
+
+@api_router.post("/client/password/request-reset")
+async def request_client_password_reset(data: ClientPasswordResetRequest):
+    """Send password reset code via email for client"""
+    client = await db.clients.find_one({"email": data.email}, {"_id": 0})
+    
+    # Always return success to not reveal if email exists
+    if not client:
+        return {"success": True, "message": "Si cet email existe, un code de réinitialisation a été envoyé"}
+    
+    # Generate reset code (6 digits)
+    reset_code = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
+    expiry = datetime.now(timezone.utc).timestamp() + 1800  # 30 minutes
+    
+    # Store reset code
+    await db.clients.update_one(
+        {"email": data.email},
+        {"$set": {"password_reset_code": reset_code, "password_reset_expiry": expiry}}
+    )
+    
+    # Send email
+    try:
+        smtp_host = os.environ.get('SMTP_HOST', 'smtp.ionos.fr')
+        smtp_port = int(os.environ.get('SMTP_PORT', 587))
+        smtp_email = os.environ.get('SMTP_EMAIL')
+        smtp_pass = os.environ.get('SMTP_PASSWORD')
+        
+        if smtp_email and smtp_pass:
+            msg = MIMEMultipart()
+            msg['From'] = smtp_email
+            msg['To'] = data.email
+            msg['Subject'] = "🔑 Réinitialisation de mot de passe - CREATIVINDUSTRY France"
+            
+            body = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; padding: 30px; border-radius: 10px;">
+                    <h1 style="color: #D4AF37; margin-bottom: 20px;">🔑 Réinitialisation de mot de passe</h1>
+                    <p>Bonjour {client.get('name', 'Client')},</p>
+                    <p>Vous avez demandé à réinitialiser votre mot de passe.</p>
+                    <p>Voici votre code de vérification :</p>
+                    <div style="background-color: #3a3a3a; padding: 20px; text-align: center; margin: 20px 0; border-radius: 5px;">
+                        <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #D4AF37;">{reset_code}</span>
+                    </div>
+                    <p style="color: #888;">Ce code expire dans <strong>30 minutes</strong>.</p>
+                    <p style="color: #888;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+                    <hr style="border-color: #444; margin: 20px 0;">
+                    <p style="color: #666; font-size: 12px;">CREATIVINDUSTRY France - Espace Client</p>
+                </div>
+            </body>
+            </html>
+            """
+            
+            msg.attach(MIMEText(body, 'html'))
+            
+            with smtplib.SMTP(smtp_host, smtp_port) as server:
+                server.starttls()
+                server.login(smtp_email, smtp_pass)
+                server.send_message(msg)
+            
+            logging.info(f"Client password reset email sent to {data.email}")
+    except Exception as e:
+        logging.error(f"Failed to send client password reset email: {e}")
+    
+    return {"success": True, "message": "Si cet email existe, un code de réinitialisation a été envoyé"}
+
+
+@api_router.post("/client/password/reset")
+async def reset_client_password(data: ClientPasswordResetVerify):
+    """Verify code and reset client password"""
+    client = await db.clients.find_one({"email": data.email}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=401, detail="Code invalide ou expiré")
+    
+    stored_code = client.get("password_reset_code")
+    expiry = client.get("password_reset_expiry", 0)
+    
+    if not stored_code or stored_code != data.reset_code:
+        raise HTTPException(status_code=401, detail="Code invalide")
+    
+    if datetime.now(timezone.utc).timestamp() > expiry:
+        raise HTTPException(status_code=401, detail="Code expiré")
+    
+    # Validate new password
+    if len(data.new_password) < 6:
+        raise HTTPException(status_code=400, detail="Le mot de passe doit contenir au moins 6 caractères")
+    
+    # Update password
+    await db.clients.update_one(
+        {"email": data.email},
+        {"$set": {
+            "password": hash_password(data.new_password),
+            "password_reset_code": None,
+            "password_reset_expiry": None
+        }}
+    )
+    
+    logging.info(f"Client password reset successful for {data.email}")
+    return {"success": True, "message": "Mot de passe modifié avec succès"}
+
+
 # ==================== CLIENT FILES ROUTES ====================
 
 @api_router.get("/client/files", response_model=List[ClientFile])
