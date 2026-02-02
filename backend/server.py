@@ -926,6 +926,23 @@ class PortfolioItemUpdate(BaseModel):
     is_active: Optional[bool] = None
     story_duration: Optional[int] = None
 
+# ==================== STORY VIEWS MODELS ====================
+
+class StoryView(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    story_id: str
+    viewer_type: str  # "client" or "anonymous"
+    viewer_id: Optional[str] = None  # Client ID if logged in
+    viewer_name: Optional[str] = None  # Client name if logged in
+    viewed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    ip_hash: Optional[str] = None  # Hashed IP for anonymous deduplication
+
+class StoryViewStats(BaseModel):
+    total_views: int
+    unique_views: int
+    client_views: List[dict]  # List of {name, viewed_at}
+    anonymous_views: int
+
 # ==================== SITE CONTENT MODELS ====================
 
 class SiteContent(BaseModel):
