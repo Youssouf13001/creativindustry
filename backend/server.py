@@ -1692,6 +1692,99 @@ async def get_client_files_admin(client_id: str, admin: dict = Depends(get_curre
             f['created_at'] = datetime.fromisoformat(f['created_at'])
     return files
 
+
+# ==================== DOWNLOAD TRACKING ====================
+
+@api_router.post("/client/files/{file_id}/download")
+async def track_file_download(file_id: str, client: dict = Depends(get_current_client)):
+    """Track when a client downloads a file"""
+    # Record the download
+    download_record = {
+        "id": str(uuid.uuid4()),
+        "file_id": file_id,
+        "client_id": client["id"],
+        "client_name": client.get("name", "Unknown"),
+        "client_email": client.get("email", ""),
+        "downloaded_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.file_downloads.insert_one(download_record)
+    
+    # Also update the file with download count
+    await db.client_files.update_one(
+        {"id": file_id},
+        {"$inc": {"download_count": 1}, "$set": {"last_downloaded_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True}
+
+
+@api_router.get("/admin/downloads")
+async def get_all_downloads(admin: dict = Depends(get_current_admin)):
+    """Get all file downloads for admin view"""
+    downloads = await db.file_downloads.find({}, {"_id": 0}).sort("downloaded_at", -1).to_list(500)
+    return downloads
+
+
+@api_router.get("/admin/clients/{client_id}/downloads")
+async def get_client_downloads(client_id: str, admin: dict = Depends(get_current_admin)):
+    """Get downloads for a specific client"""
+    downloads = await db.file_downloads.find({"client_id": client_id}, {"_id": 0}).sort("downloaded_at", -1).to_list(100)
+    return downloads
+
+
+# ==================== USER ACTIVITY TRACKING ====================
+
+@api_router.post("/client/activity/heartbeat")
+async def client_heartbeat(client: dict = Depends(get_current_client)):
+    """Record client activity (called periodically from frontend)"""
+    await db.user_activity.update_one(
+        {"user_id": client["id"], "user_type": "client"},
+        {"$set": {
+            "user_id": client["id"],
+            "user_type": "client",
+            "name": client.get("name", "Unknown"),
+            "email": client.get("email", ""),
+            "last_activity": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    return {"success": True}
+
+
+@api_router.get("/admin/users/online")
+async def get_online_users(admin: dict = Depends(get_current_admin)):
+    """Get all users active in the last 5 minutes"""
+    five_minutes_ago = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+    
+    # Get active clients
+    active_users = await db.user_activity.find(
+        {"last_activity": {"$gte": five_minutes_ago}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    # Get all clients with their last activity
+    all_clients = await db.clients.find({}, {"_id": 0, "password": 0}).to_list(500)
+    
+    # Merge activity data
+    activity_map = {u["user_id"]: u for u in active_users}
+    
+    result = []
+    for client in all_clients:
+        activity = activity_map.get(client["id"])
+        result.append({
+            "id": client["id"],
+            "name": client.get("name", "Unknown"),
+            "email": client.get("email", ""),
+            "phone": client.get("phone", ""),
+            "is_online": activity is not None,
+            "last_activity": activity["last_activity"] if activity else None
+        })
+    
+    # Sort: online users first, then by last activity
+    result.sort(key=lambda x: (not x["is_online"], x["last_activity"] or ""), reverse=True)
+    
+    return result
+
 # ==================== SITE CONTENT ROUTES ====================
 
 @api_router.get("/content")
