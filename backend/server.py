@@ -2922,6 +2922,73 @@ async def create_wedding_quote(data: WeddingQuoteCreate):
         except Exception as e:
             logging.error(f"Error sending email to {admin_email}: {e}")
     
+    # Send confirmation email to the CLIENT with their quote
+    client_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><style>
+        body {{ font-family: Arial, sans-serif; background: #0a0a0a; color: #fff; margin: 0; padding: 20px; }}
+        .container {{ max-width: 600px; margin: 0 auto; background: #111; border: 1px solid #333; }}
+        .header {{ background: linear-gradient(135deg, #d4af37, #f5e6a3); padding: 30px; text-align: center; }}
+        .header h1 {{ color: #000; margin: 0; font-size: 24px; }}
+        .content {{ padding: 30px; }}
+        .info-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; }}
+        .label {{ color: #888; }}
+        .value {{ color: #fff; font-weight: bold; }}
+        .total {{ background: #d4af37; color: #000; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; margin-top: 20px; }}
+        table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+        th {{ text-align: left; padding: 10px; background: #222; color: #d4af37; }}
+    </style></head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>💒 Votre Devis Mariage</h1>
+            </div>
+            <div class="content">
+                <p style="font-size: 16px; margin-bottom: 20px;">Bonjour {data.client_name},</p>
+                <p style="color: #ccc; margin-bottom: 30px;">Merci pour votre demande de devis ! Voici le récapitulatif de votre sélection :</p>
+                
+                <h2 style="color: #d4af37; margin-bottom: 20px;">Récapitulatif</h2>
+                <div class="info-row"><span class="label">Date du mariage</span><span class="value">{data.event_date}</span></div>
+                <div class="info-row"><span class="label">Lieu</span><span class="value">{data.event_location or 'Non précisé'}</span></div>
+                
+                <h2 style="color: #d4af37; margin: 30px 0 20px;">Prestations Sélectionnées</h2>
+                <table>
+                    <tr><th>Prestation</th><th style="text-align: right;">Prix</th></tr>
+                    {options_html}
+                </table>
+                
+                <div class="total">TOTAL: {total_price}€</div>
+                
+                <p style="color: #ccc; margin-top: 30px;">
+                    Nous avons bien reçu votre demande et nous vous recontacterons très prochainement pour discuter de votre projet.
+                </p>
+                <p style="color: #888; font-size: 12px; margin-top: 30px; text-align: center;">
+                    📎 Votre devis en PDF est joint à cet email.<br><br>
+                    CREATIVINDUSTRY France<br>
+                    📞 +33 1 23 45 67 89 | ✉️ contact@creativindustry.com
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        if pdf_data:
+            send_email_with_attachment(
+                data.client_email,
+                f"💒 Votre Devis Mariage - CREATIVINDUSTRY ({total_price}€)",
+                client_html,
+                pdf_data,
+                pdf_filename
+            )
+        else:
+            send_email(data.client_email, f"💒 Votre Devis Mariage - CREATIVINDUSTRY ({total_price}€)", client_html)
+        logging.info(f"Quote confirmation sent to client: {data.client_email}")
+    except Exception as e:
+        logging.error(f"Error sending quote to client {data.client_email}: {e}")
+    
     return quote
 
 @api_router.get("/wedding-quotes", response_model=List[WeddingQuote])
