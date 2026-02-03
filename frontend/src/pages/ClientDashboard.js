@@ -212,6 +212,20 @@ const ClientDashboard = () => {
     }
   };
 
+  const handleToggleNewsletter = async () => {
+    setUpdatingNewsletter(true);
+    try {
+      const newValue = !newsletterSubscribed;
+      await axios.put(`${API}/client/newsletter`, { subscribed: newValue }, { headers });
+      setNewsletterSubscribed(newValue);
+      toast.success(newValue ? "Vous êtes abonné à la newsletter" : "Vous êtes désabonné de la newsletter");
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour des préférences");
+    } finally {
+      setUpdatingNewsletter(false);
+    }
+  };
+
   // Lightbox navigation
   const openLightbox = (photo, index) => {
     setLightboxPhoto(photo);
