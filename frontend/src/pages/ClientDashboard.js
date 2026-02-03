@@ -449,6 +449,40 @@ const ClientDashboard = () => {
                 </button>
               )}
             </div>
+
+            {/* Newsletter Preferences */}
+            <div className="bg-card border border-white/10 p-6">
+              <h2 className="font-primary font-bold text-xl mb-6 flex items-center gap-2">
+                <Bell size={20} className="text-primary" /> Notifications
+              </h2>
+              
+              <div className="flex items-center justify-between py-3">
+                <div>
+                  <p className="font-semibold">Newsletter</p>
+                  <p className="text-sm text-white/60">Recevez un email lors de nouvelles vidéos ou stories</p>
+                </div>
+                <button
+                  onClick={handleToggleNewsletter}
+                  disabled={updatingNewsletter}
+                  data-testid="newsletter-toggle"
+                  className={`relative w-14 h-7 rounded-full transition-colors duration-300 ${
+                    newsletterSubscribed ? 'bg-primary' : 'bg-white/20'
+                  } ${updatingNewsletter ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <span 
+                    className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300 ${
+                      newsletterSubscribed ? 'translate-x-8' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              
+              <p className="text-xs text-white/40 mt-4">
+                {newsletterSubscribed 
+                  ? "✓ Vous êtes abonné aux notifications par email"
+                  : "Vous ne recevrez pas de notifications par email"}
+              </p>
+            </div>
           </div>
         )}
 
