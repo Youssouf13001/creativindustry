@@ -2110,6 +2110,12 @@ async def create_portfolio_item(data: PortfolioItemCreate, admin: dict = Depends
     doc = item.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     await db.portfolio.insert_one(doc)
+    
+    # Send newsletter notification if it's a video or story
+    if data.media_type in ["video", "story"]:
+        import asyncio
+        asyncio.create_task(send_newsletter_notification(data.media_type, data.title, data.media_url))
+    
     return item
 
 @api_router.put("/admin/portfolio/{item_id}", response_model=PortfolioItem)
