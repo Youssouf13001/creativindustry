@@ -20,6 +20,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientLogin from "./pages/ClientLogin";
 import ClientDashboard from "./pages/ClientDashboard";
+import UnsubscribePage from "./pages/UnsubscribePage";
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/client" element={<ClientLogin />} />
             <Route path="/client/dashboard" element={<ClientDashboard />} />
+            <Route path="/unsubscribe/:clientId" element={<UnsubscribePage />} />
           </Routes>
         </main>
         <Footer />
