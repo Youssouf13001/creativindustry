@@ -20,6 +20,28 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V16 - Newsletter & Améliorations Espace Client (03 Fév 2026)
+- ✅ **Système de Newsletter complet** :
+  - Les nouveaux clients sont automatiquement abonnés à l'inscription
+  - Email de notification envoyé lors de la publication d'une nouvelle vidéo ou story
+  - Template email stylisé avec branding CREATIVINDUSTRY
+  - Lien de désabonnement dans chaque email
+  - Endpoints : `GET /api/newsletter/unsubscribe/{client_id}`, `POST /api/newsletter/resubscribe/{client_id}`
+- ✅ **Page de désabonnement** (`/unsubscribe/:clientId`) :
+  - États : succès, déjà désabonné, erreur, réabonnement réussi
+  - Bouton de réabonnement
+  - Design cohérent avec le site
+- ✅ **Espace Client Amélioré** :
+  - Photo de profil avec persistance (stockée dans localStorage)
+  - Menu déroulant global dans le header pour les clients connectés
+  - Réinitialisation de mot de passe par email
+- ✅ **Suivi d'Activité Client** :
+  - Clients en ligne visibles dans l'admin
+  - Historique des téléchargements avec nom du fichier
+- ✅ **Upload de fichiers amélioré** :
+  - Support ZIP, RAR, PDF
+  - Barre de progression
+
 ### V15 - Sauvegarde Complète & Stories (02 Fév 2026)
 - ✅ **Sauvegarde complète ZIP** : Téléchargement depuis l'admin (Paramètres)
   - Base de données MongoDB exportée en JSON (toutes les collections)
@@ -128,12 +150,18 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - `/api/admin/backup` - Téléchargement sauvegarde ZIP (auth admin)
 - `/api/auth/mfa/*` - Endpoints MFA (generate, verify, disable, reset)
 - `/api/stories/{id}/view` - Enregistrement vue story
+- `/api/newsletter/unsubscribe/{client_id}` - Désabonnement newsletter
+- `/api/newsletter/resubscribe/{client_id}` - Réabonnement newsletter
+- `/api/client/profile/photo` - Upload photo de profil
+- `/api/client/heartbeat` - Suivi activité client
+- `/api/admin/clients/online` - Liste clients en ligne
 
 ## Backlog
-- P1: Refactoring AdminDashboard.js (2000+ lignes) en composants séparés
+- P1: Refactoring AdminDashboard.js (3500+ lignes) en composants séparés
 - P1: Refactoring server.py en plusieurs routers FastAPI
 - P2: Rappels automatiques 24h avant le RDV
 - P2: Compression automatique des images à l'upload
+- P2: Problème de miniature - Les miniatures uploadées ne s'affichent pas correctement
 
 ## Architecture Frontend (Refactorisé V10)
 ```
@@ -156,7 +184,8 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
     ├── AdminLogin.js
     ├── AdminDashboard.js
     ├── ClientLogin.js
-    └── ClientDashboard.js
+    ├── ClientDashboard.js
+    └── UnsubscribePage.js
 ```
 
 ## Mise à jour IONOS
