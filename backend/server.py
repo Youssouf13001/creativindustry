@@ -3895,6 +3895,59 @@ async def download_social_media_zip():
     )
 
 
+# ==================== NEWSLETTER ENDPOINTS ====================
+
+@api_router.get("/newsletter/unsubscribe/{client_id}")
+async def unsubscribe_from_newsletter(client_id: str):
+    """Unsubscribe a client from the newsletter"""
+    # Find client by ID
+    client = await db.clients.find_one({"id": client_id})
+    
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Check if already unsubscribed
+    if not client.get("newsletter_subscribed", True):
+        return {"message": "Vous êtes déjà désabonné de la newsletter", "already_unsubscribed": True}
+    
+    # Update subscription status
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$set": {"newsletter_subscribed": False}}
+    )
+    
+    logging.info(f"Client {client.get('email')} unsubscribed from newsletter")
+    
+    return {
+        "message": "Vous avez été désabonné avec succès de la newsletter CREATIVINDUSTRY",
+        "email": client.get("email"),
+        "already_unsubscribed": False
+    }
+
+
+@api_router.post("/newsletter/resubscribe/{client_id}")
+async def resubscribe_to_newsletter(client_id: str):
+    """Resubscribe a client to the newsletter"""
+    # Find client by ID
+    client = await db.clients.find_one({"id": client_id})
+    
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Update subscription status
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$set": {"newsletter_subscribed": True}}
+    )
+    
+    logging.info(f"Client {client.get('email')} resubscribed to newsletter")
+    
+    return {
+        "message": "Vous êtes à nouveau abonné à la newsletter CREATIVINDUSTRY",
+        "email": client.get("email")
+    }
+
+
 app.include_router(api_router)
 
 # Mount static files for uploads
