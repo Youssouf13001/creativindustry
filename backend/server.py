@@ -166,7 +166,7 @@ def send_email_with_attachment(to_email: str, subject: str, html_content: str, a
     
     try:
         msg = MIMEMultipart()
-        msg['From'] = SMTP_EMAIL
+        msg['From'] = f"CREATIVINDUSTRY <{SMTP_EMAIL}>"
         msg['To'] = to_email
         msg['Subject'] = subject
         
@@ -180,8 +180,9 @@ def send_email_with_attachment(to_email: str, subject: str, html_content: str, a
         part.add_header('Content-Disposition', f'attachment; filename="{attachment_filename}"')
         msg.attach(part)
         
-        # Send email
-        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT) as server:
+        # Send email using STARTTLS (port 587)
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
             server.login(SMTP_EMAIL, SMTP_PASSWORD)
             server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
         
