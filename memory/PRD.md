@@ -31,6 +31,11 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
   - États : succès, déjà désabonné, erreur, réabonnement réussi
   - Bouton de réabonnement
   - Design cohérent avec le site
+- ✅ **Gestion des préférences newsletter dans l'espace client** :
+  - Section "Notifications" dans l'onglet Paramètres
+  - Toggle ON/OFF pour activer/désactiver la newsletter
+  - Endpoint : `PUT /api/client/newsletter`
+  - Mise à jour en temps réel avec feedback visuel
 - ✅ **Espace Client Amélioré** :
   - Photo de profil avec persistance (stockée dans localStorage)
   - Menu déroulant global dans le header pour les clients connectés
@@ -152,6 +157,7 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - `/api/stories/{id}/view` - Enregistrement vue story
 - `/api/newsletter/unsubscribe/{client_id}` - Désabonnement newsletter
 - `/api/newsletter/resubscribe/{client_id}` - Réabonnement newsletter
+- `/api/client/newsletter` - PUT pour modifier préférence newsletter
 - `/api/client/profile/photo` - Upload photo de profil
 - `/api/client/heartbeat` - Suivi activité client
 - `/api/admin/clients/online` - Liste clients en ligne
