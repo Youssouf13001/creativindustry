@@ -3431,6 +3431,175 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Newsletter Tab */}
+        {activeTab === "newsletter" && (
+          <div className="space-y-6">
+            <h2 className="font-primary font-bold text-xl mb-4">📧 Gestion de la Newsletter</h2>
+            
+            {loadingNewsletter ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader className="animate-spin text-primary" size={32} />
+              </div>
+            ) : (
+              <>
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="bg-card border border-white/10 p-6 text-center">
+                    <p className="text-3xl font-bold text-primary">{newsletterStats?.total_clients || 0}</p>
+                    <p className="text-white/60 text-sm mt-1">Total Clients</p>
+                  </div>
+                  <div className="bg-card border border-white/10 p-6 text-center">
+                    <p className="text-3xl font-bold text-green-500">{newsletterStats?.subscribed_count || 0}</p>
+                    <p className="text-white/60 text-sm mt-1">Abonnés</p>
+                  </div>
+                  <div className="bg-card border border-white/10 p-6 text-center">
+                    <p className="text-3xl font-bold text-red-500">{newsletterStats?.unsubscribed_count || 0}</p>
+                    <p className="text-white/60 text-sm mt-1">Désabonnés</p>
+                  </div>
+                  <div className="bg-card border border-white/10 p-6 text-center">
+                    <p className="text-3xl font-bold text-primary">{newsletterStats?.subscription_rate || 0}%</p>
+                    <p className="text-white/60 text-sm mt-1">Taux d'abonnement</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Send Newsletter Form */}
+                  <div className="bg-card border border-white/10 p-6">
+                    <h3 className="font-primary font-bold text-lg mb-4 flex items-center gap-2">
+                      <FileText size={20} className="text-primary" />
+                      Envoyer une Newsletter
+                    </h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">Sujet de l'email</label>
+                        <input
+                          type="text"
+                          value={newsletterForm.subject}
+                          onChange={(e) => setNewsletterForm(prev => ({ ...prev, subject: e.target.value }))}
+                          placeholder="Ex: Nouveautés du mois..."
+                          className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                          data-testid="newsletter-subject-input"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-2">Message</label>
+                        <textarea
+                          value={newsletterForm.message}
+                          onChange={(e) => setNewsletterForm(prev => ({ ...prev, message: e.target.value }))}
+                          placeholder="Écrivez votre message ici..."
+                          rows={6}
+                          className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none resize-none"
+                          data-testid="newsletter-message-input"
+                        />
+                      </div>
+                      <button
+                        onClick={handleSendNewsletter}
+                        disabled={sendingNewsletter || !newsletterForm.subject || !newsletterForm.message}
+                        className="btn-primary w-full py-3 disabled:opacity-50 flex items-center justify-center gap-2"
+                        data-testid="send-newsletter-btn"
+                      >
+                        {sendingNewsletter ? (
+                          <>
+                            <Loader className="animate-spin" size={16} />
+                            Envoi en cours...
+                          </>
+                        ) : (
+                          <>
+                            📧 Envoyer à {newsletterStats?.subscribed_count || 0} abonné(s)
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Recent Newsletters */}
+                  <div className="bg-card border border-white/10 p-6">
+                    <h3 className="font-primary font-bold text-lg mb-4 flex items-center gap-2">
+                      <Clock size={20} className="text-primary" />
+                      Historique des envois
+                    </h3>
+                    <div className="space-y-3 max-h-80 overflow-y-auto">
+                      {(newsletterStats?.recent_newsletters || []).length === 0 ? (
+                        <p className="text-white/40 text-center py-4">Aucun envoi récent</p>
+                      ) : (
+                        newsletterStats.recent_newsletters.map((nl, idx) => (
+                          <div key={idx} className="bg-background p-3 border border-white/10">
+                            <p className="font-semibold text-sm truncate">{nl.subject}</p>
+                            <p className="text-white/40 text-xs mt-1">
+                              {new Date(nl.sent_at).toLocaleDateString("fr-FR", { 
+                                day: "numeric", 
+                                month: "short", 
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })}
+                            </p>
+                            <div className="flex gap-3 mt-2 text-xs">
+                              <span className="text-green-400">✓ {nl.sent_count} envoyé(s)</span>
+                              {nl.failed_count > 0 && (
+                                <span className="text-red-400">✗ {nl.failed_count} échec(s)</span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Subscribers List */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Subscribed */}
+                  <div className="bg-card border border-white/10 p-6">
+                    <h3 className="font-primary font-bold text-lg mb-4 flex items-center gap-2">
+                      <Check size={20} className="text-green-500" />
+                      Abonnés ({newsletterSubscribers.subscribers.length})
+                    </h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {newsletterSubscribers.subscribers.length === 0 ? (
+                        <p className="text-white/40 text-center py-4">Aucun abonné</p>
+                      ) : (
+                        newsletterSubscribers.subscribers.map((sub) => (
+                          <div key={sub.id} className="flex items-center justify-between py-2 px-3 bg-background border border-white/10">
+                            <div>
+                              <p className="font-semibold text-sm">{sub.name}</p>
+                              <p className="text-white/40 text-xs">{sub.email}</p>
+                            </div>
+                            <span className="text-green-500 text-xs">● Abonné</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Unsubscribed */}
+                  <div className="bg-card border border-white/10 p-6">
+                    <h3 className="font-primary font-bold text-lg mb-4 flex items-center gap-2">
+                      <X size={20} className="text-red-500" />
+                      Désabonnés ({newsletterSubscribers.unsubscribers.length})
+                    </h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {newsletterSubscribers.unsubscribers.length === 0 ? (
+                        <p className="text-white/40 text-center py-4">Aucun désabonné</p>
+                      ) : (
+                        newsletterSubscribers.unsubscribers.map((unsub) => (
+                          <div key={unsub.id} className="flex items-center justify-between py-2 px-3 bg-background border border-white/10">
+                            <div>
+                              <p className="font-semibold text-sm">{unsub.name}</p>
+                              <p className="text-white/40 text-xs">{unsub.email}</p>
+                            </div>
+                            <span className="text-red-500 text-xs">● Désabonné</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Messages Tab */}
         {activeTab === "messages" && (
           <div>
