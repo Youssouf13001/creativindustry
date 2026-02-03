@@ -1771,6 +1771,28 @@ async def upload_client_photo(
     return {"success": True, "photo_url": photo_url}
 
 
+class NewsletterPreferenceUpdate(BaseModel):
+    subscribed: bool
+
+
+@api_router.put("/client/newsletter")
+async def update_newsletter_preference(data: NewsletterPreferenceUpdate, client: dict = Depends(get_current_client)):
+    """Update client newsletter subscription preference"""
+    await db.clients.update_one(
+        {"id": client["id"]},
+        {"$set": {"newsletter_subscribed": data.subscribed}}
+    )
+    
+    action = "abonné" if data.subscribed else "désabonné"
+    logging.info(f"Client {client['id']} {action} de la newsletter")
+    
+    return {
+        "success": True, 
+        "newsletter_subscribed": data.subscribed,
+        "message": f"Vous êtes maintenant {action} de la newsletter"
+    }
+
+
 @api_router.put("/client/password")
 async def change_client_password(data: ClientPasswordChange, client: dict = Depends(get_current_client)):
     """Change client password (requires current password)"""
