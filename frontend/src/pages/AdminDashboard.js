@@ -76,6 +76,12 @@ const AdminDashboard = () => {
   // Story views state
   const [storyViews, setStoryViews] = useState({});
   const [selectedStoryViews, setSelectedStoryViews] = useState(null);
+  // Newsletter states
+  const [newsletterStats, setNewsletterStats] = useState(null);
+  const [newsletterSubscribers, setNewsletterSubscribers] = useState({ subscribers: [], unsubscribers: [] });
+  const [newsletterForm, setNewsletterForm] = useState({ subject: "", message: "" });
+  const [sendingNewsletter, setSendingNewsletter] = useState(false);
+  const [loadingNewsletter, setLoadingNewsletter] = useState(false);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
