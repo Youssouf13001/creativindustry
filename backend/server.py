@@ -88,6 +88,76 @@ def send_email(to_email: str, subject: str, html_content: str):
         logging.error(f"Failed to send email: {str(e)}")
         return False
 
+
+async def send_newsletter_notification(media_type: str, title: str, media_url: str = ""):
+    """Send newsletter notification to all subscribed clients when new video/story is published"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        logging.warning("SMTP not configured - skipping newsletter")
+        return
+    
+    # Get all subscribed clients
+    subscribers = await db.clients.find(
+        {"newsletter_subscribed": True},
+        {"_id": 0, "email": 1, "name": 1, "id": 1}
+    ).to_list(1000)
+    
+    if not subscribers:
+        logging.info("No newsletter subscribers")
+        return
+    
+    # Determine content type
+    if media_type == "story":
+        type_label = "Story"
+        emoji = "📱"
+        description = "Une nouvelle story est disponible !"
+    else:
+        type_label = "Vidéo"
+        emoji = "🎬"
+        description = "Une nouvelle vidéo est disponible !"
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    
+    for subscriber in subscribers:
+        try:
+            unsubscribe_link = f"{site_url}/unsubscribe/{subscriber['id']}"
+            
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); padding: 30px; text-align: center;">
+                        <h1 style="margin: 0; color: #000; font-size: 24px;">{emoji} Nouveau contenu !</h1>
+                    </div>
+                    <div style="padding: 30px;">
+                        <p style="font-size: 18px; margin-bottom: 10px;">Bonjour {subscriber.get('name', 'Client')},</p>
+                        <p style="color: #ccc; margin-bottom: 20px;">{description}</p>
+                        <div style="background-color: #3a3a3a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <p style="margin: 0; font-size: 14px; color: #888;">Nouveau contenu</p>
+                            <p style="margin: 10px 0 0 0; font-size: 20px; font-weight: bold; color: #D4AF37;">{title}</p>
+                            <p style="margin: 5px 0 0 0; font-size: 14px; color: #888;">Type: {type_label}</p>
+                        </div>
+                        <a href="{site_url}/portfolio" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px;">
+                            Voir maintenant →
+                        </a>
+                    </div>
+                    <div style="padding: 20px; background-color: #222; text-align: center; border-top: 1px solid #333;">
+                        <p style="margin: 0; font-size: 12px; color: #666;">
+                            CREATIVINDUSTRY France<br>
+                            <a href="{unsubscribe_link}" style="color: #888; text-decoration: underline;">Se désabonner</a>
+                        </p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            send_email(subscriber['email'], f"{emoji} {type_label} : {title} - CREATIVINDUSTRY", html_content)
+            logging.info(f"Newsletter sent to {subscriber['email']}")
+            
+        except Exception as e:
+            logging.error(f"Failed to send newsletter to {subscriber['email']}: {e}")
+
+
 def send_email_with_attachment(to_email: str, subject: str, html_content: str, attachment_data: bytes, attachment_filename: str):
     """Send email with PDF attachment"""
     if not SMTP_EMAIL or not SMTP_PASSWORD:
