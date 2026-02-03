@@ -3972,6 +3972,148 @@ async def resubscribe_to_newsletter(client_id: str):
     }
 
 
+# ==================== ADMIN NEWSLETTER MANAGEMENT ====================
+
+@api_router.get("/admin/newsletter/subscribers")
+async def get_newsletter_subscribers(admin: dict = Depends(get_current_admin)):
+    """Get all clients with their newsletter subscription status"""
+    clients = await db.clients.find(
+        {},
+        {"_id": 0, "id": 1, "name": 1, "email": 1, "newsletter_subscribed": 1, "created_at": 1}
+    ).to_list(1000)
+    
+    # Add default newsletter_subscribed for older clients
+    for client in clients:
+        if "newsletter_subscribed" not in client:
+            client["newsletter_subscribed"] = True
+    
+    subscribed = [c for c in clients if c.get("newsletter_subscribed", True)]
+    unsubscribed = [c for c in clients if not c.get("newsletter_subscribed", True)]
+    
+    return {
+        "total_clients": len(clients),
+        "subscribed_count": len(subscribed),
+        "unsubscribed_count": len(unsubscribed),
+        "subscribers": subscribed,
+        "unsubscribers": unsubscribed
+    }
+
+
+@api_router.get("/admin/newsletter/stats")
+async def get_newsletter_stats(admin: dict = Depends(get_current_admin)):
+    """Get newsletter statistics"""
+    # Count total clients
+    total_clients = await db.clients.count_documents({})
+    
+    # Count subscribed clients
+    subscribed_count = await db.clients.count_documents({"newsletter_subscribed": {"$ne": False}})
+    
+    # Count unsubscribed clients
+    unsubscribed_count = await db.clients.count_documents({"newsletter_subscribed": False})
+    
+    # Get newsletter history
+    newsletter_history = await db.newsletter_history.find(
+        {},
+        {"_id": 0}
+    ).sort("sent_at", -1).limit(10).to_list(10)
+    
+    # Calculate subscription rate
+    subscription_rate = round((subscribed_count / total_clients * 100), 1) if total_clients > 0 else 0
+    
+    return {
+        "total_clients": total_clients,
+        "subscribed_count": subscribed_count,
+        "unsubscribed_count": unsubscribed_count,
+        "subscription_rate": subscription_rate,
+        "recent_newsletters": newsletter_history
+    }
+
+
+class ManualNewsletterRequest(BaseModel):
+    subject: str
+    message: str
+
+
+@api_router.post("/admin/newsletter/send")
+async def send_manual_newsletter(data: ManualNewsletterRequest, admin: dict = Depends(get_current_admin)):
+    """Send a manual newsletter to all subscribed clients"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        raise HTTPException(status_code=500, detail="SMTP non configuré")
+    
+    # Get all subscribed clients
+    subscribers = await db.clients.find(
+        {"newsletter_subscribed": {"$ne": False}},
+        {"_id": 0, "email": 1, "name": 1}
+    ).to_list(1000)
+    
+    if not subscribers:
+        raise HTTPException(status_code=400, detail="Aucun abonné à la newsletter")
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    sent_count = 0
+    failed_count = 0
+    
+    for subscriber in subscribers:
+        try:
+            # Get client ID for unsubscribe link
+            client = await db.clients.find_one({"email": subscriber["email"]}, {"id": 1})
+            unsubscribe_link = f"{site_url}/unsubscribe/{client['id']}" if client else "#"
+            
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); padding: 30px; text-align: center;">
+                        <h1 style="margin: 0; color: #000; font-size: 24px;">📬 CREATIVINDUSTRY</h1>
+                    </div>
+                    <div style="padding: 30px;">
+                        <p style="font-size: 18px; margin-bottom: 10px;">Bonjour {subscriber.get('name', 'Client')},</p>
+                        <div style="background-color: #3a3a3a; padding: 20px; border-radius: 8px; margin: 20px 0; line-height: 1.6;">
+                            {data.message.replace(chr(10), '<br>')}
+                        </div>
+                        <a href="{site_url}" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 20px;">
+                            Visiter le site →
+                        </a>
+                    </div>
+                    <div style="padding: 20px; background-color: #222; text-align: center; border-top: 1px solid #333;">
+                        <p style="margin: 0; font-size: 12px; color: #666;">
+                            CREATIVINDUSTRY France<br>
+                            <a href="{unsubscribe_link}" style="color: #888; text-decoration: underline;">Se désabonner</a>
+                        </p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            
+            send_email(subscriber["email"], data.subject, html_content)
+            sent_count += 1
+            
+        except Exception as e:
+            logging.error(f"Failed to send newsletter to {subscriber['email']}: {e}")
+            failed_count += 1
+    
+    # Save to newsletter history
+    await db.newsletter_history.insert_one({
+        "id": str(uuid.uuid4()),
+        "subject": data.subject,
+        "message": data.message[:200] + "..." if len(data.message) > 200 else data.message,
+        "sent_at": datetime.now(timezone.utc).isoformat(),
+        "sent_count": sent_count,
+        "failed_count": failed_count,
+        "sent_by": admin.get("email", "admin")
+    })
+    
+    logging.info(f"Manual newsletter sent: {sent_count} success, {failed_count} failed")
+    
+    return {
+        "success": True,
+        "message": f"Newsletter envoyée à {sent_count} abonné(s)",
+        "sent_count": sent_count,
+        "failed_count": failed_count
+    }
+
+
 app.include_router(api_router)
 
 # Mount static files for uploads
