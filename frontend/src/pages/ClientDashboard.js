@@ -70,10 +70,11 @@ const ClientDashboard = () => {
       setGalleries(galleriesRes.data);
       if (meRes.data) {
         // Update client user with latest data from server
-        const fullClient = await axios.get(`${API}/client/me`, { headers }).catch(() => null);
-        if (fullClient?.data) {
-          setClientUser(prev => ({ ...prev, ...fullClient.data }));
-        }
+        setClientUser(prev => ({ ...prev, ...meRes.data }));
+        setNewsletterSubscribed(meRes.data.newsletter_subscribed !== false);
+        // Update localStorage
+        const storedUser = JSON.parse(localStorage.getItem("client_user") || "{}");
+        localStorage.setItem("client_user", JSON.stringify({ ...storedUser, ...meRes.data }));
       }
     } catch (e) {
       if (e.response?.status === 401) {
