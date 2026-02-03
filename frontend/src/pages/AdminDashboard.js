@@ -252,6 +252,45 @@ const AdminDashboard = () => {
     }
   };
 
+  // Fetch newsletter data
+  const fetchNewsletterData = async () => {
+    setLoadingNewsletter(true);
+    try {
+      const [statsRes, subscribersRes] = await Promise.all([
+        axios.get(`${API}/admin/newsletter/stats`, { headers }),
+        axios.get(`${API}/admin/newsletter/subscribers`, { headers })
+      ]);
+      setNewsletterStats(statsRes.data);
+      setNewsletterSubscribers({
+        subscribers: subscribersRes.data.subscribers || [],
+        unsubscribers: subscribersRes.data.unsubscribers || []
+      });
+    } catch (e) {
+      console.error("Error fetching newsletter data:", e);
+    } finally {
+      setLoadingNewsletter(false);
+    }
+  };
+
+  // Send manual newsletter
+  const handleSendNewsletter = async () => {
+    if (!newsletterForm.subject.trim() || !newsletterForm.message.trim()) {
+      toast.error("Veuillez remplir le sujet et le message");
+      return;
+    }
+    setSendingNewsletter(true);
+    try {
+      const res = await axios.post(`${API}/admin/newsletter/send`, newsletterForm, { headers });
+      toast.success(res.data.message);
+      setNewsletterForm({ subject: "", message: "" });
+      fetchNewsletterData(); // Refresh stats
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de l'envoi");
+    } finally {
+      setSendingNewsletter(false);
+    }
+  };
+
   const updateBookingStatus = async (id, status) => {
     try {
       await axios.put(`${API}/bookings/${id}`, { status }, { headers });
