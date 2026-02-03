@@ -1598,6 +1598,7 @@ async def register_client(data: ClientCreate):
         "password": hash_password(data.password),
         "name": data.name,
         "phone": data.phone,
+        "newsletter_subscribed": True,  # Auto-subscribe to newsletter
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.clients.insert_one(client_doc)
