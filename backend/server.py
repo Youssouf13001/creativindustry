@@ -1167,6 +1167,7 @@ class ClientResponse(BaseModel):
     name: str
     phone: Optional[str] = None
     profile_photo: Optional[str] = None
+    newsletter_subscribed: Optional[bool] = True
 
 class ClientFile(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1694,7 +1695,8 @@ async def get_client_me(client: dict = Depends(get_current_client)):
             email=full_client["email"], 
             name=full_client["name"], 
             phone=full_client.get("phone"),
-            profile_photo=full_client.get("profile_photo")
+            profile_photo=full_client.get("profile_photo"),
+            newsletter_subscribed=full_client.get("newsletter_subscribed", True)
         )
     return ClientResponse(id=client["id"], email=client["email"], name=client["name"], phone=client.get("phone"))
 
