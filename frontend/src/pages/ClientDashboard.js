@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight, FileArchive, User, Settings, Lock, Upload, Loader } from "lucide-react";
+import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight, FileArchive, User, Settings, Lock, Upload, Loader, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 
@@ -23,6 +23,8 @@ const ClientDashboard = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordData, setPasswordData] = useState({ current: "", new: "", confirm: "" });
+  const [newsletterSubscribed, setNewsletterSubscribed] = useState(true);
+  const [updatingNewsletter, setUpdatingNewsletter] = useState(false);
   const profilePhotoRef = useRef(null);
   
   const navigate = useNavigate();
