@@ -105,6 +105,13 @@ const AdminDashboard = () => {
     }
   }, [portfolioFilterCategory]);
 
+  // Load newsletter data when switching to newsletter tab
+  useEffect(() => {
+    if (activeTab === "newsletter") {
+      fetchNewsletterData();
+    }
+  }, [activeTab]);
+
   const fetchMfaStatus = async () => {
     try {
       const res = await axios.get(`${API}/auth/mfa/status`, { headers });
