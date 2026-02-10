@@ -88,6 +88,8 @@ const AdminDashboard = () => {
   const [loadingDeployment, setLoadingDeployment] = useState(false);
   const [deploying, setDeploying] = useState(false);
   const [deployLogs, setDeployLogs] = useState([]);
+  // Backup reminder state
+  const [backupStatus, setBackupStatus] = useState(null);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
