@@ -1039,6 +1039,29 @@ const AdminDashboard = () => {
           </button>
         </div>
 
+        {/* Backup Reminder Alert */}
+        {backupStatus?.needs_reminder && (
+          <div className="bg-yellow-500/20 border border-yellow-500 p-4 mb-6 flex items-center justify-between" data-testid="backup-reminder">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <p className="font-semibold text-yellow-400">Rappel de sauvegarde</p>
+                <p className="text-sm text-white/70">
+                  {backupStatus.days_since_backup !== null 
+                    ? `Dernière sauvegarde il y a ${backupStatus.days_since_backup} jours` 
+                    : "Vous n'avez jamais fait de sauvegarde manuelle"}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setActiveTab("settings")}
+              className="btn-primary px-4 py-2 text-sm"
+            >
+              Faire une sauvegarde
+            </button>
+          </div>
+        )}
+
         {/* Stats */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
