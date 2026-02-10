@@ -991,6 +991,7 @@ const AdminDashboard = () => {
             { id: "bookings", label: "Réservations" },
             { id: "clients", label: "Clients" },
             { id: "newsletter", label: "📧 Newsletter" },
+            { id: "deployment", label: "🚀 Déploiement" },
             { id: "services", label: "Services" },
             { id: "options", label: "Options Mariage" },
             { id: "messages", label: "Messages" },
