@@ -118,6 +118,13 @@ const AdminDashboard = () => {
     }
   }, [activeTab]);
 
+  // Load deployment data when switching to deployment tab
+  useEffect(() => {
+    if (activeTab === "deployment") {
+      fetchDeploymentData();
+    }
+  }, [activeTab]);
+
   const fetchMfaStatus = async () => {
     try {
       const res = await axios.get(`${API}/auth/mfa/status`, { headers });
