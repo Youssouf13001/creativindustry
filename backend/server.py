@@ -4183,6 +4183,270 @@ async def send_manual_newsletter(data: ManualNewsletterRequest, admin: dict = De
     }
 
 
+# ==================== DEPLOYMENT MANAGEMENT ====================
+
+# Configuration - Chemin du projet sur le serveur IONOS
+PROJECT_PATH = os.environ.get('PROJECT_PATH', '/var/www/creativindustry')
+
+
+@api_router.get("/admin/deployment/status")
+async def get_deployment_status(admin: dict = Depends(get_current_admin)):
+    """Get current deployment status including git info"""
+    try:
+        # Get current commit
+        result = subprocess.run(
+            ['git', 'log', '--oneline', '-1'],
+            cwd=PROJECT_PATH,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        current_commit = result.stdout.strip() if result.returncode == 0 else "Inconnu"
+        
+        # Get last 10 commits for rollback options
+        result = subprocess.run(
+            ['git', 'log', '--oneline', '-10'],
+            cwd=PROJECT_PATH,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        commits = []
+        if result.returncode == 0:
+            for line in result.stdout.strip().split('\n'):
+                if line:
+                    parts = line.split(' ', 1)
+                    commits.append({
+                        "hash": parts[0],
+                        "message": parts[1] if len(parts) > 1 else ""
+                    })
+        
+        # Get current branch
+        result = subprocess.run(
+            ['git', 'branch', '--show-current'],
+            cwd=PROJECT_PATH,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        branch = result.stdout.strip() if result.returncode == 0 else "main"
+        
+        # Check if there are updates available
+        subprocess.run(['git', 'fetch', 'origin'], cwd=PROJECT_PATH, capture_output=True, timeout=30)
+        result = subprocess.run(
+            ['git', 'rev-list', '--count', f'{branch}..origin/{branch}'],
+            cwd=PROJECT_PATH,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        updates_available = int(result.stdout.strip()) if result.returncode == 0 and result.stdout.strip().isdigit() else 0
+        
+        return {
+            "success": True,
+            "current_commit": current_commit,
+            "branch": branch,
+            "commits": commits,
+            "updates_available": updates_available,
+            "project_path": PROJECT_PATH
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail="Timeout lors de la récupération du statut")
+    except Exception as e:
+        logging.error(f"Deployment status error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
+@api_router.post("/admin/deployment/update")
+async def trigger_deployment_update(admin: dict = Depends(get_current_admin)):
+    """Pull latest code and rebuild"""
+    try:
+        logs = []
+        
+        # Step 1: Git fetch and reset
+        logs.append("📥 Récupération du code...")
+        result = subprocess.run(
+            ['git', 'fetch', 'origin'],
+            cwd=PROJECT_PATH,
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+        
+        result = subprocess.run(
+            ['git', 'reset', '--hard', 'origin/main'],
+            cwd=PROJECT_PATH,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.returncode != 0:
+            raise Exception(f"Git reset failed: {result.stderr}")
+        logs.append("✅ Code mis à jour")
+        
+        # Step 2: Build frontend
+        logs.append("🔨 Compilation du frontend...")
+        frontend_path = os.path.join(PROJECT_PATH, 'frontend')
+        result = subprocess.run(
+            ['npm', 'run', 'build'],
+            cwd=frontend_path,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        if result.returncode != 0:
+            raise Exception(f"Build failed: {result.stderr}")
+        logs.append("✅ Frontend compilé")
+        
+        # Step 3: Restart service
+        logs.append("🔄 Redémarrage du service...")
+        result = subprocess.run(
+            ['sudo', 'systemctl', 'restart', 'creativindustry'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.returncode != 0:
+            logs.append("⚠️ Redémarrage manuel peut être nécessaire")
+        else:
+            logs.append("✅ Service redémarré")
+        
+        # Get new commit info
+        result = subprocess.run(
+            ['git', 'log', '--oneline', '-1'],
+            cwd=PROJECT_PATH,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        new_commit = result.stdout.strip() if result.returncode == 0 else "Inconnu"
+        
+        # Log the deployment
+        await db.deployment_history.insert_one({
+            "id": str(uuid.uuid4()),
+            "action": "update",
+            "commit": new_commit,
+            "performed_by": admin.get("email"),
+            "performed_at": datetime.now(timezone.utc).isoformat(),
+            "success": True,
+            "logs": logs
+        })
+        
+        return {
+            "success": True,
+            "message": "Mise à jour effectuée avec succès",
+            "new_commit": new_commit,
+            "logs": logs
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail="Timeout lors de la mise à jour")
+    except Exception as e:
+        logging.error(f"Deployment update error: {e}")
+        # Log failed deployment
+        await db.deployment_history.insert_one({
+            "id": str(uuid.uuid4()),
+            "action": "update",
+            "commit": "N/A",
+            "performed_by": admin.get("email"),
+            "performed_at": datetime.now(timezone.utc).isoformat(),
+            "success": False,
+            "error": str(e)
+        })
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
+class RollbackRequest(BaseModel):
+    commit_hash: str
+
+
+@api_router.post("/admin/deployment/rollback")
+async def trigger_deployment_rollback(data: RollbackRequest, admin: dict = Depends(get_current_admin)):
+    """Rollback to a specific commit"""
+    try:
+        logs = []
+        
+        # Step 1: Git checkout to specific commit
+        logs.append(f"⏪ Retour à la version {data.commit_hash}...")
+        result = subprocess.run(
+            ['git', 'checkout', data.commit_hash],
+            cwd=PROJECT_PATH,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.returncode != 0:
+            raise Exception(f"Git checkout failed: {result.stderr}")
+        logs.append("✅ Code restauré")
+        
+        # Step 2: Build frontend
+        logs.append("🔨 Compilation du frontend...")
+        frontend_path = os.path.join(PROJECT_PATH, 'frontend')
+        result = subprocess.run(
+            ['npm', 'run', 'build'],
+            cwd=frontend_path,
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        if result.returncode != 0:
+            raise Exception(f"Build failed: {result.stderr}")
+        logs.append("✅ Frontend compilé")
+        
+        # Step 3: Restart service
+        logs.append("🔄 Redémarrage du service...")
+        result = subprocess.run(
+            ['sudo', 'systemctl', 'restart', 'creativindustry'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        if result.returncode != 0:
+            logs.append("⚠️ Redémarrage manuel peut être nécessaire")
+        else:
+            logs.append("✅ Service redémarré")
+        
+        # Log the rollback
+        await db.deployment_history.insert_one({
+            "id": str(uuid.uuid4()),
+            "action": "rollback",
+            "commit": data.commit_hash,
+            "performed_by": admin.get("email"),
+            "performed_at": datetime.now(timezone.utc).isoformat(),
+            "success": True,
+            "logs": logs
+        })
+        
+        return {
+            "success": True,
+            "message": f"Rollback vers {data.commit_hash} effectué",
+            "logs": logs
+        }
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail="Timeout lors du rollback")
+    except Exception as e:
+        logging.error(f"Deployment rollback error: {e}")
+        await db.deployment_history.insert_one({
+            "id": str(uuid.uuid4()),
+            "action": "rollback",
+            "commit": data.commit_hash,
+            "performed_by": admin.get("email"),
+            "performed_at": datetime.now(timezone.utc).isoformat(),
+            "success": False,
+            "error": str(e)
+        })
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
+@api_router.get("/admin/deployment/history")
+async def get_deployment_history(admin: dict = Depends(get_current_admin)):
+    """Get deployment history"""
+    history = await db.deployment_history.find(
+        {},
+        {"_id": 0}
+    ).sort("performed_at", -1).limit(20).to_list(20)
+    return history
+
+
 app.include_router(api_router)
 
 # Mount static files for uploads
