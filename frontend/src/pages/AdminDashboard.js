@@ -4146,6 +4146,8 @@ const AdminDashboard = () => {
                       link.remove();
                       window.URL.revokeObjectURL(url);
                       toast.success("Sauvegarde téléchargée avec succès !");
+                      // Confirm the backup was downloaded to update reminder
+                      confirmBackupDownload();
                     }
                   } catch (e) {
                     console.error('Backup error:', e);
@@ -4156,6 +4158,17 @@ const AdminDashboard = () => {
               >
                 <Download size={20} /> Télécharger la sauvegarde ZIP
               </button>
+              {backupStatus?.last_backup && (
+                <p className="text-xs text-green-400 mt-2">
+                  ✅ Dernière sauvegarde : {new Date(backupStatus.last_backup.performed_at).toLocaleDateString("fr-FR", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                  })}
+                </p>
+              )}
               <p className="text-xs text-white/40 mt-3">
                 💡 Conseil : Faites une sauvegarde régulière (1x/semaine) et conservez-la sur un disque externe ou cloud.
               </p>
