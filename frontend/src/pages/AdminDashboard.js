@@ -104,6 +104,7 @@ const AdminDashboard = () => {
     fetchBankDetails();
     fetchMfaStatus();
     fetchStoryViews();
+    fetchBackupStatus();
   }, [token]);
 
   // Refresh story views when switching to stories filter
@@ -126,6 +127,26 @@ const AdminDashboard = () => {
       fetchDeploymentData();
     }
   }, [activeTab]);
+
+  // Fetch backup status for reminder
+  const fetchBackupStatus = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/backup/status`, { headers });
+      setBackupStatus(res.data);
+    } catch (e) {
+      console.error("Error fetching backup status:", e);
+    }
+  };
+
+  // Confirm backup download
+  const confirmBackupDownload = async () => {
+    try {
+      await axios.post(`${API}/admin/backup/confirm-download`, {}, { headers });
+      fetchBackupStatus();
+    } catch (e) {
+      console.error("Error confirming backup:", e);
+    }
+  };
 
   const fetchMfaStatus = async () => {
     try {
