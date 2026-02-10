@@ -3668,6 +3668,148 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Deployment Tab */}
+        {activeTab === "deployment" && (
+          <div className="space-y-6">
+            <h2 className="font-primary font-bold text-xl mb-4">🚀 Gestion du Déploiement</h2>
+            
+            {loadingDeployment ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader className="animate-spin text-primary" size={32} />
+              </div>
+            ) : (
+              <>
+                {/* Current Status */}
+                <div className="bg-card border border-white/10 p-6">
+                  <h3 className="font-primary font-bold text-lg mb-4">📊 Statut Actuel</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-background p-4 border border-white/10">
+                      <p className="text-white/60 text-sm">Version actuelle</p>
+                      <p className="font-mono text-primary font-bold">{deploymentStatus?.current_commit || "Inconnue"}</p>
+                    </div>
+                    <div className="bg-background p-4 border border-white/10">
+                      <p className="text-white/60 text-sm">Branche</p>
+                      <p className="font-mono text-white font-bold">{deploymentStatus?.branch || "main"}</p>
+                    </div>
+                    <div className="bg-background p-4 border border-white/10">
+                      <p className="text-white/60 text-sm">Mises à jour disponibles</p>
+                      <p className={`font-bold ${deploymentStatus?.updates_available > 0 ? "text-yellow-500" : "text-green-500"}`}>
+                        {deploymentStatus?.updates_available > 0 ? `${deploymentStatus.updates_available} nouvelle(s)` : "À jour ✓"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Update Button */}
+                  <div className="bg-card border border-white/10 p-6">
+                    <h3 className="font-primary font-bold text-lg mb-4">📥 Mettre à jour</h3>
+                    <p className="text-white/60 text-sm mb-4">
+                      Récupère la dernière version du code depuis GitHub, recompile le frontend et redémarre le service.
+                    </p>
+                    <button
+                      onClick={handleDeployUpdate}
+                      disabled={deploying}
+                      className="btn-primary w-full py-3 disabled:opacity-50 flex items-center justify-center gap-2"
+                      data-testid="deploy-update-btn"
+                    >
+                      {deploying ? (
+                        <>
+                          <Loader className="animate-spin" size={16} />
+                          Mise à jour en cours...
+                        </>
+                      ) : (
+                        <>🚀 Forcer la mise à jour</>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Logs */}
+                  <div className="bg-card border border-white/10 p-6">
+                    <h3 className="font-primary font-bold text-lg mb-4">📋 Logs</h3>
+                    <div className="bg-black p-4 font-mono text-sm h-40 overflow-y-auto border border-white/10">
+                      {deployLogs.length === 0 ? (
+                        <p className="text-white/40">Aucune action en cours...</p>
+                      ) : (
+                        deployLogs.map((log, idx) => (
+                          <p key={idx} className={log.includes("❌") ? "text-red-400" : log.includes("✅") ? "text-green-400" : "text-white/80"}>
+                            {log}
+                          </p>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rollback Options */}
+                <div className="bg-card border border-white/10 p-6">
+                  <h3 className="font-primary font-bold text-lg mb-4">⏪ Revenir à une version précédente</h3>
+                  <p className="text-white/60 text-sm mb-4">
+                    ⚠️ Attention : Un rollback restaurera le code à une version antérieure. Utilisez cette option uniquement en cas de problème urgent.
+                  </p>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {(deploymentStatus?.commits || []).map((commit, idx) => (
+                      <div 
+                        key={commit.hash} 
+                        className={`flex items-center justify-between p-3 border ${idx === 0 ? "border-primary bg-primary/10" : "border-white/10 bg-background"}`}
+                      >
+                        <div className="flex-1">
+                          <span className="font-mono text-primary text-sm">{commit.hash}</span>
+                          <span className="text-white/60 text-sm ml-3">{commit.message}</span>
+                          {idx === 0 && <span className="ml-2 text-xs bg-primary text-black px-2 py-0.5 rounded">ACTUEL</span>}
+                        </div>
+                        {idx !== 0 && (
+                          <button
+                            onClick={() => handleDeployRollback(commit.hash)}
+                            disabled={deploying}
+                            className="btn-outline text-sm px-3 py-1 disabled:opacity-50"
+                            data-testid={`rollback-${commit.hash}`}
+                          >
+                            Restaurer
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Deployment History */}
+                <div className="bg-card border border-white/10 p-6">
+                  <h3 className="font-primary font-bold text-lg mb-4">📜 Historique des déploiements</h3>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {deploymentHistory.length === 0 ? (
+                      <p className="text-white/40 text-center py-4">Aucun historique</p>
+                    ) : (
+                      deploymentHistory.map((entry) => (
+                        <div key={entry.id} className="flex items-center justify-between py-2 px-3 bg-background border border-white/10">
+                          <div>
+                            <span className={`text-xs px-2 py-0.5 rounded mr-2 ${entry.action === "update" ? "bg-blue-500/20 text-blue-400" : "bg-yellow-500/20 text-yellow-400"}`}>
+                              {entry.action === "update" ? "MISE À JOUR" : "ROLLBACK"}
+                            </span>
+                            <span className="font-mono text-sm text-primary">{entry.commit}</span>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-white/60">{entry.performed_by}</p>
+                            <p className="text-xs text-white/40">
+                              {new Date(entry.performed_at).toLocaleDateString("fr-FR", {
+                                day: "numeric",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Messages Tab */}
         {activeTab === "messages" && (
           <div>
