@@ -304,6 +304,60 @@ const AdminDashboard = () => {
     }
   };
 
+  // Fetch deployment data
+  const fetchDeploymentData = async () => {
+    setLoadingDeployment(true);
+    try {
+      const [statusRes, historyRes] = await Promise.all([
+        axios.get(`${API}/admin/deployment/status`, { headers }),
+        axios.get(`${API}/admin/deployment/history`, { headers })
+      ]);
+      setDeploymentStatus(statusRes.data);
+      setDeploymentHistory(historyRes.data || []);
+    } catch (e) {
+      console.error("Error fetching deployment data:", e);
+      toast.error("Erreur lors du chargement des infos de déploiement");
+    } finally {
+      setLoadingDeployment(false);
+    }
+  };
+
+  // Trigger update
+  const handleDeployUpdate = async () => {
+    if (!window.confirm("⚠️ Voulez-vous vraiment mettre à jour le site ? Cela peut prendre quelques minutes.")) return;
+    setDeploying(true);
+    setDeployLogs(["🚀 Démarrage de la mise à jour..."]);
+    try {
+      const res = await axios.post(`${API}/admin/deployment/update`, {}, { headers });
+      setDeployLogs(res.data.logs || []);
+      toast.success(res.data.message);
+      fetchDeploymentData();
+    } catch (e) {
+      setDeployLogs(prev => [...prev, `❌ Erreur: ${e.response?.data?.detail || e.message}`]);
+      toast.error(e.response?.data?.detail || "Erreur lors de la mise à jour");
+    } finally {
+      setDeploying(false);
+    }
+  };
+
+  // Trigger rollback
+  const handleDeployRollback = async (commitHash) => {
+    if (!window.confirm(`⚠️ Voulez-vous revenir à la version ${commitHash} ? Le site sera temporairement indisponible.`)) return;
+    setDeploying(true);
+    setDeployLogs([`⏪ Rollback vers ${commitHash}...`]);
+    try {
+      const res = await axios.post(`${API}/admin/deployment/rollback`, { commit_hash: commitHash }, { headers });
+      setDeployLogs(res.data.logs || []);
+      toast.success(res.data.message);
+      fetchDeploymentData();
+    } catch (e) {
+      setDeployLogs(prev => [...prev, `❌ Erreur: ${e.response?.data?.detail || e.message}`]);
+      toast.error(e.response?.data?.detail || "Erreur lors du rollback");
+    } finally {
+      setDeploying(false);
+    }
+  };
+
   const updateBookingStatus = async (id, status) => {
     try {
       await axios.put(`${API}/bookings/${id}`, { status }, { headers });
