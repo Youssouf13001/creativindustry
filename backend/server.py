@@ -3314,6 +3314,44 @@ Pour toute question : infos@creativindustry.com
         raise HTTPException(status_code=500, detail=f"Erreur lors de la sauvegarde: {str(e)}")
 
 
+@api_router.post("/admin/backup/confirm-download")
+async def confirm_backup_download(admin: dict = Depends(get_current_admin)):
+    """Confirm that a backup was downloaded - updates last backup date"""
+    await db.backup_history.insert_one({
+        "id": str(uuid.uuid4()),
+        "performed_by": admin.get("email"),
+        "performed_at": datetime.now(timezone.utc).isoformat(),
+        "type": "manual"
+    })
+    return {"success": True, "message": "Sauvegarde confirmée"}
+
+
+@api_router.get("/admin/backup/status")
+async def get_backup_status(admin: dict = Depends(get_current_admin)):
+    """Get backup status and reminder"""
+    # Get last backup
+    last_backup = await db.backup_history.find_one(
+        {}, 
+        {"_id": 0},
+        sort=[("performed_at", -1)]
+    )
+    
+    days_since_backup = None
+    needs_reminder = True
+    
+    if last_backup and last_backup.get("performed_at"):
+        last_date = datetime.fromisoformat(last_backup["performed_at"].replace("Z", "+00:00"))
+        days_since_backup = (datetime.now(timezone.utc) - last_date).days
+        needs_reminder = days_since_backup >= 7
+    
+    return {
+        "last_backup": last_backup,
+        "days_since_backup": days_since_backup,
+        "needs_reminder": needs_reminder,
+        "reminder_message": "⚠️ Vous n'avez pas fait de sauvegarde depuis plus de 7 jours !" if needs_reminder else None
+    }
+
+
 @api_router.get("/admin/backup/download/{filename}")
 async def download_backup(filename: str, admin: dict = Depends(get_current_admin)):
     """Download a previously created backup file"""
