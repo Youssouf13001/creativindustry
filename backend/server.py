@@ -12,6 +12,7 @@ import zipfile
 import io
 import secrets
 import base64
+import subprocess
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional
