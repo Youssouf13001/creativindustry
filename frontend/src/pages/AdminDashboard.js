@@ -82,6 +82,12 @@ const AdminDashboard = () => {
   const [newsletterForm, setNewsletterForm] = useState({ subject: "", message: "" });
   const [sendingNewsletter, setSendingNewsletter] = useState(false);
   const [loadingNewsletter, setLoadingNewsletter] = useState(false);
+  // Deployment states
+  const [deploymentStatus, setDeploymentStatus] = useState(null);
+  const [deploymentHistory, setDeploymentHistory] = useState([]);
+  const [loadingDeployment, setLoadingDeployment] = useState(false);
+  const [deploying, setDeploying] = useState(false);
+  const [deployLogs, setDeployLogs] = useState([]);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
