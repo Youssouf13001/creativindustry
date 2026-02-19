@@ -608,6 +608,238 @@ const ClientDashboard = () => {
           </div>
         )}
 
+        {/* Transfers Tab */}
+        {activeTab === "transfers" && (
+          <div className="space-y-6">
+            <h2 className="font-primary font-bold text-xl mb-4">📤 Transférer des fichiers</h2>
+            <p className="text-white/60 text-sm mb-6">
+              Envoyez-nous vos fichiers (musiques, documents, photos). Maximum 100MB par fichier.
+            </p>
+
+            {/* Upload Progress */}
+            {uploadingTransfer && (
+              <div className="bg-primary/20 border border-primary p-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <Loader className="animate-spin text-primary" size={20} />
+                  <span>Upload en cours... {uploadProgress}%</span>
+                </div>
+                <div className="w-full bg-white/20 h-2 mt-2 rounded">
+                  <div className="bg-primary h-2 rounded transition-all" style={{ width: `${uploadProgress}%` }} />
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Music */}
+              <div className="bg-card border border-white/10 p-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Music size={20} className="text-primary" /> Musiques
+                </h3>
+                <p className="text-white/40 text-xs mb-4">MP3, WAV, M4A, FLAC, AAC, OGG</p>
+                <label className="btn-outline w-full py-3 cursor-pointer flex items-center justify-center gap-2">
+                  <Upload size={16} /> Ajouter une musique
+                  <input
+                    type="file"
+                    accept=".mp3,.wav,.m4a,.flac,.aac,.ogg"
+                    className="hidden"
+                    onChange={(e) => handleFileTransfer("music", e.target.files[0])}
+                    disabled={uploadingTransfer}
+                  />
+                </label>
+                <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
+                  {myTransfers.music.map((file) => (
+                    <div key={file.id} className="flex items-center justify-between py-2 px-3 bg-background border border-white/10">
+                      <span className="text-sm truncate flex-1">{file.original_name}</span>
+                      <button onClick={() => handleDeleteTransfer(file.id)} className="text-red-400 hover:text-red-300 ml-2">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  {myTransfers.music.length === 0 && <p className="text-white/30 text-xs text-center py-2">Aucune musique</p>}
+                </div>
+              </div>
+
+              {/* Documents */}
+              <div className="bg-card border border-white/10 p-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <FileText size={20} className="text-primary" /> Documents
+                </h3>
+                <p className="text-white/40 text-xs mb-4">PDF, DOC, DOCX, TXT, ZIP, RAR</p>
+                <label className="btn-outline w-full py-3 cursor-pointer flex items-center justify-center gap-2">
+                  <Upload size={16} /> Ajouter un document
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt,.zip,.rar"
+                    className="hidden"
+                    onChange={(e) => handleFileTransfer("documents", e.target.files[0])}
+                    disabled={uploadingTransfer}
+                  />
+                </label>
+                <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
+                  {myTransfers.documents.map((file) => (
+                    <div key={file.id} className="flex items-center justify-between py-2 px-3 bg-background border border-white/10">
+                      <span className="text-sm truncate flex-1">{file.original_name}</span>
+                      <button onClick={() => handleDeleteTransfer(file.id)} className="text-red-400 hover:text-red-300 ml-2">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  {myTransfers.documents.length === 0 && <p className="text-white/30 text-xs text-center py-2">Aucun document</p>}
+                </div>
+              </div>
+
+              {/* Photos */}
+              <div className="bg-card border border-white/10 p-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Image size={20} className="text-primary" /> Photos
+                </h3>
+                <p className="text-white/40 text-xs mb-4">JPG, PNG, GIF, WEBP, HEIC</p>
+                <label className="btn-outline w-full py-3 cursor-pointer flex items-center justify-center gap-2">
+                  <Upload size={16} /> Ajouter une photo
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.gif,.webp,.heic"
+                    className="hidden"
+                    onChange={(e) => handleFileTransfer("photos", e.target.files[0])}
+                    disabled={uploadingTransfer}
+                  />
+                </label>
+                <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
+                  {myTransfers.photos.map((file) => (
+                    <div key={file.id} className="flex items-center justify-between py-2 px-3 bg-background border border-white/10">
+                      <span className="text-sm truncate flex-1">{file.original_name}</span>
+                      <button onClick={() => handleDeleteTransfer(file.id)} className="text-red-400 hover:text-red-300 ml-2">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  {myTransfers.photos.length === 0 && <p className="text-white/30 text-xs text-center py-2">Aucune photo</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Devis Tab */}
+        {activeTab === "devis" && (
+          <div className="space-y-6">
+            <h2 className="font-primary font-bold text-xl mb-4">📋 Mes Devis</h2>
+            {myDevis.length === 0 ? (
+              <div className="bg-card border border-white/10 p-8 text-center">
+                <Receipt size={48} className="mx-auto text-white/20 mb-4" />
+                <p className="text-white/60">Aucun devis pour le moment</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {myDevis.map((devis) => (
+                  <div key={devis.devis_id} className="bg-card border border-white/10 p-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div>
+                        <h3 className="font-bold text-lg">Devis #{devis.devis_id?.slice(-8)}</h3>
+                        {devis.event_type && <p className="text-white/60 text-sm">{devis.event_type}</p>}
+                        {devis.event_date && <p className="text-white/40 text-sm">📅 {devis.event_date}</p>}
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-primary">{devis.total_amount}€</p>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          devis.status === "accepted" ? "bg-green-500/20 text-green-400" :
+                          devis.status === "rejected" ? "bg-red-500/20 text-red-400" :
+                          "bg-yellow-500/20 text-yellow-400"
+                        }`}>
+                          {devis.status === "accepted" ? "Accepté" : devis.status === "rejected" ? "Refusé" : "En attente"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Invoices Tab */}
+        {activeTab === "invoices" && (
+          <div className="space-y-6">
+            <h2 className="font-primary font-bold text-xl mb-4">🧾 Mes Factures</h2>
+            {myInvoices.length === 0 ? (
+              <div className="bg-card border border-white/10 p-8 text-center">
+                <File size={48} className="mx-auto text-white/20 mb-4" />
+                <p className="text-white/60">Aucune facture pour le moment</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {myInvoices.map((invoice) => (
+                  <div key={invoice.invoice_id} className="bg-card border border-white/10 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      <h3 className="font-bold">Facture N° {invoice.invoice_number}</h3>
+                      <p className="text-white/40 text-sm">📅 {invoice.invoice_date}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <p className="text-xl font-bold text-primary">{invoice.amount}€</p>
+                      {invoice.pdf_url && (
+                        <a
+                          href={`${BACKEND_URL}${invoice.pdf_url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                        >
+                          <Download size={16} /> Télécharger PDF
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Payments Tab */}
+        {activeTab === "payments" && (
+          <div className="space-y-6">
+            <h2 className="font-primary font-bold text-xl mb-4">💰 Mes Paiements</h2>
+            
+            {/* Payment Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-card border border-white/10 p-6 text-center">
+                <p className="text-white/60 text-sm mb-1">Total Devis</p>
+                <p className="text-3xl font-bold text-white">{myPayments.total_amount}€</p>
+              </div>
+              <div className="bg-card border border-white/10 p-6 text-center">
+                <p className="text-white/60 text-sm mb-1">Déjà Payé</p>
+                <p className="text-3xl font-bold text-green-500">{myPayments.total_paid}€</p>
+              </div>
+              <div className="bg-card border border-white/10 p-6 text-center">
+                <p className="text-white/60 text-sm mb-1">Reste à Payer</p>
+                <p className="text-3xl font-bold text-primary">{myPayments.remaining}€</p>
+              </div>
+            </div>
+
+            {/* Payment History */}
+            <div className="bg-card border border-white/10 p-6">
+              <h3 className="font-bold text-lg mb-4">Historique des paiements</h3>
+              {myPayments.payments.length === 0 ? (
+                <p className="text-white/40 text-center py-4">Aucun paiement enregistré</p>
+              ) : (
+                <div className="space-y-3">
+                  {myPayments.payments.map((payment) => (
+                    <div key={payment.payment_id} className="flex justify-between items-center py-3 px-4 bg-background border border-white/10">
+                      <div>
+                        <p className="font-semibold">{payment.amount}€</p>
+                        <p className="text-white/40 text-sm">{payment.payment_date}</p>
+                      </div>
+                      <div className="text-right">
+                        {payment.payment_method && <p className="text-white/60 text-sm">{payment.payment_method}</p>}
+                        <span className="text-green-400 text-xs">✓ Payé</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Galleries Tab */}
         {activeTab === "galleries" && (
           <>
