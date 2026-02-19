@@ -747,14 +747,14 @@ const Lightbox = ({ selectedItem, onClose }) => {
         >
           {selectedItem.media_type === "photo" ? (
             <img
-              src={selectedItem.media_url}
+              src={selectedItem.media_url?.startsWith('http') ? selectedItem.media_url : `${BACKEND_URL}${selectedItem.media_url}`}
               alt={selectedItem.title}
               className="w-full max-h-[80vh] object-contain"
             />
           ) : (
             <div className="aspect-video">
               <iframe
-                src={selectedItem.media_url}
+                src={selectedItem.media_url?.startsWith('http') ? selectedItem.media_url : `${BACKEND_URL}${selectedItem.media_url}`}
                 title={selectedItem.title}
                 className="w-full h-full"
                 allowFullScreen
