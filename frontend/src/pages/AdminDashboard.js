@@ -4505,8 +4505,37 @@ const AdminDashboard = () => {
               )}
 
               <p className="text-white/60 text-sm mb-6">
-                Envoyez des fichiers directement dans l'espace client. Maximum 5 Go par fichier. Le client sera notifié par email.
+                Envoyez des fichiers directement dans l'espace client. Maximum 10 Go par fichier. Le client sera notifié par email.
               </p>
+
+              {/* Download All as ZIP */}
+              <div className="mb-6">
+                <button
+                  onClick={() => {
+                    fetch(`${API}/admin/client/${showClientFileTransfer.id}/files-zip`, { headers })
+                      .then(res => {
+                        if (!res.ok) throw new Error("Aucun fichier à télécharger");
+                        return res.blob();
+                      })
+                      .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `Fichiers_${showClientFileTransfer.name.replace(/\s/g, '_')}.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        a.remove();
+                        toast.success("Téléchargement ZIP en cours...");
+                      })
+                      .catch((e) => toast.error(e.message || "Erreur lors du téléchargement"));
+                  }}
+                  className="btn-outline px-4 py-2 text-sm flex items-center gap-2"
+                  data-testid="download-client-files-zip"
+                >
+                  <FileArchive size={16} /> Télécharger tous les fichiers (ZIP)
+                </button>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {/* Music Upload */}
