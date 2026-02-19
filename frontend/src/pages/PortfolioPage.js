@@ -484,7 +484,7 @@ const PortfolioPage = () => {
                     <div className="relative aspect-video">
                       {item.thumbnail_url ? (
                         <img
-                          src={item.thumbnail_url}
+                          src={item.thumbnail_url.startsWith('http') ? item.thumbnail_url : `${BACKEND_URL}${item.thumbnail_url}`}
                           alt={item.title}
                           className="w-full h-full object-cover"
                         />
