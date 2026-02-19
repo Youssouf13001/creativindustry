@@ -4352,8 +4352,8 @@ async def upload_client_transfer(
     if file_type not in ["music", "documents", "photos"]:
         raise HTTPException(status_code=400, detail="Type de fichier invalide. Utilisez: music, documents, photos")
     
-    # Check file size (100MB max)
-    MAX_SIZE = 100 * 1024 * 1024  # 100MB
+    # Check file size (5GB max)
+    MAX_SIZE = 5 * 1024 * 1024 * 1024  # 5GB
     content = await file.read()
     if len(content) > MAX_SIZE:
         raise HTTPException(status_code=400, detail="Fichier trop volumineux. Maximum 100MB.")
