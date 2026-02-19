@@ -1202,6 +1202,20 @@ const AdminDashboard = () => {
               {tab.label}
             </button>
           ))}
+          
+          {/* Chat Button */}
+          <button
+            onClick={() => setShowChat(true)}
+            className="relative ml-4 bg-primary text-black px-4 py-2 text-sm font-bold hover:bg-primary/90 transition-colors flex items-center gap-2"
+            data-testid="admin-chat-button"
+          >
+            <MessageSquare size={16} /> Chat
+            {unreadMessages > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                {unreadMessages}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Calendar Tab */}
