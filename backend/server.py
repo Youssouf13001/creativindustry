@@ -4083,6 +4083,407 @@ async def download_social_media_zip():
     )
 
 
+# ==================== INTEGRATION ENDPOINTS (Communication avec site Devis) ====================
+
+# Secret API key for communication between sites (à configurer dans .env)
+INTEGRATION_API_KEY = os.environ.get('INTEGRATION_API_KEY', 'creativindustry-devis-secret-key-2024')
+
+
+def verify_integration_key(api_key: str):
+    """Verify the API key from devis site"""
+    if api_key != INTEGRATION_API_KEY:
+        raise HTTPException(status_code=401, detail="Clé API invalide")
+
+
+def generate_temp_password():
+    """Generate a temporary password"""
+    import string
+    import random
+    chars = string.ascii_letters + string.digits
+    return ''.join(random.choice(chars) for _ in range(12))
+
+
+@api_router.post("/integration/create-client-from-devis")
+async def create_client_from_devis(data: IntegrationCreateClient):
+    """Create a client account when devis is accepted on devis site"""
+    verify_integration_key(data.api_key)
+    
+    # Check if client already exists
+    existing = await db.clients.find_one({"email": data.email})
+    if existing:
+        # Update existing client with devis info
+        await db.clients.update_one(
+            {"email": data.email},
+            {"$set": {"devis_id": data.devis_id}}
+        )
+        client_id = existing["id"]
+        logging.info(f"Existing client {data.email} linked to devis {data.devis_id}")
+    else:
+        # Create new client with temporary password
+        temp_password = generate_temp_password()
+        hashed_password = bcrypt.hashpw(temp_password.encode(), bcrypt.gensalt()).decode()
+        
+        client_id = str(uuid.uuid4())
+        new_client = {
+            "id": client_id,
+            "email": data.email,
+            "name": data.name,
+            "phone": data.phone,
+            "password": hashed_password,
+            "must_change_password": True,
+            "newsletter_subscribed": True,
+            "devis_id": data.devis_id,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "created_from": "devis_site"
+        }
+        await db.clients.insert_one(new_client)
+        
+        # Send welcome email with credentials
+        site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+                <div style="background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); padding: 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #000; font-size: 24px;">🎉 Bienvenue chez CREATIVINDUSTRY</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <p style="font-size: 18px;">Bonjour {data.name},</p>
+                    <p style="color: #ccc;">Félicitations ! Votre devis a été accepté. Votre espace client est maintenant disponible.</p>
+                    
+                    <div style="background-color: #3a3a3a; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <h3 style="color: #D4AF37; margin-top: 0;">Vos identifiants de connexion :</h3>
+                        <p><strong>Email :</strong> {data.email}</p>
+                        <p><strong>Mot de passe temporaire :</strong> {temp_password}</p>
+                    </div>
+                    
+                    <p style="color: #ff9800; font-size: 14px;">⚠️ Vous devrez changer ce mot de passe lors de votre première connexion.</p>
+                    
+                    <a href="{site_url}/client" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 20px;">
+                        Accéder à mon espace →
+                    </a>
+                    
+                    <p style="color: #888; font-size: 12px; margin-top: 30px;">
+                        Dans votre espace, vous pourrez :<br>
+                        • Consulter vos devis et factures<br>
+                        • Transférer des fichiers (musiques, photos, documents)<br>
+                        • Suivre vos paiements<br>
+                        • Accéder à vos galeries photos
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        try:
+            send_email(data.email, "🎉 Votre espace client CREATIVINDUSTRY est prêt !", html_content)
+        except Exception as e:
+            logging.error(f"Failed to send welcome email to {data.email}: {e}")
+        
+        logging.info(f"New client {data.email} created from devis {data.devis_id}")
+    
+    # Store devis data
+    await db.client_devis.update_one(
+        {"devis_id": data.devis_id},
+        {"$set": {
+            "client_id": client_id,
+            "client_email": data.email,
+            "devis_id": data.devis_id,
+            "devis_data": data.devis_data,
+            "event_date": data.event_date,
+            "event_type": data.event_type,
+            "total_amount": data.total_amount,
+            "status": "accepted",
+            "synced_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    return {"success": True, "client_id": client_id, "message": "Client créé avec succès"}
+
+
+@api_router.post("/integration/sync-devis")
+async def sync_devis_from_devis_site(data: IntegrationSyncDevis):
+    """Sync devis updates from devis site"""
+    verify_integration_key(data.api_key)
+    
+    # Find client
+    client = await db.clients.find_one({"email": data.client_email})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Update or create devis record
+    await db.client_devis.update_one(
+        {"devis_id": data.devis_id},
+        {"$set": {
+            "client_id": client["id"],
+            "client_email": data.client_email,
+            "devis_id": data.devis_id,
+            "devis_data": data.devis_data,
+            "total_amount": data.total_amount,
+            "status": data.status,
+            "synced_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "Devis synchronisé"}
+
+
+@api_router.post("/integration/sync-invoice")
+async def sync_invoice_from_devis_site(data: IntegrationSyncInvoice):
+    """Sync invoice from devis site"""
+    verify_integration_key(data.api_key)
+    
+    # Find client
+    client = await db.clients.find_one({"email": data.client_email})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Save PDF if provided
+    pdf_path = None
+    if data.pdf_data:
+        try:
+            pdf_bytes = base64.b64decode(data.pdf_data)
+            pdf_filename = f"facture_{data.invoice_number.replace('/', '_')}_{client['id']}.pdf"
+            pdf_path = UPLOADS_DIR / "client_transfers" / "documents" / pdf_filename
+            with open(pdf_path, 'wb') as f:
+                f.write(pdf_bytes)
+            pdf_path = f"/uploads/client_transfers/documents/{pdf_filename}"
+        except Exception as e:
+            logging.error(f"Failed to save invoice PDF: {e}")
+    
+    # Store invoice
+    await db.client_invoices.update_one(
+        {"invoice_id": data.invoice_id},
+        {"$set": {
+            "client_id": client["id"],
+            "client_email": data.client_email,
+            "devis_id": data.devis_id,
+            "invoice_id": data.invoice_id,
+            "invoice_number": data.invoice_number,
+            "invoice_date": data.invoice_date,
+            "amount": data.amount,
+            "pdf_url": pdf_path or data.pdf_url,
+            "synced_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    # Notify client by email
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; padding: 30px;">
+            <h2 style="color: #D4AF37;">🧾 Nouvelle facture disponible</h2>
+            <p>Bonjour {client.get('name', 'Client')},</p>
+            <p>Une nouvelle facture est disponible dans votre espace client :</p>
+            <div style="background-color: #3a3a3a; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Facture N° :</strong> {data.invoice_number}</p>
+                <p><strong>Date :</strong> {data.invoice_date}</p>
+                <p><strong>Montant :</strong> {data.amount}€</p>
+            </div>
+            <a href="{site_url}/client/dashboard" style="display: inline-block; background: #D4AF37; color: #000; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 5px;">
+                Voir ma facture →
+            </a>
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        send_email(data.client_email, f"🧾 Facture N°{data.invoice_number} - CREATIVINDUSTRY", html_content)
+    except Exception as e:
+        logging.error(f"Failed to send invoice notification: {e}")
+    
+    return {"success": True, "message": "Facture synchronisée"}
+
+
+@api_router.post("/integration/sync-payment")
+async def sync_payment_from_devis_site(data: IntegrationSyncPayment):
+    """Sync payment from devis site"""
+    verify_integration_key(data.api_key)
+    
+    # Find client
+    client = await db.clients.find_one({"email": data.client_email})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Store payment
+    await db.client_payments.update_one(
+        {"payment_id": data.payment_id},
+        {"$set": {
+            "client_id": client["id"],
+            "client_email": data.client_email,
+            "devis_id": data.devis_id,
+            "payment_id": data.payment_id,
+            "amount": data.amount,
+            "payment_date": data.payment_date,
+            "payment_method": data.payment_method,
+            "synced_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "Paiement synchronisé"}
+
+
+# ==================== CLIENT FILE TRANSFER ENDPOINTS ====================
+
+@api_router.post("/client/transfer/{file_type}")
+async def upload_client_transfer(
+    file_type: str,
+    file: UploadFile = File(...),
+    client: dict = Depends(get_current_client)
+):
+    """Upload a file (music, documents, photos) - Max 100MB"""
+    if file_type not in ["music", "documents", "photos"]:
+        raise HTTPException(status_code=400, detail="Type de fichier invalide. Utilisez: music, documents, photos")
+    
+    # Check file size (100MB max)
+    MAX_SIZE = 100 * 1024 * 1024  # 100MB
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="Fichier trop volumineux. Maximum 100MB.")
+    
+    # Validate file types
+    allowed_extensions = {
+        "music": [".mp3", ".wav", ".m4a", ".flac", ".aac", ".ogg"],
+        "documents": [".pdf", ".doc", ".docx", ".txt", ".zip", ".rar"],
+        "photos": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic"]
+    }
+    
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in allowed_extensions[file_type]:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Extension non autorisée pour {file_type}. Extensions acceptées: {', '.join(allowed_extensions[file_type])}"
+        )
+    
+    # Create client folder if not exists
+    client_folder = UPLOADS_DIR / "client_transfers" / file_type / client["id"]
+    client_folder.mkdir(parents=True, exist_ok=True)
+    
+    # Save file
+    file_id = str(uuid.uuid4())
+    safe_filename = f"{file_id}{file_ext}"
+    file_path = client_folder / safe_filename
+    
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Store in database
+    file_record = {
+        "id": file_id,
+        "client_id": client["id"],
+        "file_type": file_type,
+        "original_name": file.filename,
+        "stored_name": safe_filename,
+        "file_url": f"/uploads/client_transfers/{file_type}/{client['id']}/{safe_filename}",
+        "size_bytes": len(content),
+        "uploaded_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.client_transfers.insert_one(file_record)
+    
+    return {
+        "success": True,
+        "file_id": file_id,
+        "file_url": file_record["file_url"],
+        "message": f"Fichier uploadé avec succès dans {file_type}"
+    }
+
+
+@api_router.get("/client/transfers")
+async def get_client_transfers(client: dict = Depends(get_current_client)):
+    """Get all transferred files for current client"""
+    files = await db.client_transfers.find(
+        {"client_id": client["id"]},
+        {"_id": 0}
+    ).sort("uploaded_at", -1).to_list(500)
+    
+    # Group by type
+    grouped = {
+        "music": [],
+        "documents": [],
+        "photos": []
+    }
+    for f in files:
+        if f["file_type"] in grouped:
+            grouped[f["file_type"]].append(f)
+    
+    return grouped
+
+
+@api_router.delete("/client/transfer/{file_id}")
+async def delete_client_transfer(file_id: str, client: dict = Depends(get_current_client)):
+    """Delete a transferred file"""
+    file_record = await db.client_transfers.find_one({"id": file_id, "client_id": client["id"]})
+    if not file_record:
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+    
+    # Delete physical file
+    file_path = UPLOADS_DIR / "client_transfers" / file_record["file_type"] / client["id"] / file_record["stored_name"]
+    if file_path.exists():
+        file_path.unlink()
+    
+    # Delete from database
+    await db.client_transfers.delete_one({"id": file_id})
+    
+    return {"success": True, "message": "Fichier supprimé"}
+
+
+# ==================== CLIENT DEVIS/INVOICE/PAYMENT ENDPOINTS ====================
+
+@api_router.get("/client/my-devis")
+async def get_client_devis(client: dict = Depends(get_current_client)):
+    """Get all devis for current client"""
+    devis = await db.client_devis.find(
+        {"client_id": client["id"]},
+        {"_id": 0}
+    ).sort("synced_at", -1).to_list(50)
+    return devis
+
+
+@api_router.get("/client/my-invoices")
+async def get_client_invoices(client: dict = Depends(get_current_client)):
+    """Get all invoices for current client"""
+    invoices = await db.client_invoices.find(
+        {"client_id": client["id"]},
+        {"_id": 0}
+    ).sort("invoice_date", -1).to_list(50)
+    return invoices
+
+
+@api_router.get("/client/my-payments")
+async def get_client_payments(client: dict = Depends(get_current_client)):
+    """Get all payments and summary for current client"""
+    # Get all devis for total amount
+    devis = await db.client_devis.find(
+        {"client_id": client["id"]},
+        {"_id": 0, "total_amount": 1, "devis_id": 1}
+    ).to_list(50)
+    
+    total_devis = sum(d.get("total_amount", 0) for d in devis)
+    
+    # Get all payments
+    payments = await db.client_payments.find(
+        {"client_id": client["id"]},
+        {"_id": 0}
+    ).sort("payment_date", -1).to_list(100)
+    
+    total_paid = sum(p.get("amount", 0) for p in payments)
+    remaining = total_devis - total_paid
+    
+    return {
+        "total_amount": total_devis,
+        "total_paid": total_paid,
+        "remaining": remaining,
+        "payments": payments
+    }
+
+
 # ==================== NEWSLETTER ENDPOINTS ====================
 
 @api_router.get("/newsletter/unsubscribe/{client_id}")
