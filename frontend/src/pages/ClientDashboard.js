@@ -1074,6 +1074,61 @@ const ClientDashboard = () => {
           />
         </div>
       )}
+
+      {/* Force Password Change Modal */}
+      {showMustChangePassword && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-primary p-8 max-w-md w-full">
+            <div className="text-center mb-6">
+              <Lock size={48} className="mx-auto text-primary mb-4" />
+              <h2 className="text-xl font-bold">Changement de mot de passe requis</h2>
+              <p className="text-white/60 text-sm mt-2">
+                Pour des raisons de sécurité, vous devez changer votre mot de passe temporaire.
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm text-white/60 mb-1">Mot de passe actuel (temporaire)</label>
+                <input
+                  type="password"
+                  value={forcePasswordData.current}
+                  onChange={(e) => setForcePasswordData(prev => ({ ...prev, current: e.target.value }))}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  placeholder="Mot de passe reçu par email"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-1">Nouveau mot de passe</label>
+                <input
+                  type="password"
+                  value={forcePasswordData.new}
+                  onChange={(e) => setForcePasswordData(prev => ({ ...prev, new: e.target.value }))}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  placeholder="Minimum 6 caractères"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-white/60 mb-1">Confirmer le mot de passe</label>
+                <input
+                  type="password"
+                  value={forcePasswordData.confirm}
+                  onChange={(e) => setForcePasswordData(prev => ({ ...prev, confirm: e.target.value }))}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  placeholder="Confirmer votre nouveau mot de passe"
+                />
+              </div>
+              <button
+                onClick={handleForcePasswordChange}
+                disabled={!forcePasswordData.current || !forcePasswordData.new || !forcePasswordData.confirm}
+                className="btn-primary w-full py-3 mt-4 disabled:opacity-50"
+              >
+                Changer mon mot de passe
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
