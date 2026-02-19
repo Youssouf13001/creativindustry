@@ -4649,6 +4649,9 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
+
+        {/* Admin Chat Modal */}
+        <AdminChat isOpen={showChat} onClose={() => { setShowChat(false); fetchUnreadMessages(); }} />
       </div>
     </div>
   );
