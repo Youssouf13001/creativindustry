@@ -4444,6 +4444,155 @@ async def delete_client_transfer(file_id: str, client: dict = Depends(get_curren
     return {"success": True, "message": "Fichier supprimé"}
 
 
+# ==================== ADMIN FILE TRANSFER TO CLIENTS ====================
+
+@api_router.post("/admin/transfer-to-client/{client_id}/{file_type}")
+async def admin_upload_file_to_client(
+    client_id: str,
+    file_type: str,
+    file: UploadFile = File(...),
+    admin: dict = Depends(get_current_admin)
+):
+    """Admin uploads a file for a specific client - Max 5GB"""
+    if file_type not in ["music", "documents", "photos", "videos"]:
+        raise HTTPException(status_code=400, detail="Type de fichier invalide. Utilisez: music, documents, photos, videos")
+    
+    # Verify client exists
+    client = await db.clients.find_one({"id": client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Read file in chunks for large files
+    MAX_SIZE = 5 * 1024 * 1024 * 1024  # 5GB
+    
+    # Validate file types
+    allowed_extensions = {
+        "music": [".mp3", ".wav", ".m4a", ".flac", ".aac", ".ogg"],
+        "documents": [".pdf", ".doc", ".docx", ".txt", ".zip", ".rar"],
+        "photos": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic"],
+        "videos": [".mp4", ".mov", ".avi", ".mkv", ".webm"]
+    }
+    
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext not in allowed_extensions[file_type]:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Extension non autorisée pour {file_type}. Extensions acceptées: {', '.join(allowed_extensions[file_type])}"
+        )
+    
+    # Create client folder if not exists
+    client_folder = UPLOADS_DIR / "client_transfers" / file_type / client_id
+    client_folder.mkdir(parents=True, exist_ok=True)
+    
+    # Save file with streaming for large files
+    file_id = str(uuid.uuid4())
+    safe_filename = f"{file_id}{file_ext}"
+    file_path = client_folder / safe_filename
+    
+    total_size = 0
+    with open(file_path, "wb") as f:
+        while chunk := await file.read(1024 * 1024):  # Read 1MB at a time
+            total_size += len(chunk)
+            if total_size > MAX_SIZE:
+                f.close()
+                file_path.unlink()  # Delete partial file
+                raise HTTPException(status_code=400, detail="Fichier trop volumineux. Maximum 5GB.")
+            f.write(chunk)
+    
+    # Store in database
+    file_record = {
+        "id": file_id,
+        "client_id": client_id,
+        "file_type": file_type,
+        "original_name": file.filename,
+        "stored_name": safe_filename,
+        "file_url": f"/uploads/client_transfers/{file_type}/{client_id}/{safe_filename}",
+        "size_bytes": total_size,
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "uploaded_by": "admin",
+        "admin_email": admin.get("email")
+    }
+    await db.client_transfers.insert_one(file_record)
+    
+    # Notify client by email
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    size_mb = round(total_size / (1024 * 1024), 2)
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; padding: 30px;">
+            <h2 style="color: #D4AF37;">📁 Nouveau fichier disponible</h2>
+            <p>Bonjour {client.get('name', 'Client')},</p>
+            <p>Un nouveau fichier a été ajouté à votre espace client :</p>
+            <div style="background-color: #3a3a3a; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Fichier :</strong> {file.filename}</p>
+                <p><strong>Type :</strong> {file_type}</p>
+                <p><strong>Taille :</strong> {size_mb} MB</p>
+            </div>
+            <a href="{site_url}/client/dashboard" style="display: inline-block; background: #D4AF37; color: #000; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 5px;">
+                Accéder à mon espace →
+            </a>
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        send_email(client.get("email"), f"📁 Nouveau fichier - {file.filename}", html_content)
+    except Exception as e:
+        logging.error(f"Failed to send file notification: {e}")
+    
+    logging.info(f"Admin {admin.get('email')} uploaded {file.filename} to client {client_id}")
+    
+    return {
+        "success": True,
+        "file_id": file_id,
+        "file_url": file_record["file_url"],
+        "size_mb": size_mb,
+        "message": f"Fichier envoyé au client {client.get('name')}"
+    }
+
+
+@api_router.get("/admin/client-transfers/{client_id}")
+async def admin_get_client_transfers(client_id: str, admin: dict = Depends(get_current_admin)):
+    """Get all transferred files for a specific client"""
+    files = await db.client_transfers.find(
+        {"client_id": client_id},
+        {"_id": 0}
+    ).sort("uploaded_at", -1).to_list(500)
+    
+    # Group by type
+    grouped = {
+        "music": [],
+        "documents": [],
+        "photos": [],
+        "videos": []
+    }
+    for f in files:
+        if f["file_type"] in grouped:
+            grouped[f["file_type"]].append(f)
+    
+    return grouped
+
+
+@api_router.delete("/admin/client-transfer/{file_id}")
+async def admin_delete_client_transfer(file_id: str, admin: dict = Depends(get_current_admin)):
+    """Admin deletes a client's transferred file"""
+    file_record = await db.client_transfers.find_one({"id": file_id})
+    if not file_record:
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+    
+    # Delete physical file
+    file_path = UPLOADS_DIR / "client_transfers" / file_record["file_type"] / file_record["client_id"] / file_record["stored_name"]
+    if file_path.exists():
+        file_path.unlink()
+    
+    # Delete from database
+    await db.client_transfers.delete_one({"id": file_id})
+    
+    return {"success": True, "message": "Fichier supprimé"}
+
+
 # ==================== CLIENT DEVIS/INVOICE/PAYMENT ENDPOINTS ====================
 
 @api_router.get("/client/my-devis")
