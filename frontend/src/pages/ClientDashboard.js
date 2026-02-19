@@ -271,31 +271,44 @@ const ClientDashboard = () => {
     }
   }, [activeTab]);
 
-  // Upload file transfer
-  const handleFileTransfer = async (fileType, file) => {
-    if (!file) return;
+  // Upload file transfer (supports multiple files)
+  const handleFileTransfer = async (fileType, files) => {
+    if (!files || files.length === 0) return;
     
-    // Check file size (100MB max)
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("Fichier trop volumineux. Maximum 100MB.");
-      return;
+    const fileArray = Array.from(files);
+    const MAX_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
+    
+    // Check file sizes
+    for (const file of fileArray) {
+      if (file.size > MAX_SIZE) {
+        toast.error(`Fichier "${file.name}" trop volumineux. Maximum 5 Go.`);
+        return;
+      }
     }
     
     setUploadingTransfer(true);
     setUploadProgress(0);
     
-    const formData = new FormData();
-    formData.append("file", file);
+    let uploaded = 0;
+    const total = fileArray.length;
     
     try {
-      await axios.post(`${API}/client/transfer/${fileType}`, formData, {
-        headers: { ...headers, "Content-Type": "multipart/form-data" },
-        onUploadProgress: (progressEvent) => {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          setUploadProgress(percent);
-        }
-      });
-      toast.success("Fichier uploadé avec succès !");
+      for (const file of fileArray) {
+        const formData = new FormData();
+        formData.append("file", file);
+        
+        await axios.post(`${API}/client/transfer/${fileType}`, formData, {
+          headers: { ...headers, "Content-Type": "multipart/form-data" },
+          onUploadProgress: (progressEvent) => {
+            const fileProgress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            const overallProgress = Math.round(((uploaded * 100) + fileProgress) / total);
+            setUploadProgress(overallProgress);
+          }
+        });
+        uploaded++;
+        setUploadProgress(Math.round((uploaded * 100) / total));
+      }
+      toast.success(`${total} fichier(s) uploadé(s) avec succès !`);
       fetchDevisData();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erreur lors de l'upload");
