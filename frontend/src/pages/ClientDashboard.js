@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight, FileArchive, User, Settings, Lock, Upload, Loader, Bell } from "lucide-react";
+import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight, FileArchive, User, Settings, Lock, Upload, Loader, Bell, Music, File, CreditCard, Receipt, Euro, Trash2, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 
@@ -26,6 +26,16 @@ const ClientDashboard = () => {
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(true);
   const [updatingNewsletter, setUpdatingNewsletter] = useState(false);
   const profilePhotoRef = useRef(null);
+  
+  // New states for devis/invoices/payments/transfers
+  const [myDevis, setMyDevis] = useState([]);
+  const [myInvoices, setMyInvoices] = useState([]);
+  const [myPayments, setMyPayments] = useState({ total_amount: 0, total_paid: 0, remaining: 0, payments: [] });
+  const [myTransfers, setMyTransfers] = useState({ music: [], documents: [], photos: [] });
+  const [uploadingTransfer, setUploadingTransfer] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [showMustChangePassword, setShowMustChangePassword] = useState(false);
+  const [forcePasswordData, setForcePasswordData] = useState({ current: "", new: "", confirm: "" });
   
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
