@@ -4381,7 +4381,13 @@ async def upload_client_transfer(
     
     total_size = 0
     with open(file_path, "wb") as f:
-        f.write(content)
+        while chunk := await file.read(1024 * 1024):  # Read 1MB at a time
+            total_size += len(chunk)
+            if total_size > MAX_SIZE:
+                f.close()
+                file_path.unlink()  # Delete partial file
+                raise HTTPException(status_code=400, detail="Fichier trop volumineux. Maximum 5GB.")
+            f.write(chunk)
     
     # Store in database
     file_record = {
@@ -4391,7 +4397,7 @@ async def upload_client_transfer(
         "original_name": file.filename,
         "stored_name": safe_filename,
         "file_url": f"/uploads/client_transfers/{file_type}/{client['id']}/{safe_filename}",
-        "size_bytes": len(content),
+        "size_bytes": total_size,
         "uploaded_at": datetime.now(timezone.utc).isoformat()
     }
     await db.client_transfers.insert_one(file_record)
