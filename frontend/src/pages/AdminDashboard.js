@@ -4450,6 +4450,147 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
+
+        {/* Client File Transfer Modal */}
+        {showClientFileTransfer && (
+          <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+            <div className="bg-card border border-primary p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-primary font-bold text-xl">
+                  📁 Fichiers de {showClientFileTransfer.name}
+                </h3>
+                <button onClick={() => setShowClientFileTransfer(null)} className="text-white/60 hover:text-white text-2xl">×</button>
+              </div>
+
+              {/* Upload Progress */}
+              {uploadingToClient && (
+                <div className="bg-primary/20 border border-primary p-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <Loader className="animate-spin text-primary" size={20} />
+                    <span>Upload en cours... {uploadToClientProgress}%</span>
+                  </div>
+                  <div className="w-full bg-white/20 h-2 mt-2 rounded">
+                    <div className="bg-primary h-2 rounded transition-all" style={{ width: `${uploadToClientProgress}%` }} />
+                  </div>
+                </div>
+              )}
+
+              <p className="text-white/60 text-sm mb-6">
+                Envoyez des fichiers directement dans l'espace client. Maximum 5 Go par fichier. Le client sera notifié par email.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {/* Music Upload */}
+                <div className="bg-background border border-white/10 p-4">
+                  <h4 className="font-bold text-sm mb-3 flex items-center gap-2">🎵 Musiques</h4>
+                  <label className="btn-primary w-full py-2 text-sm cursor-pointer flex items-center justify-center gap-2">
+                    <Upload size={14} /> Ajouter
+                    <input
+                      type="file"
+                      accept=".mp3,.wav,.m4a,.flac,.aac,.ogg"
+                      className="hidden"
+                      onChange={(e) => uploadFileToClient("music", e.target.files[0])}
+                      disabled={uploadingToClient}
+                    />
+                  </label>
+                  <p className="text-xs text-white/40 mt-2">MP3, WAV, M4A...</p>
+                </div>
+
+                {/* Documents Upload */}
+                <div className="bg-background border border-white/10 p-4">
+                  <h4 className="font-bold text-sm mb-3 flex items-center gap-2">📄 Documents</h4>
+                  <label className="btn-primary w-full py-2 text-sm cursor-pointer flex items-center justify-center gap-2">
+                    <Upload size={14} /> Ajouter
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.txt,.zip,.rar"
+                      className="hidden"
+                      onChange={(e) => uploadFileToClient("documents", e.target.files[0])}
+                      disabled={uploadingToClient}
+                    />
+                  </label>
+                  <p className="text-xs text-white/40 mt-2">PDF, DOC, ZIP...</p>
+                </div>
+
+                {/* Photos Upload */}
+                <div className="bg-background border border-white/10 p-4">
+                  <h4 className="font-bold text-sm mb-3 flex items-center gap-2">📷 Photos</h4>
+                  <label className="btn-primary w-full py-2 text-sm cursor-pointer flex items-center justify-center gap-2">
+                    <Upload size={14} /> Ajouter
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.gif,.webp,.heic"
+                      className="hidden"
+                      onChange={(e) => uploadFileToClient("photos", e.target.files[0])}
+                      disabled={uploadingToClient}
+                    />
+                  </label>
+                  <p className="text-xs text-white/40 mt-2">JPG, PNG, WEBP...</p>
+                </div>
+
+                {/* Videos Upload */}
+                <div className="bg-background border border-white/10 p-4">
+                  <h4 className="font-bold text-sm mb-3 flex items-center gap-2">🎬 Vidéos</h4>
+                  <label className="btn-primary w-full py-2 text-sm cursor-pointer flex items-center justify-center gap-2">
+                    <Upload size={14} /> Ajouter
+                    <input
+                      type="file"
+                      accept=".mp4,.mov,.avi,.mkv,.webm"
+                      className="hidden"
+                      onChange={(e) => uploadFileToClient("videos", e.target.files[0])}
+                      disabled={uploadingToClient}
+                    />
+                  </label>
+                  <p className="text-xs text-white/40 mt-2">MP4, MOV, AVI...</p>
+                </div>
+              </div>
+
+              {/* Files List */}
+              <div className="space-y-4">
+                {["music", "documents", "photos", "videos"].map(type => (
+                  <div key={type} className="border border-white/10 p-4">
+                    <h4 className="font-bold text-sm mb-3 capitalize flex items-center gap-2">
+                      {type === "music" && "🎵"}{type === "documents" && "📄"}{type === "photos" && "📷"}{type === "videos" && "🎬"} 
+                      {type === "music" ? "Musiques" : type === "documents" ? "Documents" : type === "photos" ? "Photos" : "Vidéos"} 
+                      ({clientTransfers[type]?.length || 0})
+                    </h4>
+                    {clientTransfers[type]?.length > 0 ? (
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {clientTransfers[type].map(file => (
+                          <div key={file.id} className="flex items-center justify-between py-2 px-3 bg-card border border-white/10">
+                            <div className="flex-1 truncate">
+                              <span className="text-sm">{file.original_name}</span>
+                              <span className="text-xs text-white/40 ml-2">
+                                ({(file.size_bytes / (1024 * 1024)).toFixed(2)} MB)
+                              </span>
+                            </div>
+                            <button 
+                              onClick={() => deleteClientTransferFile(file.id)}
+                              className="text-red-400 hover:text-red-300 ml-2"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-white/30 text-xs">Aucun fichier</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button 
+                  onClick={() => setShowClientFileTransfer(null)} 
+                  className="btn-outline px-6 py-2"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
