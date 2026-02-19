@@ -1175,6 +1175,8 @@ class ClientResponse(BaseModel):
     phone: Optional[str] = None
     profile_photo: Optional[str] = None
     newsletter_subscribed: Optional[bool] = True
+    must_change_password: Optional[bool] = False
+    devis_id: Optional[str] = None  # Linked devis from devis site
 
 class ClientFile(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -1194,6 +1196,56 @@ class ClientFileCreate(BaseModel):
     file_type: str
     file_url: str
     thumbnail_url: Optional[str] = None
+
+
+# ==================== INTEGRATION MODELS (from Devis site) ====================
+
+class IntegrationCreateClient(BaseModel):
+    """Model for creating client from devis site when devis is accepted"""
+    email: str
+    name: str
+    phone: Optional[str] = None
+    devis_id: str
+    devis_data: dict  # Full devis data
+    event_date: Optional[str] = None
+    event_type: Optional[str] = None
+    total_amount: float
+    api_key: str  # Secret key for authentication between sites
+
+
+class IntegrationSyncDevis(BaseModel):
+    """Model for syncing devis updates"""
+    client_email: str
+    devis_id: str
+    devis_data: dict
+    status: str  # pending, accepted, rejected
+    total_amount: float
+    api_key: str
+
+
+class IntegrationSyncInvoice(BaseModel):
+    """Model for syncing invoice from devis site"""
+    client_email: str
+    devis_id: str
+    invoice_id: str
+    invoice_number: str
+    invoice_date: str
+    amount: float
+    pdf_url: Optional[str] = None
+    pdf_data: Optional[str] = None  # Base64 encoded PDF
+    api_key: str
+
+
+class IntegrationSyncPayment(BaseModel):
+    """Model for syncing payment from devis site"""
+    client_email: str
+    devis_id: str
+    payment_id: str
+    amount: float
+    payment_date: str
+    payment_method: Optional[str] = None
+    api_key: str
+
 
 # ==================== CHAT MODELS ====================
 
