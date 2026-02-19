@@ -716,6 +716,35 @@ const ClientDashboard = () => {
                   {myTransfers.photos.length === 0 && <p className="text-white/30 text-xs text-center py-2">Aucune photo</p>}
                 </div>
               </div>
+
+              {/* Videos */}
+              <div className="bg-card border border-white/10 p-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Video size={20} className="text-primary" /> Vidéos
+                </h3>
+                <p className="text-white/40 text-xs mb-4">MP4, MOV, AVI, MKV, WEBM</p>
+                <label className="btn-outline w-full py-3 cursor-pointer flex items-center justify-center gap-2">
+                  <Upload size={16} /> Ajouter une vidéo
+                  <input
+                    type="file"
+                    accept=".mp4,.mov,.avi,.mkv,.webm"
+                    className="hidden"
+                    onChange={(e) => handleFileTransfer("videos", e.target.files[0])}
+                    disabled={uploadingTransfer}
+                  />
+                </label>
+                <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
+                  {(myTransfers.videos || []).map((file) => (
+                    <div key={file.id} className="flex items-center justify-between py-2 px-3 bg-background border border-white/10">
+                      <span className="text-sm truncate flex-1">{file.original_name}</span>
+                      <button onClick={() => handleDeleteTransfer(file.id)} className="text-red-400 hover:text-red-300 ml-2">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                  {(!myTransfers.videos || myTransfers.videos.length === 0) && <p className="text-white/30 text-xs text-center py-2">Aucune vidéo</p>}
+                </div>
+              </div>
             </div>
           </div>
         )}
