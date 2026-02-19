@@ -51,6 +51,7 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 (UPLOADS_DIR / "client_transfers" / "music").mkdir(exist_ok=True)
 (UPLOADS_DIR / "client_transfers" / "documents").mkdir(exist_ok=True)
 (UPLOADS_DIR / "client_transfers" / "photos").mkdir(exist_ok=True)
+(UPLOADS_DIR / "client_transfers" / "videos").mkdir(exist_ok=True)
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
