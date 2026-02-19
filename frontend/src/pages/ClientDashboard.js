@@ -613,7 +613,7 @@ const ClientDashboard = () => {
           <div className="space-y-6">
             <h2 className="font-primary font-bold text-xl mb-4">📤 Transférer des fichiers</h2>
             <p className="text-white/60 text-sm mb-6">
-              Envoyez-nous vos fichiers (musiques, documents, photos). Maximum 100MB par fichier.
+              Envoyez-nous vos fichiers (musiques, documents, photos, vidéos). Maximum 5 Go par fichier.
             </p>
 
             {/* Upload Progress */}
