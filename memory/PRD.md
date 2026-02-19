@@ -201,11 +201,28 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - `/api/admin/client/{client_id}/files-zip` - Télécharger fichiers client en ZIP
 
 ## Backlog
-- P1: Refactoring AdminDashboard.js (3500+ lignes) en composants séparés
+- P1: Refactoring AdminDashboard.js (4700+ lignes) en composants séparés
 - P1: Refactoring server.py en plusieurs routers FastAPI
 - P2: Rappels automatiques 24h avant le RDV
 - P2: Compression automatique des images à l'upload
-- P2: Problème de miniature - Les miniatures uploadées ne s'affichent pas correctement
+
+## Problèmes Résolus (19 Fév 2026)
+- ✅ **Problème de miniatures** : Les URLs relatives n'étaient pas préfixées avec `BACKEND_URL` dans `PortfolioPage.js`. Corrigé en ajoutant des vérifications `startsWith('http')` sur toutes les URLs de médias.
+
+## Intégration Paiements (Documentation)
+Pour synchroniser les paiements depuis le site devis, envoyer une requête POST à :
+```
+POST /api/integration/sync-payment
+{
+  "client_email": "client@example.com",
+  "devis_id": "uuid-du-devis",
+  "payment_id": "uuid-unique-paiement",
+  "amount": 400.00,
+  "payment_date": "2026-02-19",
+  "payment_method": "Virement bancaire",
+  "api_key": "votre-clé-api"
+}
+```
 
 ## Architecture Frontend (Refactorisé V10)
 ```
