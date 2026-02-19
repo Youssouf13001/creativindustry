@@ -33,6 +33,11 @@ const AdminDashboard = () => {
   const [showAddOption, setShowAddOption] = useState(false);
   const [newOption, setNewOption] = useState({ name: "", description: "", price: 0, category: "coverage" });
   const [editingPortfolio, setEditingPortfolio] = useState(null);
+  // Client file transfer states
+  const [showClientFileTransfer, setShowClientFileTransfer] = useState(null); // client object or null
+  const [clientTransfers, setClientTransfers] = useState({ music: [], documents: [], photos: [], videos: [] });
+  const [uploadingToClient, setUploadingToClient] = useState(false);
+  const [uploadToClientProgress, setUploadToClientProgress] = useState(0);
   const [uploadingPortfolio, setUploadingPortfolio] = useState(false);
   const [uploadingMultiplePhotos, setUploadingMultiplePhotos] = useState(false);
   const [multiplePhotosProgress, setMultiplePhotosProgress] = useState({ current: 0, total: 0 });
