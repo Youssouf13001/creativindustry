@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { Image, Video, Play, X, ArrowLeft, Users, Heart, Mic, Tv, ChevronLeft, ChevronRight, Pause } from "lucide-react";
-import { API } from "../config/api";
+import { API, BACKEND_URL } from "../config/api";
 
 const CATEGORIES = [
   { id: "wedding", label: "Mariages", icon: Heart, color: "from-pink-500 to-rose-600" },
