@@ -680,12 +680,13 @@ const ClientDashboard = () => {
                 </h3>
                 <p className="text-white/40 text-xs mb-4">PDF, DOC, DOCX, TXT, ZIP, RAR</p>
                 <label className="btn-outline w-full py-3 cursor-pointer flex items-center justify-center gap-2">
-                  <Upload size={16} /> Ajouter un document
+                  <Upload size={16} /> Ajouter des documents
                   <input
                     type="file"
                     accept=".pdf,.doc,.docx,.txt,.zip,.rar"
                     className="hidden"
-                    onChange={(e) => handleFileTransfer("documents", e.target.files[0])}
+                    multiple
+                    onChange={(e) => handleFileTransfer("documents", e.target.files)}
                     disabled={uploadingTransfer}
                   />
                 </label>
