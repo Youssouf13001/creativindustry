@@ -46,6 +46,11 @@ UPLOADS_DIR.mkdir(exist_ok=True)
 (UPLOADS_DIR / "clients").mkdir(exist_ok=True)
 (UPLOADS_DIR / "galleries").mkdir(exist_ok=True)
 (UPLOADS_DIR / "selections").mkdir(exist_ok=True)
+# New folders for client file transfers
+(UPLOADS_DIR / "client_transfers").mkdir(exist_ok=True)
+(UPLOADS_DIR / "client_transfers" / "music").mkdir(exist_ok=True)
+(UPLOADS_DIR / "client_transfers" / "documents").mkdir(exist_ok=True)
+(UPLOADS_DIR / "client_transfers" / "photos").mkdir(exist_ok=True)
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
