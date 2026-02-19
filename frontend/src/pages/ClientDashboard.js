@@ -650,12 +650,13 @@ const ClientDashboard = () => {
                 </h3>
                 <p className="text-white/40 text-xs mb-4">MP3, WAV, M4A, FLAC, AAC, OGG</p>
                 <label className="btn-outline w-full py-3 cursor-pointer flex items-center justify-center gap-2">
-                  <Upload size={16} /> Ajouter une musique
+                  <Upload size={16} /> Ajouter des musiques
                   <input
                     type="file"
                     accept=".mp3,.wav,.m4a,.flac,.aac,.ogg"
                     className="hidden"
-                    onChange={(e) => handleFileTransfer("music", e.target.files[0])}
+                    multiple
+                    onChange={(e) => handleFileTransfer("music", e.target.files)}
                     disabled={uploadingTransfer}
                   />
                 </label>
