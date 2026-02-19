@@ -1216,6 +1216,9 @@ const ClientDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Client Chat Widget */}
+      <ClientChat />
     </div>
   );
 };
