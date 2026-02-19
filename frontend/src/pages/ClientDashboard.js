@@ -428,11 +428,16 @@ const ClientDashboard = () => {
               {[
                 { id: "galleries", label: "Galeries", icon: FolderOpen },
                 { id: "files", label: "Fichiers", icon: FileText },
+                { id: "transfers", label: "Transferts", icon: UploadCloud },
+                { id: "devis", label: "Devis", icon: Receipt },
+                { id: "invoices", label: "Factures", icon: File },
+                { id: "payments", label: "Paiements", icon: Euro },
                 { id: "settings", label: "Paramètres", icon: Settings }
               ].map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
                   onClick={() => setActiveTab(id)}
+                  data-testid={`tab-${id}`}
                   className={`flex items-center gap-2 px-4 py-2 transition-colors ${
                     activeTab === id 
                       ? "bg-primary text-black font-bold" 
