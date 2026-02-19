@@ -59,6 +59,12 @@ const ClientDashboard = () => {
     const user = JSON.parse(localStorage.getItem("client_user") || "{}");
     setClientUser(user);
     setProfileData({ name: user.name || "", phone: user.phone || "" });
+    
+    // Check if must change password
+    if (user.must_change_password) {
+      setShowMustChangePassword(true);
+    }
+    
     fetchData();
     
     // Send heartbeat immediately and then every 2 minutes
@@ -82,6 +88,10 @@ const ClientDashboard = () => {
         // Update client user with latest data from server
         setClientUser(prev => ({ ...prev, ...meRes.data }));
         setNewsletterSubscribed(meRes.data.newsletter_subscribed !== false);
+        // Check if must change password
+        if (meRes.data.must_change_password) {
+          setShowMustChangePassword(true);
+        }
         // Update localStorage
         const storedUser = JSON.parse(localStorage.getItem("client_user") || "{}");
         localStorage.setItem("client_user", JSON.stringify({ ...storedUser, ...meRes.data }));
