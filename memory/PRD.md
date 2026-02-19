@@ -20,6 +20,29 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V17 - Chat WebSocket, PDF Downloads, ZIP & Upload Multiple (19 Fév 2026)
+- ✅ **Chat Messagerie Instantanée (WebSocket)** :
+  - Communication en temps réel entre admin et clients
+  - Envoi de fichiers et images (max 50MB)
+  - Indicateur "en ligne" pour les clients
+  - Compteur de messages non lus
+  - WebSocket avec authentification JWT
+  - Composants : `ClientChat.js`, `AdminChat.js`
+- ✅ **Téléchargement PDF Devis et Factures** :
+  - Client peut télécharger ses devis en PDF
+  - Client peut télécharger ses factures en PDF
+  - PDF générés à la volée avec ReportLab
+  - Design professionnel avec branding CREATIVINDUSTRY
+- ✅ **Téléchargement ZIP Fichiers Client (Admin)** :
+  - Admin peut télécharger tous les fichiers d'un client en ZIP
+  - Structure par catégorie (music, documents, photos, videos)
+  - ZIP supprimé automatiquement après téléchargement
+- ✅ **Limite Admin Upload augmentée à 10Go** (au lieu de 5Go)
+- ✅ **Upload Multiple de Fichiers (Client)** :
+  - Toutes les catégories supportent l'upload multiple
+  - Musique, Documents, Photos, Vidéos
+  - Attribut `multiple` sur tous les inputs
+
 ### V16 - Newsletter & Améliorations Espace Client (03 Fév 2026)
 - ✅ **Système de Newsletter complet** :
   - Les nouveaux clients sont automatiquement abonnés à l'inscription
