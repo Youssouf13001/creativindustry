@@ -204,7 +204,7 @@ const StoryViewer = ({ stories, initialIndex, onClose }) => {
         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-pink-500 p-[2px]">
           <div className="w-full h-full rounded-full bg-black overflow-hidden">
             {currentStory?.thumbnail_url && (
-              <img src={currentStory.thumbnail_url} alt="" className="w-full h-full object-cover" />
+              <img src={currentStory.thumbnail_url.startsWith('http') ? currentStory.thumbnail_url : `${BACKEND_URL}${currentStory.thumbnail_url}`} alt="" className="w-full h-full object-cover" />
             )}
           </div>
         </div>
