@@ -4348,9 +4348,9 @@ async def upload_client_transfer(
     file: UploadFile = File(...),
     client: dict = Depends(get_current_client)
 ):
-    """Upload a file (music, documents, photos) - Max 100MB"""
-    if file_type not in ["music", "documents", "photos"]:
-        raise HTTPException(status_code=400, detail="Type de fichier invalide. Utilisez: music, documents, photos")
+    """Upload a file (music, documents, photos, videos) - Max 5GB"""
+    if file_type not in ["music", "documents", "photos", "videos"]:
+        raise HTTPException(status_code=400, detail="Type de fichier invalide. Utilisez: music, documents, photos, videos")
     
     # Check file size (5GB max)
     MAX_SIZE = 5 * 1024 * 1024 * 1024  # 5GB
