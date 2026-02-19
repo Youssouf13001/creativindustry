@@ -242,7 +242,7 @@ const StoryViewer = ({ stories, initialIndex, onClose }) => {
         {currentStory?.media_url?.match(/\.(mp4|webm|mov|avi)$/i) || currentStory?.media_url?.includes('video') ? (
           <video
             ref={videoRef}
-            src={currentStory?.media_url}
+            src={currentStory?.media_url?.startsWith('http') ? currentStory?.media_url : `${BACKEND_URL}${currentStory?.media_url}`}
             className="max-h-[80vh] max-w-full object-contain"
             autoPlay
             playsInline
@@ -250,7 +250,7 @@ const StoryViewer = ({ stories, initialIndex, onClose }) => {
           />
         ) : (
           <img
-            src={currentStory?.media_url}
+            src={currentStory?.media_url?.startsWith('http') ? currentStory?.media_url : `${BACKEND_URL}${currentStory?.media_url}`}
             alt={currentStory?.title}
             className="max-h-[80vh] max-w-full object-contain"
           />
