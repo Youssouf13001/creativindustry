@@ -66,13 +66,13 @@ const StoriesSection = ({ stories, onStoryClick }) => {
                 <div className="w-full h-full rounded-full overflow-hidden border-2 border-background">
                   {story.thumbnail_url ? (
                     <img 
-                      src={story.thumbnail_url} 
+                      src={story.thumbnail_url.startsWith('http') ? story.thumbnail_url : `${BACKEND_URL}${story.thumbnail_url}`} 
                       alt={story.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
                   ) : (
                     <video 
-                      src={story.media_url} 
+                      src={story.media_url.startsWith('http') ? story.media_url : `${BACKEND_URL}${story.media_url}`} 
                       className="w-full h-full object-cover"
                       muted
                     />
