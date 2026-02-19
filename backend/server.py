@@ -1874,10 +1874,10 @@ async def change_client_password(data: ClientPasswordChange, client: dict = Depe
     if len(data.new_password) < 6:
         raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit contenir au moins 6 caractères")
     
-    # Update password
+    # Update password and remove must_change_password flag
     await db.clients.update_one(
         {"id": client["id"]},
-        {"$set": {"password": hash_password(data.new_password)}}
+        {"$set": {"password": hash_password(data.new_password), "must_change_password": False}}
     )
     
     return {"success": True, "message": "Mot de passe modifié avec succès"}
