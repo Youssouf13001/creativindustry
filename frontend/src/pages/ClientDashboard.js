@@ -246,6 +246,103 @@ const ClientDashboard = () => {
     }
   };
 
+  // Fetch devis, invoices, payments, transfers
+  const fetchDevisData = async () => {
+    try {
+      const [devisRes, invoicesRes, paymentsRes, transfersRes] = await Promise.all([
+        axios.get(`${API}/client/my-devis`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API}/client/my-invoices`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API}/client/my-payments`, { headers }).catch(() => ({ data: { total_amount: 0, total_paid: 0, remaining: 0, payments: [] } })),
+        axios.get(`${API}/client/transfers`, { headers }).catch(() => ({ data: { music: [], documents: [], photos: [] } }))
+      ]);
+      setMyDevis(devisRes.data);
+      setMyInvoices(invoicesRes.data);
+      setMyPayments(paymentsRes.data);
+      setMyTransfers(transfersRes.data);
+    } catch (e) {
+      console.error("Error fetching devis data:", e);
+    }
+  };
+
+  // Load devis data when switching to relevant tabs
+  useEffect(() => {
+    if (["devis", "invoices", "payments", "transfers"].includes(activeTab)) {
+      fetchDevisData();
+    }
+  }, [activeTab]);
+
+  // Upload file transfer
+  const handleFileTransfer = async (fileType, file) => {
+    if (!file) return;
+    
+    // Check file size (100MB max)
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Fichier trop volumineux. Maximum 100MB.");
+      return;
+    }
+    
+    setUploadingTransfer(true);
+    setUploadProgress(0);
+    
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+      await axios.post(`${API}/client/transfer/${fileType}`, formData, {
+        headers: { ...headers, "Content-Type": "multipart/form-data" },
+        onUploadProgress: (progressEvent) => {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(percent);
+        }
+      });
+      toast.success("Fichier uploadé avec succès !");
+      fetchDevisData();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de l'upload");
+    } finally {
+      setUploadingTransfer(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // Delete file transfer
+  const handleDeleteTransfer = async (fileId) => {
+    if (!window.confirm("Supprimer ce fichier ?")) return;
+    try {
+      await axios.delete(`${API}/client/transfer/${fileId}`, { headers });
+      toast.success("Fichier supprimé");
+      fetchDevisData();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  // Force password change handler
+  const handleForcePasswordChange = async () => {
+    if (forcePasswordData.new !== forcePasswordData.confirm) {
+      toast.error("Les mots de passe ne correspondent pas");
+      return;
+    }
+    if (forcePasswordData.new.length < 6) {
+      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+    try {
+      await axios.put(`${API}/client/password`, {
+        current_password: forcePasswordData.current,
+        new_password: forcePasswordData.new
+      }, { headers });
+      setShowMustChangePassword(false);
+      // Update localStorage
+      const user = JSON.parse(localStorage.getItem("client_user") || "{}");
+      user.must_change_password = false;
+      localStorage.setItem("client_user", JSON.stringify(user));
+      toast.success("Mot de passe modifié avec succès !");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors du changement de mot de passe");
+    }
+  };
+
   // Lightbox navigation
   const openLightbox = (photo, index) => {
     setLightboxPhoto(photo);
