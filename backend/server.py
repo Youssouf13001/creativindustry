@@ -4354,11 +4354,8 @@ async def upload_client_transfer(
     
     # Check file size (5GB max)
     MAX_SIZE = 5 * 1024 * 1024 * 1024  # 5GB
-    content = await file.read()
-    if len(content) > MAX_SIZE:
-        raise HTTPException(status_code=400, detail="Fichier trop volumineux. Maximum 100MB.")
     
-    # Validate file types
+    # Validate file types first (before reading content)
     allowed_extensions = {
         "music": [".mp3", ".wav", ".m4a", ".flac", ".aac", ".ogg"],
         "documents": [".pdf", ".doc", ".docx", ".txt", ".zip", ".rar"],
@@ -4377,11 +4374,12 @@ async def upload_client_transfer(
     client_folder = UPLOADS_DIR / "client_transfers" / file_type / client["id"]
     client_folder.mkdir(parents=True, exist_ok=True)
     
-    # Save file
+    # Save file with streaming for large files
     file_id = str(uuid.uuid4())
     safe_filename = f"{file_id}{file_ext}"
     file_path = client_folder / safe_filename
     
+    total_size = 0
     with open(file_path, "wb") as f:
         f.write(content)
     
