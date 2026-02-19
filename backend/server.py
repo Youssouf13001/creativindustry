@@ -5108,6 +5108,541 @@ async def get_deployment_history(admin: dict = Depends(get_current_admin)):
     return history
 
 
+# ==================== CLIENT PDF DOWNLOAD ENDPOINTS ====================
+
+@api_router.get("/client/devis/{devis_id}/pdf")
+async def download_devis_pdf(devis_id: str, client: dict = Depends(get_current_client)):
+    """Download devis as PDF for client"""
+    # Find the devis
+    devis = await db.client_devis.find_one({"devis_id": devis_id, "client_id": client["id"]}, {"_id": 0})
+    if not devis:
+        raise HTTPException(status_code=404, detail="Devis non trouvé")
+    
+    # Generate PDF
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#d4af37'), alignment=TA_CENTER, spaceAfter=20)
+    heading_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#d4af37'), spaceBefore=20, spaceAfter=10)
+    normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=11, spaceAfter=5)
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#888888'), alignment=TA_CENTER, spaceBefore=30)
+    
+    elements = []
+    
+    # Header
+    elements.append(Paragraph("CREATIVINDUSTRY France", title_style))
+    elements.append(Paragraph("Devis", title_style))
+    elements.append(Spacer(1, 20))
+    
+    # Devis info
+    elements.append(Paragraph(f"<b>Référence:</b> {devis.get('devis_id', '')[:8].upper()}", normal_style))
+    elements.append(Paragraph(f"<b>Date:</b> {devis.get('synced_at', '')[:10] if devis.get('synced_at') else 'N/A'}", normal_style))
+    elements.append(Spacer(1, 15))
+    
+    # Event info
+    if devis.get('event_type'):
+        elements.append(Paragraph(f"<b>Événement:</b> {devis.get('event_type')}", normal_style))
+    if devis.get('event_date'):
+        elements.append(Paragraph(f"<b>Date de l'événement:</b> {devis.get('event_date')}", normal_style))
+    
+    elements.append(Spacer(1, 20))
+    
+    # Total
+    total = devis.get('total_amount', 0)
+    elements.append(Paragraph(f"<b>TOTAL:</b> {total}€", ParagraphStyle('Total', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#d4af37'))))
+    
+    # Devis details if available
+    devis_data = devis.get('devis_data', {})
+    if devis_data and isinstance(devis_data, dict):
+        elements.append(Spacer(1, 20))
+        elements.append(Paragraph("Détails du devis", heading_style))
+        for key, value in devis_data.items():
+            if key not in ['_id', 'id']:
+                elements.append(Paragraph(f"<b>{key}:</b> {value}", normal_style))
+    
+    # Footer
+    elements.append(Spacer(1, 30))
+    elements.append(Paragraph("─" * 50, footer_style))
+    elements.append(Paragraph("CREATIVINDUSTRY France", footer_style))
+    elements.append(Paragraph("contact@creativindustry.com", footer_style))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=Devis_{devis_id[:8].upper()}.pdf"}
+    )
+
+
+@api_router.get("/client/invoice/{invoice_id}/pdf")
+async def download_invoice_pdf(invoice_id: str, client: dict = Depends(get_current_client)):
+    """Download invoice as PDF for client"""
+    # Find the invoice
+    invoice = await db.client_invoices.find_one({"invoice_id": invoice_id, "client_id": client["id"]}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Facture non trouvée")
+    
+    # Check if we have a stored PDF file
+    pdf_path = invoice.get('pdf_path')
+    if pdf_path:
+        full_path = UPLOADS_DIR / pdf_path.lstrip('/uploads/')
+        if full_path.exists():
+            return FileResponse(
+                str(full_path),
+                media_type="application/pdf",
+                filename=f"Facture_{invoice.get('invoice_number', invoice_id[:8])}.pdf"
+            )
+    
+    # Generate PDF if no stored file
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#d4af37'), alignment=TA_CENTER, spaceAfter=20)
+    heading_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#d4af37'), spaceBefore=20, spaceAfter=10)
+    normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=11, spaceAfter=5)
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#888888'), alignment=TA_CENTER, spaceBefore=30)
+    
+    elements = []
+    
+    # Header
+    elements.append(Paragraph("CREATIVINDUSTRY France", title_style))
+    elements.append(Paragraph("FACTURE", title_style))
+    elements.append(Spacer(1, 20))
+    
+    # Invoice info
+    elements.append(Paragraph(f"<b>Numéro de facture:</b> {invoice.get('invoice_number', 'N/A')}", normal_style))
+    elements.append(Paragraph(f"<b>Date:</b> {invoice.get('invoice_date', 'N/A')}", normal_style))
+    elements.append(Paragraph(f"<b>Client:</b> {client.get('name', 'N/A')}", normal_style))
+    elements.append(Spacer(1, 20))
+    
+    # Amount
+    amount = invoice.get('amount', 0)
+    elements.append(Paragraph(f"<b>MONTANT:</b> {amount}€", ParagraphStyle('Total', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#d4af37'))))
+    
+    # Payment status
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph("Statut: Facture émise", normal_style))
+    
+    # Footer
+    elements.append(Spacer(1, 30))
+    elements.append(Paragraph("─" * 50, footer_style))
+    elements.append(Paragraph("CREATIVINDUSTRY France", footer_style))
+    elements.append(Paragraph("contact@creativindustry.com", footer_style))
+    
+    doc.build(elements)
+    buffer.seek(0)
+    
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=Facture_{invoice.get('invoice_number', invoice_id[:8])}.pdf"}
+    )
+
+
+# ==================== ADMIN DOWNLOAD CLIENT FILES AS ZIP ====================
+
+@api_router.get("/admin/client/{client_id}/files-zip")
+async def download_client_files_zip(client_id: str, admin: dict = Depends(get_current_admin)):
+    """Download all files from a specific client as ZIP"""
+    # Verify client exists
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Get all client transfers
+    files = await db.client_transfers.find({"client_id": client_id}, {"_id": 0}).to_list(1000)
+    
+    if not files:
+        raise HTTPException(status_code=404, detail="Aucun fichier à télécharger pour ce client")
+    
+    # Create temporary ZIP file
+    client_name = client.get('name', 'client').replace(' ', '_')
+    zip_filename = f"Fichiers_{client_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    zip_path = UPLOADS_DIR / zip_filename
+    
+    try:
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_STORED) as zipf:
+            for file_record in files:
+                file_type = file_record.get('file_type', 'other')
+                stored_name = file_record.get('stored_name')
+                original_name = file_record.get('original_name', stored_name)
+                
+                file_path = UPLOADS_DIR / "client_transfers" / file_type / client_id / stored_name
+                
+                if file_path.exists():
+                    # Add to ZIP with folder structure: type/original_filename
+                    arcname = f"{file_type}/{original_name}"
+                    zipf.write(file_path, arcname)
+        
+        # Return file response
+        return FileResponse(
+            str(zip_path),
+            media_type="application/zip",
+            filename=zip_filename,
+            background=BackgroundTask(lambda: zip_path.unlink() if zip_path.exists() else None)
+        )
+    except Exception as e:
+        logging.error(f"Error creating ZIP: {e}")
+        if zip_path.exists():
+            zip_path.unlink()
+        raise HTTPException(status_code=500, detail=f"Erreur lors de la création du ZIP: {str(e)}")
+
+
+# ==================== CHAT WEBSOCKET SYSTEM ====================
+
+from fastapi import WebSocket, WebSocketDisconnect
+from starlette.background import BackgroundTask
+from fastapi.responses import StreamingResponse
+from typing import Dict, Set
+import json
+import asyncio
+
+# Store active connections
+class ConnectionManager:
+    def __init__(self):
+        # {client_id: websocket} for clients
+        self.client_connections: Dict[str, WebSocket] = {}
+        # {admin_id: websocket} for admins
+        self.admin_connections: Dict[str, WebSocket] = {}
+    
+    async def connect_client(self, websocket: WebSocket, client_id: str):
+        await websocket.accept()
+        self.client_connections[client_id] = websocket
+    
+    async def connect_admin(self, websocket: WebSocket, admin_id: str):
+        await websocket.accept()
+        self.admin_connections[admin_id] = websocket
+    
+    def disconnect_client(self, client_id: str):
+        if client_id in self.client_connections:
+            del self.client_connections[client_id]
+    
+    def disconnect_admin(self, admin_id: str):
+        if admin_id in self.admin_connections:
+            del self.admin_connections[admin_id]
+    
+    async def send_to_client(self, client_id: str, message: dict):
+        if client_id in self.client_connections:
+            try:
+                await self.client_connections[client_id].send_json(message)
+            except Exception as e:
+                logging.error(f"Error sending to client {client_id}: {e}")
+                self.disconnect_client(client_id)
+    
+    async def send_to_admin(self, admin_id: str, message: dict):
+        if admin_id in self.admin_connections:
+            try:
+                await self.admin_connections[admin_id].send_json(message)
+            except Exception as e:
+                logging.error(f"Error sending to admin {admin_id}: {e}")
+                self.disconnect_admin(admin_id)
+    
+    async def broadcast_to_admins(self, message: dict):
+        for admin_id in list(self.admin_connections.keys()):
+            await self.send_to_admin(admin_id, message)
+    
+    def get_online_clients(self):
+        return list(self.client_connections.keys())
+
+manager = ConnectionManager()
+
+# Create chat uploads directory
+(UPLOADS_DIR / "chat").mkdir(exist_ok=True)
+
+
+# Chat message model
+class ChatMessageCreate(BaseModel):
+    content: str
+    recipient_id: str  # client_id if admin sends, "admin" if client sends
+    message_type: str = "text"  # text, image, file
+    file_url: Optional[str] = None
+    file_name: Optional[str] = None
+
+
+@api_router.websocket("/ws/chat/client/{client_id}")
+async def websocket_client_endpoint(websocket: WebSocket, client_id: str, token: str = None):
+    """WebSocket endpoint for client chat"""
+    # Verify token
+    if not token:
+        await websocket.close(code=4001)
+        return
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "client" or payload.get("sub") != client_id:
+            await websocket.close(code=4003)
+            return
+    except:
+        await websocket.close(code=4001)
+        return
+    
+    await manager.connect_client(websocket, client_id)
+    
+    # Get client info
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0, "name": 1, "email": 1})
+    
+    # Notify admins that client is online
+    await manager.broadcast_to_admins({
+        "type": "client_online",
+        "client_id": client_id,
+        "client_name": client.get("name", "Unknown") if client else "Unknown"
+    })
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            
+            # Store message in database
+            message_id = str(uuid.uuid4())
+            message_record = {
+                "id": message_id,
+                "conversation_id": f"client_{client_id}",
+                "sender_type": "client",
+                "sender_id": client_id,
+                "sender_name": client.get("name", "Client") if client else "Client",
+                "content": data.get("content", ""),
+                "message_type": data.get("message_type", "text"),
+                "file_url": data.get("file_url"),
+                "file_name": data.get("file_name"),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "read": False
+            }
+            await db.chat_messages.insert_one(message_record)
+            
+            # Send to all admins
+            await manager.broadcast_to_admins({
+                "type": "new_message",
+                "message": {k: v for k, v in message_record.items() if k != "_id"}
+            })
+            
+    except WebSocketDisconnect:
+        manager.disconnect_client(client_id)
+        # Notify admins
+        await manager.broadcast_to_admins({
+            "type": "client_offline",
+            "client_id": client_id
+        })
+
+
+@api_router.websocket("/ws/chat/admin/{admin_id}")
+async def websocket_admin_endpoint(websocket: WebSocket, admin_id: str, token: str = None):
+    """WebSocket endpoint for admin chat"""
+    # Verify token
+    if not token:
+        await websocket.close(code=4001)
+        return
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "admin" or payload.get("sub") != admin_id:
+            await websocket.close(code=4003)
+            return
+    except:
+        await websocket.close(code=4001)
+        return
+    
+    await manager.connect_admin(websocket, admin_id)
+    
+    # Send list of online clients
+    online_clients = manager.get_online_clients()
+    clients_info = []
+    for cid in online_clients:
+        client = await db.clients.find_one({"id": cid}, {"_id": 0, "id": 1, "name": 1, "email": 1})
+        if client:
+            clients_info.append(client)
+    
+    await websocket.send_json({
+        "type": "online_clients",
+        "clients": clients_info
+    })
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            
+            client_id = data.get("recipient_id")
+            if not client_id:
+                continue
+            
+            # Get admin info
+            admin = await db.admins.find_one({"id": admin_id}, {"_id": 0, "name": 1})
+            
+            # Store message in database
+            message_id = str(uuid.uuid4())
+            message_record = {
+                "id": message_id,
+                "conversation_id": f"client_{client_id}",
+                "sender_type": "admin",
+                "sender_id": admin_id,
+                "sender_name": admin.get("name", "Admin") if admin else "Admin",
+                "recipient_id": client_id,
+                "content": data.get("content", ""),
+                "message_type": data.get("message_type", "text"),
+                "file_url": data.get("file_url"),
+                "file_name": data.get("file_name"),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "read": False
+            }
+            await db.chat_messages.insert_one(message_record)
+            
+            # Send to specific client
+            await manager.send_to_client(client_id, {
+                "type": "new_message",
+                "message": {k: v for k, v in message_record.items() if k != "_id"}
+            })
+            
+            # Also broadcast to other admins
+            for other_admin_id in manager.admin_connections.keys():
+                if other_admin_id != admin_id:
+                    await manager.send_to_admin(other_admin_id, {
+                        "type": "new_message",
+                        "message": {k: v for k, v in message_record.items() if k != "_id"}
+                    })
+            
+    except WebSocketDisconnect:
+        manager.disconnect_admin(admin_id)
+
+
+@api_router.get("/chat/conversations")
+async def get_chat_conversations(admin: dict = Depends(get_current_admin)):
+    """Get all chat conversations for admin"""
+    # Get unique conversation IDs
+    pipeline = [
+        {"$group": {"_id": "$conversation_id", "last_message": {"$last": "$$ROOT"}, "unread_count": {"$sum": {"$cond": [{"$and": [{"$eq": ["$read", False]}, {"$eq": ["$sender_type", "client"]}]}, 1, 0]}}}},
+        {"$sort": {"last_message.created_at": -1}}
+    ]
+    conversations = await db.chat_messages.aggregate(pipeline).to_list(100)
+    
+    result = []
+    for conv in conversations:
+        client_id = conv["_id"].replace("client_", "")
+        client = await db.clients.find_one({"id": client_id}, {"_id": 0, "id": 1, "name": 1, "email": 1, "profile_photo": 1})
+        if client:
+            result.append({
+                "conversation_id": conv["_id"],
+                "client": client,
+                "last_message": {k: v for k, v in conv["last_message"].items() if k != "_id"},
+                "unread_count": conv["unread_count"],
+                "is_online": client_id in manager.client_connections
+            })
+    
+    return result
+
+
+@api_router.get("/chat/messages/{client_id}")
+async def get_chat_messages(client_id: str, admin: dict = Depends(get_current_admin)):
+    """Get chat messages for a specific client conversation"""
+    messages = await db.chat_messages.find(
+        {"conversation_id": f"client_{client_id}"},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(200)
+    
+    # Mark messages as read
+    await db.chat_messages.update_many(
+        {"conversation_id": f"client_{client_id}", "sender_type": "client", "read": False},
+        {"$set": {"read": True}}
+    )
+    
+    return messages
+
+
+@api_router.get("/chat/my-messages")
+async def get_my_chat_messages(client: dict = Depends(get_current_client)):
+    """Get chat messages for current client"""
+    messages = await db.chat_messages.find(
+        {"conversation_id": f"client_{client['id']}"},
+        {"_id": 0}
+    ).sort("created_at", 1).to_list(200)
+    
+    # Mark admin messages as read
+    await db.chat_messages.update_many(
+        {"conversation_id": f"client_{client['id']}", "sender_type": "admin", "read": False},
+        {"$set": {"read": True}}
+    )
+    
+    return messages
+
+
+@api_router.post("/chat/upload")
+async def upload_chat_file(
+    file: UploadFile = File(...),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Upload file for chat (images or documents)"""
+    # Verify token (can be admin or client)
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        user_type = payload.get("type")
+    except:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # Validate file type
+    allowed_types = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'application/pdf', 'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain', 'application/zip'
+    ]
+    allowed_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.txt', '.zip']
+    
+    file_ext = Path(file.filename).suffix.lower()
+    if file.content_type not in allowed_types and file_ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="Type de fichier non supporté")
+    
+    # Max size 50MB for chat files
+    MAX_SIZE = 50 * 1024 * 1024
+    
+    file_id = str(uuid.uuid4())
+    safe_filename = f"{file_id}{file_ext}"
+    file_path = UPLOADS_DIR / "chat" / safe_filename
+    
+    total_size = 0
+    with open(file_path, "wb") as f:
+        while chunk := await file.read(1024 * 1024):
+            total_size += len(chunk)
+            if total_size > MAX_SIZE:
+                f.close()
+                file_path.unlink()
+                raise HTTPException(status_code=400, detail="Fichier trop volumineux (max 50MB)")
+            f.write(chunk)
+    
+    # Determine message type
+    message_type = "image" if file_ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp'] else "file"
+    
+    return {
+        "file_url": f"/uploads/chat/{safe_filename}",
+        "file_name": file.filename,
+        "message_type": message_type,
+        "size": total_size
+    }
+
+
+@api_router.get("/chat/unread-count")
+async def get_unread_count(admin: dict = Depends(get_current_admin)):
+    """Get total unread message count for admin"""
+    count = await db.chat_messages.count_documents({
+        "sender_type": "client",
+        "read": False
+    })
+    return {"unread_count": count}
+
+
+@api_router.get("/chat/client/unread-count")
+async def get_client_unread_count(client: dict = Depends(get_current_client)):
+    """Get unread message count for client"""
+    count = await db.chat_messages.count_documents({
+        "conversation_id": f"client_{client['id']}",
+        "sender_type": "admin",
+        "read": False
+    })
+    return {"unread_count": count}
+
+
 app.include_router(api_router)
 
 # Mount static files for uploads
