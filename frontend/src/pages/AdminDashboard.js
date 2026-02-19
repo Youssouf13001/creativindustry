@@ -3365,15 +3365,14 @@ const AdminDashboard = () => {
                     const userOnline = onlineUsers.find(u => u.id === client.id);
                     const isOnline = userOnline?.is_online;
                     return (
-                      <button
+                      <div
                         key={client.id}
-                        onClick={() => selectClient(client)}
                         className={`w-full text-left bg-card border p-4 transition-colors ${
                           selectedClient?.id === client.id ? "border-primary" : "border-white/10 hover:border-white/30"
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <div>
+                          <button onClick={() => selectClient(client)} className="flex-1 text-left">
                             <p className="font-primary font-semibold flex items-center gap-2">
                               {client.name}
                               {isOnline && (
@@ -3381,12 +3380,21 @@ const AdminDashboard = () => {
                               )}
                             </p>
                             <p className="text-white/60 text-sm">{client.email}</p>
+                          </button>
+                          <div className="flex items-center gap-2">
+                            {isOnline && (
+                              <span className="text-xs text-green-400 bg-green-500/20 px-2 py-1 rounded">En ligne</span>
+                            )}
+                            <button
+                              onClick={() => openClientFileTransfer(client)}
+                              className="btn-outline px-3 py-1 text-xs flex items-center gap-1"
+                              title="Envoyer des fichiers"
+                            >
+                              <Upload size={12} /> Fichiers
+                            </button>
                           </div>
-                          {isOnline && (
-                            <span className="text-xs text-green-400 bg-green-500/20 px-2 py-1 rounded">En ligne</span>
-                          )}
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                   {clients.length === 0 && (
