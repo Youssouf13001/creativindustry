@@ -4502,7 +4502,7 @@ async def admin_upload_file_to_client(
             if total_size > MAX_SIZE:
                 f.close()
                 file_path.unlink()  # Delete partial file
-                raise HTTPException(status_code=400, detail="Fichier trop volumineux. Maximum 5GB.")
+                raise HTTPException(status_code=400, detail="Fichier trop volumineux. Maximum 10GB.")
             f.write(chunk)
     
     # Store in database
