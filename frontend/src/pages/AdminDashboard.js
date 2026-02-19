@@ -524,6 +524,65 @@ const AdminDashboard = () => {
     }
   };
 
+  // Open file transfer modal for a client
+  const openClientFileTransfer = async (client) => {
+    setShowClientFileTransfer(client);
+    try {
+      const res = await axios.get(`${API}/admin/client-transfers/${client.id}`, { headers });
+      setClientTransfers(res.data);
+    } catch (e) {
+      setClientTransfers({ music: [], documents: [], photos: [], videos: [] });
+    }
+  };
+
+  // Upload file to client
+  const uploadFileToClient = async (fileType, file) => {
+    if (!showClientFileTransfer || !file) return;
+    
+    setUploadingToClient(true);
+    setUploadToClientProgress(0);
+    
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    try {
+      await axios.post(
+        `${API}/admin/transfer-to-client/${showClientFileTransfer.id}/${fileType}`,
+        formData,
+        {
+          headers: { ...headers, "Content-Type": "multipart/form-data" },
+          onUploadProgress: (progressEvent) => {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadToClientProgress(percent);
+          }
+        }
+      );
+      toast.success("Fichier envoyé au client !");
+      // Refresh transfers
+      const res = await axios.get(`${API}/admin/client-transfers/${showClientFileTransfer.id}`, { headers });
+      setClientTransfers(res.data);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de l'upload");
+    } finally {
+      setUploadingToClient(false);
+      setUploadToClientProgress(0);
+    }
+  };
+
+  // Delete client file
+  const deleteClientTransferFile = async (fileId) => {
+    if (!window.confirm("Supprimer ce fichier ?")) return;
+    try {
+      await axios.delete(`${API}/admin/client-transfer/${fileId}`, { headers });
+      toast.success("Fichier supprimé");
+      // Refresh
+      const res = await axios.get(`${API}/admin/client-transfers/${showClientFileTransfer.id}`, { headers });
+      setClientTransfers(res.data);
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
   const selectClient = async (client) => {
     setSelectedClient(client);
     try {
