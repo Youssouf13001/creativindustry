@@ -4362,14 +4362,15 @@ async def upload_client_transfer(
     allowed_extensions = {
         "music": [".mp3", ".wav", ".m4a", ".flac", ".aac", ".ogg"],
         "documents": [".pdf", ".doc", ".docx", ".txt", ".zip", ".rar"],
-        "photos": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic"]
+        "photos": [".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic"],
+        "videos": [".mp4", ".mov", ".avi", ".mkv", ".webm"]
     }
     
     file_ext = Path(file.filename).suffix.lower()
-    if file_ext not in allowed_extensions[file_type]:
+    if file_ext not in allowed_extensions.get(file_type, []):
         raise HTTPException(
             status_code=400, 
-            detail=f"Extension non autorisée pour {file_type}. Extensions acceptées: {', '.join(allowed_extensions[file_type])}"
+            detail=f"Extension non autorisée pour {file_type}. Extensions acceptées: {', '.join(allowed_extensions.get(file_type, []))}"
         )
     
     # Create client folder if not exists
