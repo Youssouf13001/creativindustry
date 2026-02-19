@@ -96,6 +96,9 @@ const AdminDashboard = () => {
   const [deployLogs, setDeployLogs] = useState([]);
   // Backup reminder state
   const [backupStatus, setBackupStatus] = useState(null);
+  // Chat state
+  const [showChat, setShowChat] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
@@ -111,7 +114,18 @@ const AdminDashboard = () => {
     fetchMfaStatus();
     fetchStoryViews();
     fetchBackupStatus();
+    fetchUnreadMessages();
   }, [token]);
+
+  // Fetch unread messages count
+  const fetchUnreadMessages = async () => {
+    try {
+      const res = await axios.get(`${API}/chat/unread-count`, { headers });
+      setUnreadMessages(res.data.unread_count);
+    } catch (e) {
+      console.error("Error fetching unread count");
+    }
+  };
 
   // Refresh story views when switching to stories filter
   useEffect(() => {
