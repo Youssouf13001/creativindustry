@@ -4459,7 +4459,7 @@ async def admin_upload_file_to_client(
     file: UploadFile = File(...),
     admin: dict = Depends(get_current_admin)
 ):
-    """Admin uploads a file for a specific client - Max 5GB"""
+    """Admin uploads a file for a specific client - Max 10GB"""
     if file_type not in ["music", "documents", "photos", "videos"]:
         raise HTTPException(status_code=400, detail="Type de fichier invalide. Utilisez: music, documents, photos, videos")
     
@@ -4468,8 +4468,8 @@ async def admin_upload_file_to_client(
     if not client:
         raise HTTPException(status_code=404, detail="Client non trouvé")
     
-    # Read file in chunks for large files
-    MAX_SIZE = 5 * 1024 * 1024 * 1024  # 5GB
+    # Read file in chunks for large files - ADMIN has 10GB limit
+    MAX_SIZE = 10 * 1024 * 1024 * 1024  # 10GB for admin
     
     # Validate file types
     allowed_extensions = {
