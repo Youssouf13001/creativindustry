@@ -711,12 +711,13 @@ const ClientDashboard = () => {
                 </h3>
                 <p className="text-white/40 text-xs mb-4">JPG, PNG, GIF, WEBP, HEIC</p>
                 <label className="btn-outline w-full py-3 cursor-pointer flex items-center justify-center gap-2">
-                  <Upload size={16} /> Ajouter une photo
+                  <Upload size={16} /> Ajouter des photos
                   <input
                     type="file"
                     accept=".jpg,.jpeg,.png,.gif,.webp,.heic"
                     className="hidden"
-                    onChange={(e) => handleFileTransfer("photos", e.target.files[0])}
+                    multiple
+                    onChange={(e) => handleFileTransfer("photos", e.target.files)}
                     disabled={uploadingTransfer}
                   />
                 </label>
@@ -740,12 +741,13 @@ const ClientDashboard = () => {
                 </h3>
                 <p className="text-white/40 text-xs mb-4">MP4, MOV, AVI, MKV, WEBM</p>
                 <label className="btn-outline w-full py-3 cursor-pointer flex items-center justify-center gap-2">
-                  <Upload size={16} /> Ajouter une vidéo
+                  <Upload size={16} /> Ajouter des vidéos
                   <input
                     type="file"
                     accept=".mp4,.mov,.avi,.mkv,.webm"
                     className="hidden"
-                    onChange={(e) => handleFileTransfer("videos", e.target.files[0])}
+                    multiple
+                    onChange={(e) => handleFileTransfer("videos", e.target.files)}
                     disabled={uploadingTransfer}
                   />
                 </label>
