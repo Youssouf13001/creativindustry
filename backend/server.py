@@ -5512,6 +5512,7 @@ async def get_chat_conversations(admin: dict = Depends(get_current_admin)):
     """Get all chat conversations for admin"""
     # Get unique conversation IDs
     pipeline = [
+        {"$match": {"conversation_id": {"$ne": None, "$exists": True}}},
         {"$group": {"_id": "$conversation_id", "last_message": {"$last": "$$ROOT"}, "unread_count": {"$sum": {"$cond": [{"$and": [{"$eq": ["$read", False]}, {"$eq": ["$sender_type", "client"]}]}, 1, 0]}}}},
         {"$sort": {"last_message.created_at": -1}}
     ]
@@ -5519,11 +5520,14 @@ async def get_chat_conversations(admin: dict = Depends(get_current_admin)):
     
     result = []
     for conv in conversations:
-        client_id = conv["_id"].replace("client_", "")
+        conversation_id = conv.get("_id")
+        if not conversation_id or not isinstance(conversation_id, str):
+            continue
+        client_id = conversation_id.replace("client_", "")
         client = await db.clients.find_one({"id": client_id}, {"_id": 0, "id": 1, "name": 1, "email": 1, "profile_photo": 1})
         if client:
             result.append({
-                "conversation_id": conv["_id"],
+                "conversation_id": conversation_id,
                 "client": client,
                 "last_message": {k: v for k, v in conv["last_message"].items() if k != "_id"},
                 "unread_count": conv["unread_count"],
