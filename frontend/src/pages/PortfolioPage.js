@@ -671,7 +671,7 @@ const PortfolioPage = () => {
                 <div className="relative aspect-[3/4] overflow-hidden bg-card border border-white/10">
                   {coverPhoto ? (
                     <img
-                      src={coverPhoto}
+                      src={coverPhoto.startsWith('http') ? coverPhoto : `${BACKEND_URL}${coverPhoto}`}
                       alt={category.label}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
