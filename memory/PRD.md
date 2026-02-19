@@ -185,6 +185,21 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - `/api/client/heartbeat` - Suivi activité client
 - `/api/admin/clients/online` - Liste clients en ligne
 
+### Chat & Communication (V17)
+- `/api/ws/chat/client/{client_id}` - WebSocket chat client
+- `/api/ws/chat/admin/{admin_id}` - WebSocket chat admin
+- `/api/chat/conversations` - Liste des conversations (admin)
+- `/api/chat/messages/{client_id}` - Messages d'un client (admin)
+- `/api/chat/my-messages` - Mes messages (client)
+- `/api/chat/upload` - Upload fichier pour chat
+- `/api/chat/unread-count` - Compteur non lus (admin)
+- `/api/chat/client/unread-count` - Compteur non lus (client)
+
+### PDF & ZIP Downloads (V17)
+- `/api/client/devis/{devis_id}/pdf` - Télécharger devis PDF
+- `/api/client/invoice/{invoice_id}/pdf` - Télécharger facture PDF
+- `/api/admin/client/{client_id}/files-zip` - Télécharger fichiers client en ZIP
+
 ## Backlog
 - P1: Refactoring AdminDashboard.js (3500+ lignes) en composants séparés
 - P1: Refactoring server.py en plusieurs routers FastAPI
