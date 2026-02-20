@@ -2149,6 +2149,99 @@ async def get_client_downloads(client_id: str, admin: dict = Depends(get_current
     return downloads
 
 
+@api_router.delete("/admin/clients/{client_id}")
+async def delete_client_completely(client_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a client and ALL their data including files on server"""
+    
+    # Check if client exists
+    client = await db.clients.find_one({"id": client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    client_email = client.get("email", "unknown")
+    client_name = client.get("name", "unknown")
+    deleted_files_count = 0
+    
+    # 1. Delete client files from filesystem
+    file_types = ["music", "documents", "photos", "videos"]
+    for file_type in file_types:
+        client_folder = UPLOADS_DIR / "client_transfers" / file_type / client_id
+        if client_folder.exists():
+            import shutil
+            try:
+                shutil.rmtree(client_folder)
+                logging.info(f"Deleted folder: {client_folder}")
+            except Exception as e:
+                logging.error(f"Error deleting folder {client_folder}: {e}")
+    
+    # 2. Delete client uploads folder
+    client_uploads_folder = UPLOADS_DIR / "clients" / client_id
+    if client_uploads_folder.exists():
+        import shutil
+        try:
+            shutil.rmtree(client_uploads_folder)
+            logging.info(f"Deleted client uploads folder: {client_uploads_folder}")
+        except Exception as e:
+            logging.error(f"Error deleting client uploads: {e}")
+    
+    # 3. Delete all database records related to client
+    # Client transfers
+    result = await db.client_transfers.delete_many({"client_id": client_id})
+    deleted_files_count += result.deleted_count
+    
+    # Client files (uploaded by admin)
+    result = await db.client_files.delete_many({"client_id": client_id})
+    deleted_files_count += result.deleted_count
+    
+    # Client devis
+    await db.client_devis.delete_many({"client_id": client_id})
+    
+    # Client invoices
+    await db.client_invoices.delete_many({"client_id": client_id})
+    
+    # Client payments
+    await db.client_payments.delete_many({"client_id": client_id})
+    
+    # Chat messages
+    await db.chat_messages.delete_many({"conversation_id": f"client_{client_id}"})
+    
+    # File downloads history
+    await db.file_downloads.delete_many({"client_id": client_id})
+    
+    # User activity
+    await db.user_activity.delete_many({"user_id": client_id})
+    
+    # Gallery selections
+    await db.gallery_selections.delete_many({"client_id": client_id})
+    
+    # Galleries created for this client
+    galleries = await db.galleries.find({"client_id": client_id}).to_list(100)
+    for gallery in galleries:
+        # Delete gallery photos from filesystem
+        gallery_folder = UPLOADS_DIR / "galleries" / gallery.get("id", "")
+        if gallery_folder.exists():
+            import shutil
+            try:
+                shutil.rmtree(gallery_folder)
+            except:
+                pass
+    await db.galleries.delete_many({"client_id": client_id})
+    
+    # 4. Finally delete the client record
+    await db.clients.delete_one({"id": client_id})
+    
+    logging.info(f"Client deleted: {client_email} ({client_name}) by admin {admin.get('email')}. Files deleted: {deleted_files_count}")
+    
+    return {
+        "success": True,
+        "message": f"Client {client_name} supprimé avec succès",
+        "details": {
+            "client_email": client_email,
+            "files_deleted": deleted_files_count
+        }
+    }
+
+
 # ==================== USER ACTIVITY TRACKING ====================
 
 @api_router.post("/client/activity/heartbeat")
