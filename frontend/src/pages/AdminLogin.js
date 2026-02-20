@@ -479,17 +479,6 @@ const AdminLogin = () => {
             {loading ? "Chargement..." : isRegister ? "Créer le compte" : "Se connecter"}
           </button>
         </form>
-
-        <p className="text-center text-white/60 text-sm mt-6">
-          {isRegister ? "Déjà un compte ?" : "Pas encore de compte ?"}{" "}
-          <button
-            onClick={() => setIsRegister(!isRegister)}
-            className="text-primary hover:underline"
-            data-testid="admin-toggle-auth"
-          >
-            {isRegister ? "Se connecter" : "Créer un compte"}
-          </button>
-        </p>
       </div>
     </div>
   );
