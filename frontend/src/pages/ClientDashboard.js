@@ -938,9 +938,9 @@ const ClientDashboard = () => {
                 <p className="text-white/60">Aucune facture pour le moment</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-8">
                 {myInvoices.map((invoice) => (
-                  <InvoiceCard
+                  <InvoicePreview
                     key={invoice.invoice_id}
                     invoice={invoice}
                     payments={myPayments.payments || []}
