@@ -572,7 +572,7 @@ const ClientDashboard = () => {
                   </div>
                 ) : (
                   <button
-                    onClick={requestExtension}
+                    onClick={() => setShowExtensionModal(true)}
                     disabled={requestingExtension}
                     className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
                     data-testid="request-extension-btn"
