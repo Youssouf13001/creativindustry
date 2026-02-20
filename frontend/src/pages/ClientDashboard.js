@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight, FileArchive, User, Settings, Lock, Upload, Loader, Bell, Music, File, CreditCard, Receipt, Euro, Trash2, UploadCloud, FileDown } from "lucide-react";
+import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight, FileArchive, User, Settings, Lock, Upload, Loader, Bell, Music, File, CreditCard, Receipt, Euro, Trash2, UploadCloud, FileDown, Clock, AlertTriangle, CreditCard as CardIcon } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 import ClientChat from "../components/ClientChat";
@@ -37,6 +37,12 @@ const ClientDashboard = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showMustChangePassword, setShowMustChangePassword] = useState(false);
   const [forcePasswordData, setForcePasswordData] = useState({ current: "", new: "", confirm: "" });
+  
+  // Account expiration states
+  const [accountStatus, setAccountStatus] = useState(null);
+  const [requestingExtension, setRequestingExtension] = useState(false);
+  const [showExtensionModal, setShowExtensionModal] = useState(false);
+  const [bankDetails, setBankDetails] = useState(null);
   
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
