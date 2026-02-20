@@ -1791,14 +1791,8 @@ async def register_client(data: ClientCreate):
 
 @api_router.post("/client/login", response_model=dict)
 async def login_client(data: ClientLogin):
-    logging.info(f"Client login attempt: {data.email}")
     client = await db.clients.find_one({"email": data.email}, {"_id": 0})
-    logging.info(f"Client found: {client is not None}")
-    if not client:
-        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
-    pw_valid = verify_password(data.password, client["password"])
-    logging.info(f"Password valid: {pw_valid}")
-    if not pw_valid:
+    if not client or not verify_password(data.password, client["password"]):
         raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
     
     token = create_token(client["id"], "client")
