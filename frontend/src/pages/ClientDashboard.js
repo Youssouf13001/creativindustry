@@ -901,28 +901,87 @@ const ClientDashboard = () => {
                 <p className="text-white/60">Aucun devis pour le moment</p>
               </div>
             ) : (
-              <div className="space-y-8">
+              <div className="space-y-3">
                 {myDevis.map((devis) => (
-                  <DevisPreview
-                    key={devis.devis_id}
-                    devis={devis}
-                    onDownload={(d) => {
-                      fetch(`${API}/client/devis/${d.devis_id}/pdf`, { headers })
-                        .then(res => res.blob())
-                        .then(blob => {
-                          const url = window.URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `Devis_${d.devis_id?.slice(-8)}.pdf`;
-                          document.body.appendChild(a);
-                          a.click();
-                          window.URL.revokeObjectURL(url);
-                          a.remove();
-                        })
-                        .catch(() => toast.error("Erreur lors du téléchargement"));
-                    }}
-                  />
+                  <div key={devis.devis_id} className="bg-card border border-white/10 p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h3 className="font-bold text-lg">Devis N° {devis.devis_data?.quote_number || devis.devis_id?.slice(-8)}</h3>
+                        <span className={`text-xs px-2 py-1 rounded ${
+                          devis.status === "accepted" ? "bg-green-500/20 text-green-400" :
+                          devis.status === "rejected" ? "bg-red-500/20 text-red-400" :
+                          "bg-yellow-500/20 text-yellow-400"
+                        }`}>
+                          {devis.status === "accepted" ? "Accepté" : devis.status === "rejected" ? "Refusé" : "En attente"}
+                        </span>
+                      </div>
+                      <p className="text-white/60 text-sm">{devis.event_type} • {devis.event_date}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <p className="text-2xl font-bold text-primary">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(devis.total_amount || 0)}</p>
+                      <button
+                        onClick={() => setSelectedDevisPreview(devis)}
+                        className="btn-outline px-4 py-2 text-sm flex items-center gap-2"
+                      >
+                        <Eye size={16} /> Voir
+                      </button>
+                      <button
+                        onClick={() => {
+                          fetch(`${API}/client/devis/${devis.devis_id}/pdf`, { headers })
+                            .then(res => res.blob())
+                            .then(blob => {
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = `Devis_${devis.devis_id?.slice(-8)}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                              a.remove();
+                            })
+                            .catch(() => toast.error("Erreur lors du téléchargement"));
+                        }}
+                        className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                      >
+                        <Download size={16} /> PDF
+                      </button>
+                    </div>
+                  </div>
                 ))}
+              </div>
+            )}
+            
+            {/* Modal Devis Preview */}
+            {selectedDevisPreview && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center overflow-y-auto p-4">
+                <div className="bg-background border border-white/10 rounded-lg max-w-4xl w-full my-8 relative">
+                  <button
+                    onClick={() => setSelectedDevisPreview(null)}
+                    className="absolute top-4 right-4 text-white/60 hover:text-white z-10 bg-black/50 rounded-full p-2"
+                  >
+                    <X size={24} />
+                  </button>
+                  <div className="max-h-[80vh] overflow-y-auto">
+                    <DevisPreview
+                      devis={selectedDevisPreview}
+                      onDownload={(d) => {
+                        fetch(`${API}/client/devis/${d.devis_id}/pdf`, { headers })
+                          .then(res => res.blob())
+                          .then(blob => {
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `Devis_${d.devis_id?.slice(-8)}.pdf`;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            a.remove();
+                          })
+                          .catch(() => toast.error("Erreur lors du téléchargement"));
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
