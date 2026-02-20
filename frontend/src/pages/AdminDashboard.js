@@ -1243,6 +1243,7 @@ const AdminDashboard = () => {
             { id: "quotes", label: "Devis Mariage" },
             { id: "bookings", label: "Réservations" },
             { id: "clients", label: "Clients" },
+            { id: "extensions", label: "💳 Extensions" },
             { id: "newsletter", label: "📧 Newsletter" },
             { id: "deployment", label: "🚀 Déploiement" },
             { id: "services", label: "Services" },
