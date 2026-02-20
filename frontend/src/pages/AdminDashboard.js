@@ -577,6 +577,29 @@ const AdminDashboard = () => {
     }
   };
 
+  // Delete client with all data and files
+  const deleteClient = async (client) => {
+    const confirmMessage = `⚠️ ATTENTION ⚠️\n\nVous allez supprimer définitivement le client "${client.name}" (${client.email}).\n\nCela supprimera :\n- Le compte client\n- Tous ses fichiers sur le serveur\n- Ses devis, factures et paiements\n- Ses conversations chat\n- Ses galeries et sélections photos\n\nCette action est IRRÉVERSIBLE !\n\nÊtes-vous sûr de vouloir continuer ?`;
+    
+    if (!window.confirm(confirmMessage)) return;
+    
+    // Double confirmation
+    const doubleConfirm = window.prompt(`Pour confirmer, tapez le nom du client : "${client.name}"`);
+    if (doubleConfirm !== client.name) {
+      toast.error("Suppression annulée - le nom ne correspond pas");
+      return;
+    }
+    
+    try {
+      const res = await axios.delete(`${API}/admin/clients/${client.id}`, { headers });
+      toast.success(`Client ${client.name} supprimé avec succès`);
+      setSelectedClient(null);
+      fetchData();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la suppression");
+    }
+  };
+
   // Open file transfer modal for a client
   const openClientFileTransfer = async (client) => {
     setShowClientFileTransfer(client);
