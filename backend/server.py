@@ -1330,11 +1330,15 @@ def generate_qr_code(secret: str, email: str) -> str:
     
     return base64.b64encode(buffer.getvalue()).decode()
 
-@api_router.post("/auth/register", response_model=dict)
-async def register_admin(data: AdminCreate):
+# REMOVED: Public admin registration endpoint for security
+# Admin accounts can only be created by existing admins from the admin dashboard
+
+@api_router.post("/admin/create-admin", response_model=dict)
+async def create_admin_account(data: AdminCreate, admin: dict = Depends(get_current_admin)):
+    """Create a new admin account - Only accessible by existing admins"""
     existing = await db.admins.find_one({"email": data.email})
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Cet email est déjà utilisé")
     
     admin_id = str(uuid.uuid4())
     admin_doc = {
@@ -1345,11 +1349,48 @@ async def register_admin(data: AdminCreate):
         "mfa_enabled": False,
         "mfa_secret": None,
         "backup_codes": [],
+        "created_by": admin.get("email"),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.admins.insert_one(admin_doc)
-    token = create_token(admin_id, "admin")
-    return {"token": token, "admin": {"id": admin_id, "email": data.email, "name": data.name, "mfa_enabled": False}}
+    
+    logging.info(f"New admin account created: {data.email} by {admin.get('email')}")
+    
+    return {
+        "success": True,
+        "message": "Compte administrateur créé avec succès",
+        "admin": {"id": admin_id, "email": data.email, "name": data.name}
+    }
+
+@api_router.get("/admin/admins-list")
+async def get_admins_list(admin: dict = Depends(get_current_admin)):
+    """Get list of all admin accounts - Only accessible by existing admins"""
+    admins = await db.admins.find(
+        {},
+        {"_id": 0, "id": 1, "email": 1, "name": 1, "mfa_enabled": 1, "created_at": 1, "created_by": 1}
+    ).to_list(100)
+    return admins
+
+@api_router.delete("/admin/delete-admin/{admin_id}")
+async def delete_admin_account(admin_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete an admin account - Cannot delete yourself"""
+    if admin_id == admin.get("id"):
+        raise HTTPException(status_code=400, detail="Vous ne pouvez pas supprimer votre propre compte")
+    
+    # Check if admin exists
+    target_admin = await db.admins.find_one({"id": admin_id})
+    if not target_admin:
+        raise HTTPException(status_code=404, detail="Administrateur non trouvé")
+    
+    # Check if it's the last admin
+    admin_count = await db.admins.count_documents({})
+    if admin_count <= 1:
+        raise HTTPException(status_code=400, detail="Impossible de supprimer le dernier administrateur")
+    
+    await db.admins.delete_one({"id": admin_id})
+    logging.info(f"Admin account deleted: {target_admin.get('email')} by {admin.get('email')}")
+    
+    return {"success": True, "message": "Compte administrateur supprimé"}
 
 @api_router.post("/auth/login", response_model=dict)
 async def login_admin(data: AdminLogin):
