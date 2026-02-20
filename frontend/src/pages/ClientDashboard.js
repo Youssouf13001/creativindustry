@@ -901,9 +901,9 @@ const ClientDashboard = () => {
                 <p className="text-white/60">Aucun devis pour le moment</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="space-y-8">
                 {myDevis.map((devis) => (
-                  <DevisCard
+                  <DevisPreview
                     key={devis.devis_id}
                     devis={devis}
                     onDownload={(d) => {
