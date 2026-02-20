@@ -459,7 +459,7 @@ const AdminLogin = () => {
             className="btn-primary w-full py-4 text-sm disabled:opacity-50"
             data-testid="admin-submit-btn"
           >
-            {loading ? "Chargement..." : isRegister ? "Créer le compte" : "Se connecter"}
+            {loading ? "Chargement..." : "Se connecter"}
           </button>
         </form>
       </div>
