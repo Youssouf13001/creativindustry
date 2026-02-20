@@ -122,6 +122,51 @@ const ClientDashboard = () => {
     }
   };
 
+  // Fetch account status (expiration, etc.)
+  const fetchAccountStatus = async () => {
+    try {
+      const res = await axios.get(`${API}/client/account-status`, { headers });
+      setAccountStatus(res.data);
+    } catch (e) {
+      console.error("Error fetching account status");
+    }
+  };
+
+  // Request account extension
+  const requestExtension = async () => {
+    setRequestingExtension(true);
+    try {
+      const res = await axios.post(`${API}/client/request-extension`, {}, { headers });
+      setBankDetails(res.data.bank_details);
+      setShowExtensionModal(true);
+      toast.success("Demande d'extension enregistrée !");
+      fetchAccountStatus();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la demande");
+    } finally {
+      setRequestingExtension(false);
+    }
+  };
+
+  // Cancel extension request
+  const cancelExtension = async () => {
+    try {
+      await axios.delete(`${API}/client/cancel-extension`, { headers });
+      toast.success("Demande d'extension annulée");
+      setShowExtensionModal(false);
+      fetchAccountStatus();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur");
+    }
+  };
+
+  // Initial fetch of account status
+  useEffect(() => {
+    if (token) {
+      fetchAccountStatus();
+    }
+  }, [token]);
+
   const handleDownload = (file) => {
     trackDownload(file.id);
     const url = file.file_url.startsWith('http') ? file.file_url : `${BACKEND_URL}${file.file_url}`;
