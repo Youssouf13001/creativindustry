@@ -1400,15 +1400,8 @@ async def delete_admin_account(admin_id: str, admin: dict = Depends(get_current_
 
 @api_router.post("/auth/login", response_model=dict)
 async def login_admin(data: AdminLogin):
-    logging.info(f"Login attempt for email: {data.email}")
     admin = await db.admins.find_one({"email": data.email}, {"_id": 0})
-    logging.info(f"Admin found: {admin is not None}")
-    if not admin:
-        logging.info("Admin not found")
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    password_valid = verify_password(data.password, admin["password"])
-    logging.info(f"Password valid: {password_valid}")
-    if not password_valid:
+    if not admin or not verify_password(data.password, admin["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Check if MFA is enabled
