@@ -900,55 +900,27 @@ const ClientDashboard = () => {
                 <p className="text-white/60">Aucun devis pour le moment</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {myDevis.map((devis) => (
-                  <div key={devis.devis_id} className="bg-card border border-white/10 p-6">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                      <div>
-                        <h3 className="font-bold text-lg">Devis #{devis.devis_id?.slice(-8)}</h3>
-                        {devis.event_type && <p className="text-white/60 text-sm">{devis.event_type}</p>}
-                        {devis.event_date && <p className="text-white/40 text-sm">📅 {devis.event_date}</p>}
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-primary">{devis.total_amount}€</p>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            devis.status === "accepted" ? "bg-green-500/20 text-green-400" :
-                            devis.status === "rejected" ? "bg-red-500/20 text-red-400" :
-                            "bg-yellow-500/20 text-yellow-400"
-                          }`}>
-                            {devis.status === "accepted" ? "Accepté" : devis.status === "rejected" ? "Refusé" : "En attente"}
-                          </span>
-                        </div>
-                        <a
-                          href={`${API}/client/devis/${devis.devis_id}/pdf`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            // Download with auth
-                            fetch(`${API}/client/devis/${devis.devis_id}/pdf`, { headers })
-                              .then(res => res.blob())
-                              .then(blob => {
-                                const url = window.URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `Devis_${devis.devis_id?.slice(-8)}.pdf`;
-                                document.body.appendChild(a);
-                                a.click();
-                                window.URL.revokeObjectURL(url);
-                                a.remove();
-                              })
-                              .catch(() => toast.error("Erreur lors du téléchargement"));
-                          }}
-                          className="btn-outline px-4 py-2 text-sm flex items-center gap-2"
-                          data-testid={`download-devis-${devis.devis_id}`}
-                        >
-                          <FileDown size={16} /> PDF
-                        </a>
-                      </div>
-                    </div>
-                  </div>
+                  <DevisCard
+                    key={devis.devis_id}
+                    devis={devis}
+                    onDownload={(d) => {
+                      fetch(`${API}/client/devis/${d.devis_id}/pdf`, { headers })
+                        .then(res => res.blob())
+                        .then(blob => {
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `Devis_${d.devis_id?.slice(-8)}.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          a.remove();
+                        })
+                        .catch(() => toast.error("Erreur lors du téléchargement"));
+                    }}
+                  />
                 ))}
               </div>
             )}
