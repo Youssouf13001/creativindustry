@@ -5,7 +5,8 @@ import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera,
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 import ClientChat from "../components/ClientChat";
-import { DevisCard, InvoiceCard, PaymentSummaryCard } from "../components/DevisInvoiceCards";
+import { DevisPreview, InvoicePreview } from "../components/DocumentPreview";
+import { PaymentSummaryCard } from "../components/DevisInvoiceCards";
 
 const ClientDashboard = () => {
   const [files, setFiles] = useState([]);
