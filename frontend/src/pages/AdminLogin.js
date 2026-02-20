@@ -418,23 +418,10 @@ const AdminLogin = () => {
           <span className="text-gold-gradient">Admin</span>
         </h1>
         <p className="font-secondary text-white/60 text-center mb-8">
-          {isRegister ? "Créer un compte administrateur" : "Connectez-vous pour gérer votre site"}
+          Connectez-vous pour gérer votre site
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {isRegister && (
-            <div>
-              <label className="block font-primary text-sm mb-2">Nom</label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
-                data-testid="admin-name-input"
-              />
-            </div>
-          )}
           <div>
             <label className="block font-primary text-sm mb-2">Email</label>
             <input
