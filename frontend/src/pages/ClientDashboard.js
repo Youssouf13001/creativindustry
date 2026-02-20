@@ -520,6 +520,77 @@ const ClientDashboard = () => {
         </div>
       </div>
 
+      {/* Account Expiration Banner */}
+      {accountStatus && (
+        <div className={`border-b ${
+          accountStatus.is_expired 
+            ? "bg-red-500/20 border-red-500/50" 
+            : accountStatus.days_remaining <= 30 
+              ? "bg-yellow-500/20 border-yellow-500/50" 
+              : "bg-blue-500/10 border-blue-500/30"
+        }`}>
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                {accountStatus.is_expired ? (
+                  <AlertTriangle className="text-red-400" size={24} />
+                ) : (
+                  <Clock className={accountStatus.days_remaining <= 30 ? "text-yellow-400" : "text-blue-400"} size={24} />
+                )}
+                <div>
+                  {accountStatus.is_expired ? (
+                    <>
+                      <p className="font-bold text-red-400">Votre compte a expiré</p>
+                      <p className="text-sm text-red-300">Vos fichiers seront archivés prochainement. Prolongez votre accès pour continuer.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className={`font-bold ${accountStatus.days_remaining <= 30 ? "text-yellow-400" : "text-blue-400"}`}>
+                        {accountStatus.days_remaining <= 30 
+                          ? `⚠️ Votre compte expire dans ${accountStatus.days_remaining} jours` 
+                          : `Votre compte est actif - ${accountStatus.days_remaining} jours restants`
+                        }
+                      </p>
+                      <p className="text-sm text-white/60">
+                        Date limite : {accountStatus.expires_at ? new Date(accountStatus.expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                {accountStatus.pending_order ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-yellow-400 text-sm">Paiement en attente de validation</span>
+                    <button
+                      onClick={() => setShowExtensionModal(true)}
+                      className="btn-outline px-4 py-2 text-sm"
+                    >
+                      Voir détails
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={requestExtension}
+                    disabled={requestingExtension}
+                    className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
+                    data-testid="request-extension-btn"
+                  >
+                    {requestingExtension ? (
+                      <Loader size={16} className="animate-spin" />
+                    ) : (
+                      <CardIcon size={16} />
+                    )}
+                    Prolonger de 2 mois (20€)
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Settings Tab */}
         {activeTab === "settings" && (
