@@ -5577,54 +5577,85 @@ async def download_devis_pdf(devis_id: str, client: dict = Depends(get_current_c
     if not devis:
         raise HTTPException(status_code=404, detail="Devis non trouvé")
     
+    # Company info
+    company_info = {
+        "name": "CREATIVINDUSTRY FRANCE",
+        "legal": "SASU au capital de 101 €",
+        "rcs": "RCS Paris 100 871 425",
+        "siret": "SIRET : 100 871 425",
+        "tva": "TVA intracommunautaire : FR7501100871425",
+        "address": "60 rue François 1er, 75008 Paris",
+        "email": "contact@creativindustry.com",
+        "phone": ""
+    }
+    
     # Generate PDF
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=1.5*cm, bottomMargin=2*cm)
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#d4af37'), alignment=TA_CENTER, spaceAfter=20)
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#d4af37'), alignment=TA_CENTER, spaceAfter=5)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=16, textColor=colors.HexColor('#d4af37'), alignment=TA_CENTER, spaceAfter=15)
     heading_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#d4af37'), spaceBefore=20, spaceAfter=10)
     normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=11, spaceAfter=5)
-    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#888888'), alignment=TA_CENTER, spaceBefore=30)
+    small_style = ParagraphStyle('Small', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#666666'), spaceAfter=2)
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#888888'), alignment=TA_CENTER, spaceBefore=20)
     
     elements = []
     
-    # Header
-    elements.append(Paragraph("CREATIVINDUSTRY France", title_style))
-    elements.append(Paragraph("Devis", title_style))
+    # Header with company info
+    elements.append(Paragraph(company_info["name"], title_style))
+    elements.append(Paragraph("DEVIS", subtitle_style))
+    elements.append(Spacer(1, 10))
+    
+    # Company details (left side info)
+    elements.append(Paragraph(company_info["legal"], small_style))
+    elements.append(Paragraph(company_info["rcs"], small_style))
+    elements.append(Paragraph(company_info["siret"], small_style))
+    elements.append(Paragraph(company_info["tva"], small_style))
+    elements.append(Paragraph(f"Siège social : {company_info['address']}", small_style))
+    elements.append(Paragraph(f"Email : {company_info['email']}", small_style))
     elements.append(Spacer(1, 20))
     
     # Devis info
-    elements.append(Paragraph(f"<b>Référence:</b> {devis.get('devis_id', '')[:8].upper()}", normal_style))
-    elements.append(Paragraph(f"<b>Date:</b> {devis.get('synced_at', '')[:10] if devis.get('synced_at') else 'N/A'}", normal_style))
+    elements.append(Paragraph("─" * 60, normal_style))
+    elements.append(Paragraph(f"<b>Référence Devis :</b> DEV-{devis.get('devis_id', '')[:8].upper()}", normal_style))
+    elements.append(Paragraph(f"<b>Date d'émission :</b> {devis.get('synced_at', '')[:10] if devis.get('synced_at') else 'N/A'}", normal_style))
+    elements.append(Paragraph(f"<b>Client :</b> {client.get('name', 'N/A')}", normal_style))
+    elements.append(Paragraph("─" * 60, normal_style))
     elements.append(Spacer(1, 15))
     
     # Event info
     if devis.get('event_type'):
-        elements.append(Paragraph(f"<b>Événement:</b> {devis.get('event_type')}", normal_style))
+        elements.append(Paragraph(f"<b>Type d'événement :</b> {devis.get('event_type')}", normal_style))
     if devis.get('event_date'):
-        elements.append(Paragraph(f"<b>Date de l'événement:</b> {devis.get('event_date')}", normal_style))
-    
-    elements.append(Spacer(1, 20))
-    
-    # Total
-    total = devis.get('total_amount', 0)
-    elements.append(Paragraph(f"<b>TOTAL:</b> {total}€", ParagraphStyle('Total', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#d4af37'))))
+        elements.append(Paragraph(f"<b>Date de l'événement :</b> {devis.get('event_date')}", normal_style))
     
     # Devis details if available
     devis_data = devis.get('devis_data', {})
     if devis_data and isinstance(devis_data, dict):
-        elements.append(Spacer(1, 20))
-        elements.append(Paragraph("Détails du devis", heading_style))
+        elements.append(Spacer(1, 15))
+        elements.append(Paragraph("Détails de la prestation", heading_style))
         for key, value in devis_data.items():
             if key not in ['_id', 'id']:
-                elements.append(Paragraph(f"<b>{key}:</b> {value}", normal_style))
+                elements.append(Paragraph(f"• {key} : {value}", normal_style))
     
-    # Footer
+    elements.append(Spacer(1, 25))
+    
+    # Total
+    total = devis.get('total_amount', 0)
+    elements.append(Paragraph("─" * 60, normal_style))
+    elements.append(Paragraph(f"<b>TOTAL TTC :</b> {total} €", ParagraphStyle('Total', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#d4af37'))))
+    elements.append(Paragraph("─" * 60, normal_style))
+    
+    # Legal footer
     elements.append(Spacer(1, 30))
-    elements.append(Paragraph("─" * 50, footer_style))
-    elements.append(Paragraph("CREATIVINDUSTRY France", footer_style))
-    elements.append(Paragraph("contact@creativindustry.com", footer_style))
+    elements.append(Paragraph("Conditions de paiement : 30% à la commande, solde à la livraison", footer_style))
+    elements.append(Paragraph("Validité du devis : 30 jours", footer_style))
+    elements.append(Spacer(1, 15))
+    elements.append(Paragraph(f"{company_info['name']} - {company_info['legal']}", footer_style))
+    elements.append(Paragraph(f"{company_info['siret']} - {company_info['tva']}", footer_style))
+    elements.append(Paragraph(f"{company_info['address']}", footer_style))
     
     doc.build(elements)
     buffer.seek(0)
