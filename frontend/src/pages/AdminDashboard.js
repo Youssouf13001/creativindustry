@@ -3509,10 +3509,45 @@ const AdminDashboard = () => {
               </div>
             </div>
 
+            {/* Admins Section */}
+            <div className="bg-card border border-amber-500/30 p-4 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-3 flex items-center gap-2">
+                <Shield size={20} className="text-amber-500" />
+                Administrateurs ({adminsList.length})
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {adminsList.map((admin) => (
+                  <div key={admin.id} className="bg-background border border-amber-500/20 p-3 rounded flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-amber-500/20 rounded-full flex items-center justify-center">
+                        <Shield size={18} className="text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="font-primary font-semibold text-sm flex items-center gap-2">
+                          {admin.name}
+                          <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full font-medium">ADMIN</span>
+                        </p>
+                        <p className="text-white/60 text-xs">{admin.email}</p>
+                      </div>
+                    </div>
+                    {admin.mfa_enabled && (
+                      <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded" title="MFA activé">MFA</span>
+                    )}
+                  </div>
+                ))}
+                {adminsList.length === 0 && (
+                  <p className="text-white/40 text-sm col-span-full">Aucun administrateur</p>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Client List */}
               <div>
-                <h3 className="font-primary font-semibold mb-4">Liste des clients ({clients.length})</h3>
+                <h3 className="font-primary font-semibold mb-4 flex items-center gap-2">
+                  <User size={18} className="text-blue-400" />
+                  Liste des clients ({clients.length})
+                </h3>
                 <div className="space-y-2">
                   {clients.map((client) => {
                     const userOnline = onlineUsers.find(u => u.id === client.id);
@@ -3528,6 +3563,7 @@ const AdminDashboard = () => {
                           <button onClick={() => selectClient(client)} className="flex-1 text-left">
                             <p className="font-primary font-semibold flex items-center gap-2">
                               {client.name}
+                              <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full font-medium">CLIENT</span>
                               {isOnline && (
                                 <span className="w-2 h-2 bg-green-500 rounded-full" title="En ligne"></span>
                               )}
