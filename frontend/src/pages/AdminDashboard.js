@@ -3459,6 +3459,14 @@ const AdminDashboard = () => {
                             >
                               <Upload size={12} /> Fichiers
                             </button>
+                            <button
+                              onClick={() => deleteClient(client)}
+                              className="bg-red-500/20 text-red-400 border border-red-500/50 px-3 py-1 text-xs flex items-center gap-1 hover:bg-red-500/30"
+                              title="Supprimer le client"
+                              data-testid={`delete-client-${client.id}`}
+                            >
+                              <Trash2 size={12} />
+                            </button>
                           </div>
                         </div>
                       </div>
