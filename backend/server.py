@@ -5642,10 +5642,17 @@ async def download_devis_pdf(devis_id: str, client: dict = Depends(get_current_c
     
     elements.append(Spacer(1, 25))
     
-    # Total
-    total = devis.get('total_amount', 0)
+    # Calculate TVA 20%
+    total_ttc = float(devis.get('total_amount', 0))
+    total_ht = round(total_ttc / 1.20, 2)
+    tva_amount = round(total_ttc - total_ht, 2)
+    
+    # Totals with TVA breakdown
     elements.append(Paragraph("─" * 60, normal_style))
-    elements.append(Paragraph(f"<b>TOTAL TTC :</b> {total} €", ParagraphStyle('Total', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#d4af37'))))
+    elements.append(Paragraph(f"<b>Total HT :</b> {total_ht:.2f} €", normal_style))
+    elements.append(Paragraph(f"<b>TVA (20%) :</b> {tva_amount:.2f} €", normal_style))
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph(f"<b>TOTAL TTC :</b> {total_ttc:.2f} €", ParagraphStyle('Total', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#d4af37'))))
     elements.append(Paragraph("─" * 60, normal_style))
     
     # Legal footer
