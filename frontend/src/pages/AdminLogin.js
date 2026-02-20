@@ -6,8 +6,7 @@ import { Shield, Smartphone, Mail, KeyRound } from "lucide-react";
 import { API } from "../config/api";
 
 const AdminLogin = () => {
-  const [isRegister, setIsRegister] = useState(false);
-  const [formData, setFormData] = useState({ email: "", password: "", name: "" });
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
@@ -26,16 +25,13 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const endpoint = isRegister ? "/auth/register" : "/auth/login";
-      const payload = isRegister 
-        ? formData 
-        : { 
-            email: formData.email, 
-            password: formData.password,
-            totp_code: mfaRequired ? mfaCode : null
-          };
+      const payload = { 
+        email: formData.email, 
+        password: formData.password,
+        totp_code: mfaRequired ? mfaCode : null
+      };
       
-      const res = await axios.post(`${API}${endpoint}`, payload);
+      const res = await axios.post(`${API}/auth/login`, payload);
       
       // Check if MFA is required
       if (res.data.mfa_required) {
@@ -47,7 +43,7 @@ const AdminLogin = () => {
       
       localStorage.setItem("admin_token", res.data.token);
       localStorage.setItem("admin_user", JSON.stringify(res.data.admin));
-      toast.success(isRegister ? "Compte créé !" : "Connexion réussie !");
+      toast.success("Connexion réussie !");
       navigate("/admin/dashboard");
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erreur de connexion");
