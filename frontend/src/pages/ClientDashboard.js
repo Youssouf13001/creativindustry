@@ -937,41 +937,28 @@ const ClientDashboard = () => {
                 <p className="text-white/60">Aucune facture pour le moment</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {myInvoices.map((invoice) => (
-                  <div key={invoice.invoice_id} className="bg-card border border-white/10 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                      <h3 className="font-bold">Facture N° {invoice.invoice_number}</h3>
-                      <p className="text-white/40 text-sm">📅 {invoice.invoice_date}</p>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <p className="text-xl font-bold text-primary">{invoice.amount}€</p>
-                      <a
-                        href={`${API}/client/invoice/${invoice.invoice_id}/pdf`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          // Download with auth
-                          fetch(`${API}/client/invoice/${invoice.invoice_id}/pdf`, { headers })
-                            .then(res => res.blob())
-                            .then(blob => {
-                              const url = window.URL.createObjectURL(blob);
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = `Facture_${invoice.invoice_number || invoice.invoice_id?.slice(-8)}.pdf`;
-                              document.body.appendChild(a);
-                              a.click();
-                              window.URL.revokeObjectURL(url);
-                              a.remove();
-                            })
-                            .catch(() => toast.error("Erreur lors du téléchargement"));
-                        }}
-                        className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
-                        data-testid={`download-invoice-${invoice.invoice_id}`}
-                      >
-                        <Download size={16} /> Télécharger PDF
-                      </a>
-                    </div>
-                  </div>
+                  <InvoiceCard
+                    key={invoice.invoice_id}
+                    invoice={invoice}
+                    payments={myPayments.payments || []}
+                    onDownload={(inv) => {
+                      fetch(`${API}/client/invoice/${inv.invoice_id}/pdf`, { headers })
+                        .then(res => res.blob())
+                        .then(blob => {
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `Facture_${inv.invoice_number || inv.invoice_id?.slice(-8)}.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          a.remove();
+                        })
+                        .catch(() => toast.error("Erreur lors du téléchargement"));
+                    }}
+                  />
                 ))}
               </div>
             )}
