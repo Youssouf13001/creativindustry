@@ -1917,6 +1917,318 @@ async def update_newsletter_preference(data: NewsletterPreferenceUpdate, client:
     }
 
 
+# ==================== ACCOUNT EXTENSION SYSTEM ====================
+
+@api_router.get("/client/account-status")
+async def get_client_account_status(client: dict = Depends(get_current_client)):
+    """Get client account status including expiration info"""
+    full_client = await db.clients.find_one({"id": client["id"]}, {"_id": 0, "password": 0})
+    
+    expires_at = full_client.get("expires_at")
+    if not expires_at:
+        # Set default expiration for old accounts (6 months from now)
+        expires_at = (datetime.now(timezone.utc) + timedelta(days=180)).isoformat()
+        await db.clients.update_one({"id": client["id"]}, {"$set": {"expires_at": expires_at}})
+    
+    # Calculate days remaining
+    try:
+        expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+        now = datetime.now(timezone.utc)
+        days_remaining = (expiry_date - now).days
+    except:
+        days_remaining = 180
+    
+    # Check for pending extension orders
+    pending_order = await db.extension_orders.find_one({
+        "client_id": client["id"],
+        "status": "pending"
+    }, {"_id": 0})
+    
+    return {
+        "expires_at": expires_at,
+        "days_remaining": max(0, days_remaining),
+        "is_expired": days_remaining <= 0,
+        "extension_price": 20,
+        "extension_days": 60,
+        "pending_order": pending_order
+    }
+
+
+@api_router.post("/client/request-extension")
+async def request_account_extension(client: dict = Depends(get_current_client)):
+    """Request a 2-month account extension for 20€"""
+    
+    # Check if there's already a pending order
+    existing_order = await db.extension_orders.find_one({
+        "client_id": client["id"],
+        "status": "pending"
+    })
+    if existing_order:
+        raise HTTPException(status_code=400, detail="Vous avez déjà une demande d'extension en attente")
+    
+    # Create extension order
+    order_id = str(uuid.uuid4())
+    order = {
+        "id": order_id,
+        "client_id": client["id"],
+        "client_email": client.get("email"),
+        "client_name": client.get("name"),
+        "amount": 20.00,
+        "extension_days": 60,
+        "status": "pending",  # pending, paid, cancelled
+        "payment_method": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "paid_at": None
+    }
+    await db.extension_orders.insert_one(order)
+    
+    # Get bank details for transfer
+    bank_details = await db.bank_details.find_one({}, {"_id": 0})
+    
+    # Send email notification to admin
+    try:
+        full_client = await db.clients.find_one({"id": client["id"]}, {"_id": 0, "password": 0})
+        admin_emails = [a["email"] for a in await db.admins.find({}, {"email": 1}).to_list(10)]
+        
+        for admin_email in admin_emails:
+            await send_email(
+                to_email=admin_email,
+                subject=f"Nouvelle demande d'extension - {full_client.get('name')}",
+                html_content=f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #d4af37;">Nouvelle demande d'extension</h2>
+                    <p><strong>Client:</strong> {full_client.get('name')}</p>
+                    <p><strong>Email:</strong> {full_client.get('email')}</p>
+                    <p><strong>Montant:</strong> 20€</p>
+                    <p><strong>Extension:</strong> 2 mois</p>
+                    <p><strong>ID Commande:</strong> {order_id[:8]}</p>
+                    <p style="color: #888; margin-top: 20px;">Connectez-vous au panneau admin pour valider le paiement.</p>
+                </div>
+                """
+            )
+    except Exception as e:
+        logging.error(f"Failed to send extension request email: {e}")
+    
+    return {
+        "success": True,
+        "order_id": order_id,
+        "amount": 20.00,
+        "message": "Votre demande d'extension a été enregistrée",
+        "bank_details": bank_details,
+        "instructions": "Effectuez le virement de 20€ avec la référence indiquée. Votre compte sera prolongé de 2 mois après validation du paiement."
+    }
+
+
+@api_router.delete("/client/cancel-extension")
+async def cancel_extension_request(client: dict = Depends(get_current_client)):
+    """Cancel a pending extension request"""
+    result = await db.extension_orders.delete_one({
+        "client_id": client["id"],
+        "status": "pending"
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Aucune demande d'extension en attente")
+    
+    return {"success": True, "message": "Demande d'extension annulée"}
+
+
+@api_router.get("/admin/extension-orders")
+async def get_all_extension_orders(admin: dict = Depends(get_current_admin)):
+    """Get all extension orders for admin"""
+    orders = await db.extension_orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return orders
+
+
+@api_router.post("/admin/extension-orders/{order_id}/validate")
+async def validate_extension_payment(order_id: str, admin: dict = Depends(get_current_admin)):
+    """Admin validates an extension payment and extends client account"""
+    
+    order = await db.extension_orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+    
+    if order["status"] == "paid":
+        raise HTTPException(status_code=400, detail="Cette commande a déjà été validée")
+    
+    client_id = order["client_id"]
+    
+    # Get current client expiration
+    client = await db.clients.find_one({"id": client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    current_expiry = client.get("expires_at")
+    if current_expiry:
+        try:
+            expiry_date = datetime.fromisoformat(current_expiry.replace('Z', '+00:00'))
+        except:
+            expiry_date = datetime.now(timezone.utc)
+    else:
+        expiry_date = datetime.now(timezone.utc)
+    
+    # If already expired, extend from now
+    if expiry_date < datetime.now(timezone.utc):
+        expiry_date = datetime.now(timezone.utc)
+    
+    # Add 60 days (2 months)
+    new_expiry = (expiry_date + timedelta(days=60)).isoformat()
+    
+    # Update client expiration
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$set": {"expires_at": new_expiry, "extension_paid": True}}
+    )
+    
+    # Update order status
+    await db.extension_orders.update_one(
+        {"id": order_id},
+        {"$set": {"status": "paid", "paid_at": datetime.now(timezone.utc).isoformat(), "validated_by": admin.get("email")}}
+    )
+    
+    # Send confirmation email to client
+    try:
+        await send_email(
+            to_email=client.get("email"),
+            subject="Extension de compte validée - CREATIVINDUSTRY",
+            html_content=f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #d4af37;">Extension de compte validée</h2>
+                <p>Bonjour {client.get('name')},</p>
+                <p>Votre paiement a été validé. Votre compte a été prolongé de 2 mois.</p>
+                <p><strong>Nouvelle date d'expiration:</strong> {new_expiry[:10]}</p>
+                <p style="color: #888; margin-top: 20px;">Merci de votre confiance !</p>
+                <p style="color: #d4af37;">CREATIVINDUSTRY France</p>
+            </div>
+            """
+        )
+    except Exception as e:
+        logging.error(f"Failed to send extension confirmation email: {e}")
+    
+    logging.info(f"Extension validated for client {client.get('email')} by {admin.get('email')}")
+    
+    return {
+        "success": True,
+        "message": "Paiement validé et compte prolongé",
+        "new_expires_at": new_expiry
+    }
+
+
+@api_router.delete("/admin/extension-orders/{order_id}")
+async def delete_extension_order(order_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete/reject an extension order"""
+    result = await db.extension_orders.delete_one({"id": order_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+    return {"success": True, "message": "Commande supprimée"}
+
+
+# ==================== AUTOMATIC ACCOUNT CLEANUP ====================
+
+# Create archives directory
+ARCHIVES_DIR = UPLOADS_DIR / "archives"
+ARCHIVES_DIR.mkdir(exist_ok=True)
+
+
+@api_router.post("/admin/cleanup-expired-accounts")
+async def cleanup_expired_accounts(admin: dict = Depends(get_current_admin)):
+    """Archive and cleanup expired client accounts"""
+    
+    now = datetime.now(timezone.utc)
+    archived_count = 0
+    errors = []
+    
+    # Find expired clients
+    all_clients = await db.clients.find({}, {"_id": 0}).to_list(1000)
+    
+    for client in all_clients:
+        expires_at = client.get("expires_at")
+        if not expires_at:
+            continue
+        
+        try:
+            expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            if expiry_date > now:
+                continue  # Not expired yet
+        except:
+            continue
+        
+        client_id = client["id"]
+        client_name = client.get("name", "unknown").replace(" ", "_")
+        client_email = client.get("email", "unknown")
+        
+        try:
+            # 1. Archive client files
+            archive_folder = ARCHIVES_DIR / f"archive_{client_name}_{client_id[:8]}"
+            archive_folder.mkdir(exist_ok=True)
+            
+            # Move client files to archive
+            file_types = ["music", "documents", "photos", "videos"]
+            for file_type in file_types:
+                src_folder = UPLOADS_DIR / "client_transfers" / file_type / client_id
+                if src_folder.exists():
+                    dest_folder = archive_folder / file_type
+                    dest_folder.mkdir(exist_ok=True)
+                    for file in src_folder.iterdir():
+                        shutil.move(str(file), str(dest_folder / file.name))
+                    src_folder.rmdir()
+            
+            # Archive client uploads
+            client_uploads = UPLOADS_DIR / "clients" / client_id
+            if client_uploads.exists():
+                dest_folder = archive_folder / "uploads"
+                shutil.move(str(client_uploads), str(dest_folder))
+            
+            # 2. Create archive metadata
+            archive_metadata = {
+                "client_id": client_id,
+                "client_name": client.get("name"),
+                "client_email": client_email,
+                "archived_at": now.isoformat(),
+                "original_expires_at": expires_at
+            }
+            with open(archive_folder / "metadata.json", "w") as f:
+                json.dump(archive_metadata, f, indent=2)
+            
+            # 3. Delete database records but keep client in archives collection
+            await db.archived_clients.insert_one({
+                **client,
+                "archived_at": now.isoformat(),
+                "archive_path": str(archive_folder)
+            })
+            
+            # Delete from main collections
+            await db.client_transfers.delete_many({"client_id": client_id})
+            await db.client_files.delete_many({"client_id": client_id})
+            await db.client_devis.delete_many({"client_id": client_id})
+            await db.client_invoices.delete_many({"client_id": client_id})
+            await db.client_payments.delete_many({"client_id": client_id})
+            await db.chat_messages.delete_many({"conversation_id": f"client_{client_id}"})
+            await db.extension_orders.delete_many({"client_id": client_id})
+            await db.clients.delete_one({"id": client_id})
+            
+            archived_count += 1
+            logging.info(f"Archived expired client: {client_email} to {archive_folder}")
+            
+        except Exception as e:
+            errors.append(f"Error archiving {client_email}: {str(e)}")
+            logging.error(f"Error archiving client {client_email}: {e}")
+    
+    return {
+        "success": True,
+        "archived_count": archived_count,
+        "errors": errors if errors else None,
+        "message": f"{archived_count} compte(s) expiré(s) archivé(s)"
+    }
+
+
+@api_router.get("/admin/archived-clients")
+async def get_archived_clients(admin: dict = Depends(get_current_admin)):
+    """Get list of archived clients"""
+    archived = await db.archived_clients.find({}, {"_id": 0}).sort("archived_at", -1).to_list(100)
+    return archived
+
+
 @api_router.put("/client/password")
 async def change_client_password(data: ClientPasswordChange, client: dict = Depends(get_current_client)):
     """Change client password (requires current password)"""
