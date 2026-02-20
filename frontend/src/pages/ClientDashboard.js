@@ -970,43 +970,42 @@ const ClientDashboard = () => {
           <div className="space-y-6">
             <h2 className="font-primary font-bold text-xl mb-4">💰 Mes Paiements</h2>
             
-            {/* Payment Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-card border border-white/10 p-6 text-center">
-                <p className="text-white/60 text-sm mb-1">Total Devis</p>
-                <p className="text-3xl font-bold text-white">{myPayments.total_amount}€</p>
-              </div>
-              <div className="bg-card border border-white/10 p-6 text-center">
-                <p className="text-white/60 text-sm mb-1">Déjà Payé</p>
-                <p className="text-3xl font-bold text-green-500">{myPayments.total_paid}€</p>
-              </div>
-              <div className="bg-card border border-white/10 p-6 text-center">
-                <p className="text-white/60 text-sm mb-1">Reste à Payer</p>
-                <p className="text-3xl font-bold text-primary">{myPayments.remaining}€</p>
-              </div>
-            </div>
+            {/* Payment Summary Card */}
+            <PaymentSummaryCard
+              totalAmount={myPayments.total_amount}
+              totalPaid={myPayments.total_paid}
+              remaining={myPayments.remaining}
+              bankDetails={bankDetails}
+            />
 
             {/* Payment History */}
-            <div className="bg-card border border-white/10 p-6">
-              <h3 className="font-bold text-lg mb-4">Historique des paiements</h3>
-              {myPayments.payments.length === 0 ? (
-                <p className="text-white/40 text-center py-4">Aucun paiement enregistré</p>
-              ) : (
-                <div className="space-y-3">
-                  {myPayments.payments.map((payment) => (
-                    <div key={payment.payment_id} className="flex justify-between items-center py-3 px-4 bg-background border border-white/10">
-                      <div>
-                        <p className="font-semibold">{payment.amount}€</p>
-                        <p className="text-white/40 text-sm">{payment.payment_date}</p>
+            <div className="bg-card border border-white/10 overflow-hidden">
+              <div className="p-4 bg-gradient-to-r from-green-500/20 to-transparent border-b border-white/10">
+                <h3 className="font-bold text-lg flex items-center gap-2">
+                  <div className="w-1 h-4 bg-green-500 rounded"></div>
+                  Historique des règlements
+                </h3>
+              </div>
+              <div className="p-4">
+                {myPayments.payments.length === 0 ? (
+                  <p className="text-white/40 text-center py-4">Aucun paiement enregistré</p>
+                ) : (
+                  <div className="space-y-3">
+                    {myPayments.payments.map((payment) => (
+                      <div key={payment.payment_id} className="flex justify-between items-center py-3 px-4 bg-green-500/10 rounded">
+                        <div>
+                          <p className="font-semibold text-white">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(payment.amount)}</p>
+                          <p className="text-white/40 text-sm">{new Date(payment.payment_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                        </div>
+                        <div className="text-right">
+                          {payment.payment_method && <p className="text-white/60 text-sm">{payment.payment_method}</p>}
+                          <span className="text-green-400 text-xs flex items-center gap-1"><Check size={12} /> Payé</span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        {payment.payment_method && <p className="text-white/60 text-sm">{payment.payment_method}</p>}
-                        <span className="text-green-400 text-xs">✓ Payé</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
