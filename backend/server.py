@@ -5741,24 +5741,28 @@ async def download_invoice_pdf(invoice_id: str, client: dict = Depends(get_curre
     elements.append(Paragraph("─" * 60, normal_style))
     elements.append(Spacer(1, 20))
     
-    # Amount
-    amount = invoice.get('amount', 0)
+    # Amount with TVA breakdown
+    total_ttc = float(invoice.get('amount', 0))
+    total_ht = round(total_ttc / 1.20, 2)
+    tva_amount = round(total_ttc - total_ht, 2)
+    
     elements.append(Paragraph("Désignation", heading_style))
     elements.append(Paragraph("Prestation de services audiovisuels", normal_style))
     elements.append(Spacer(1, 20))
     
+    # Totals with TVA
     elements.append(Paragraph("─" * 60, normal_style))
-    elements.append(Paragraph(f"<b>TOTAL TTC :</b> {amount} €", ParagraphStyle('Total', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#d4af37'))))
+    elements.append(Paragraph(f"<b>Total HT :</b> {total_ht:.2f} €", normal_style))
+    elements.append(Paragraph(f"<b>TVA (20%) :</b> {tva_amount:.2f} €", normal_style))
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph(f"<b>TOTAL TTC :</b> {total_ttc:.2f} €", ParagraphStyle('Total', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#d4af37'))))
     elements.append(Paragraph("─" * 60, normal_style))
-    
-    # Payment status
-    elements.append(Spacer(1, 15))
-    elements.append(Paragraph("TVA non applicable, art. 293 B du CGI", small_style))
     
     # Legal footer
     elements.append(Spacer(1, 30))
     elements.append(Paragraph("Conditions de règlement : paiement à réception de facture", footer_style))
     elements.append(Paragraph("En cas de retard de paiement, une pénalité de 3 fois le taux d'intérêt légal sera appliquée.", footer_style))
+    elements.append(Paragraph("Indemnité forfaitaire pour frais de recouvrement : 40 €", footer_style))
     elements.append(Spacer(1, 15))
     elements.append(Paragraph(f"{company_info['name']} - {company_info['legal']}", footer_style))
     elements.append(Paragraph(f"{company_info['siret']} - {company_info['tva']}", footer_style))
