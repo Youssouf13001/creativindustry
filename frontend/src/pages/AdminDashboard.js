@@ -102,6 +102,9 @@ const AdminDashboard = () => {
   // Admin management state
   const [adminsList, setAdminsList] = useState([]);
   const [newAdminData, setNewAdminData] = useState({ name: "", email: "", password: "" });
+  // Extension orders state
+  const [extensionOrders, setExtensionOrders] = useState([]);
+  const [archivedClients, setArchivedClients] = useState([]);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
@@ -119,6 +122,7 @@ const AdminDashboard = () => {
     fetchBackupStatus();
     fetchUnreadMessages();
     fetchAdminsList();
+    fetchExtensionOrders();
   }, [token]);
 
   // Fetch unread messages count
@@ -128,6 +132,64 @@ const AdminDashboard = () => {
       setUnreadMessages(res.data.unread_count);
     } catch (e) {
       console.error("Error fetching unread count");
+    }
+  };
+
+  // Fetch extension orders
+  const fetchExtensionOrders = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/extension-orders`, { headers });
+      setExtensionOrders(res.data);
+    } catch (e) {
+      console.error("Error fetching extension orders");
+    }
+  };
+
+  // Fetch archived clients
+  const fetchArchivedClients = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/archived-clients`, { headers });
+      setArchivedClients(res.data);
+    } catch (e) {
+      console.error("Error fetching archived clients");
+    }
+  };
+
+  // Validate extension payment
+  const validateExtension = async (orderId) => {
+    if (!window.confirm("Confirmer la validation du paiement ? Le compte client sera prolongé de 2 mois.")) return;
+    try {
+      await axios.post(`${API}/admin/extension-orders/${orderId}/validate`, {}, { headers });
+      toast.success("Paiement validé et compte prolongé !");
+      fetchExtensionOrders();
+      fetchData();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur");
+    }
+  };
+
+  // Delete extension order
+  const deleteExtensionOrder = async (orderId) => {
+    if (!window.confirm("Supprimer cette commande d'extension ?")) return;
+    try {
+      await axios.delete(`${API}/admin/extension-orders/${orderId}`, { headers });
+      toast.success("Commande supprimée");
+      fetchExtensionOrders();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur");
+    }
+  };
+
+  // Cleanup expired accounts
+  const cleanupExpiredAccounts = async () => {
+    if (!window.confirm("⚠️ Cette action va archiver tous les comptes expirés. Continuer ?")) return;
+    try {
+      const res = await axios.post(`${API}/admin/cleanup-expired-accounts`, {}, { headers });
+      toast.success(res.data.message);
+      fetchData();
+      fetchArchivedClients();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur");
     }
   };
 
