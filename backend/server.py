@@ -5686,42 +5686,76 @@ async def download_invoice_pdf(invoice_id: str, client: dict = Depends(get_curre
                 filename=f"Facture_{invoice.get('invoice_number', invoice_id[:8])}.pdf"
             )
     
+    # Company info
+    company_info = {
+        "name": "CREATIVINDUSTRY FRANCE",
+        "legal": "SASU au capital de 101 €",
+        "rcs": "RCS Paris 100 871 425",
+        "siret": "SIRET : 100 871 425",
+        "tva": "TVA intracommunautaire : FR7501100871425",
+        "address": "60 rue François 1er, 75008 Paris",
+        "email": "contact@creativindustry.com",
+        "phone": ""
+    }
+    
     # Generate PDF if no stored file
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=1.5*cm, bottomMargin=2*cm)
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#d4af37'), alignment=TA_CENTER, spaceAfter=20)
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=22, textColor=colors.HexColor('#d4af37'), alignment=TA_CENTER, spaceAfter=5)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Normal'], fontSize=16, textColor=colors.HexColor('#d4af37'), alignment=TA_CENTER, spaceAfter=15)
     heading_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, textColor=colors.HexColor('#d4af37'), spaceBefore=20, spaceAfter=10)
     normal_style = ParagraphStyle('CustomNormal', parent=styles['Normal'], fontSize=11, spaceAfter=5)
-    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#888888'), alignment=TA_CENTER, spaceBefore=30)
+    small_style = ParagraphStyle('Small', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#666666'), spaceAfter=2)
+    footer_style = ParagraphStyle('Footer', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#888888'), alignment=TA_CENTER, spaceBefore=20)
     
     elements = []
     
-    # Header
-    elements.append(Paragraph("CREATIVINDUSTRY France", title_style))
-    elements.append(Paragraph("FACTURE", title_style))
+    # Header with company info
+    elements.append(Paragraph(company_info["name"], title_style))
+    elements.append(Paragraph("FACTURE", subtitle_style))
+    elements.append(Spacer(1, 10))
+    
+    # Company details
+    elements.append(Paragraph(company_info["legal"], small_style))
+    elements.append(Paragraph(company_info["rcs"], small_style))
+    elements.append(Paragraph(company_info["siret"], small_style))
+    elements.append(Paragraph(company_info["tva"], small_style))
+    elements.append(Paragraph(f"Siège social : {company_info['address']}", small_style))
+    elements.append(Paragraph(f"Email : {company_info['email']}", small_style))
     elements.append(Spacer(1, 20))
     
     # Invoice info
-    elements.append(Paragraph(f"<b>Numéro de facture:</b> {invoice.get('invoice_number', 'N/A')}", normal_style))
-    elements.append(Paragraph(f"<b>Date:</b> {invoice.get('invoice_date', 'N/A')}", normal_style))
-    elements.append(Paragraph(f"<b>Client:</b> {client.get('name', 'N/A')}", normal_style))
+    elements.append(Paragraph("─" * 60, normal_style))
+    elements.append(Paragraph(f"<b>Numéro de facture :</b> {invoice.get('invoice_number', 'N/A')}", normal_style))
+    elements.append(Paragraph(f"<b>Date d'émission :</b> {invoice.get('invoice_date', 'N/A')}", normal_style))
+    elements.append(Paragraph(f"<b>Client :</b> {client.get('name', 'N/A')}", normal_style))
+    elements.append(Paragraph("─" * 60, normal_style))
     elements.append(Spacer(1, 20))
     
     # Amount
     amount = invoice.get('amount', 0)
-    elements.append(Paragraph(f"<b>MONTANT:</b> {amount}€", ParagraphStyle('Total', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#d4af37'))))
+    elements.append(Paragraph("Désignation", heading_style))
+    elements.append(Paragraph("Prestation de services audiovisuels", normal_style))
+    elements.append(Spacer(1, 20))
+    
+    elements.append(Paragraph("─" * 60, normal_style))
+    elements.append(Paragraph(f"<b>TOTAL TTC :</b> {amount} €", ParagraphStyle('Total', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#d4af37'))))
+    elements.append(Paragraph("─" * 60, normal_style))
     
     # Payment status
-    elements.append(Spacer(1, 20))
-    elements.append(Paragraph("Statut: Facture émise", normal_style))
+    elements.append(Spacer(1, 15))
+    elements.append(Paragraph("TVA non applicable, art. 293 B du CGI", small_style))
     
-    # Footer
+    # Legal footer
     elements.append(Spacer(1, 30))
-    elements.append(Paragraph("─" * 50, footer_style))
-    elements.append(Paragraph("CREATIVINDUSTRY France", footer_style))
-    elements.append(Paragraph("contact@creativindustry.com", footer_style))
+    elements.append(Paragraph("Conditions de règlement : paiement à réception de facture", footer_style))
+    elements.append(Paragraph("En cas de retard de paiement, une pénalité de 3 fois le taux d'intérêt légal sera appliquée.", footer_style))
+    elements.append(Spacer(1, 15))
+    elements.append(Paragraph(f"{company_info['name']} - {company_info['legal']}", footer_style))
+    elements.append(Paragraph(f"{company_info['siret']} - {company_info['tva']}", footer_style))
+    elements.append(Paragraph(f"{company_info['address']}", footer_style))
     
     doc.build(elements)
     buffer.seek(0)
