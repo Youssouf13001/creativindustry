@@ -99,6 +99,9 @@ const AdminDashboard = () => {
   // Chat state
   const [showChat, setShowChat] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  // Admin management state
+  const [adminsList, setAdminsList] = useState([]);
+  const [newAdminData, setNewAdminData] = useState({ name: "", email: "", password: "" });
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
@@ -115,6 +118,7 @@ const AdminDashboard = () => {
     fetchStoryViews();
     fetchBackupStatus();
     fetchUnreadMessages();
+    fetchAdminsList();
   }, [token]);
 
   // Fetch unread messages count
@@ -124,6 +128,40 @@ const AdminDashboard = () => {
       setUnreadMessages(res.data.unread_count);
     } catch (e) {
       console.error("Error fetching unread count");
+    }
+  };
+
+  // Fetch admins list
+  const fetchAdminsList = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/admins-list`, { headers });
+      setAdminsList(res.data);
+    } catch (e) {
+      console.error("Error fetching admins list");
+    }
+  };
+
+  // Create new admin
+  const createNewAdmin = async () => {
+    try {
+      await axios.post(`${API}/admin/create-admin`, newAdminData, { headers });
+      toast.success("Administrateur créé avec succès !");
+      setNewAdminData({ name: "", email: "", password: "" });
+      fetchAdminsList();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la création");
+    }
+  };
+
+  // Delete admin
+  const deleteAdmin = async (adminId) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cet administrateur ?")) return;
+    try {
+      await axios.delete(`${API}/admin/delete-admin/${adminId}`, { headers });
+      toast.success("Administrateur supprimé !");
+      fetchAdminsList();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la suppression");
     }
   };
 
