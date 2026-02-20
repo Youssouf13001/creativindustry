@@ -1178,7 +1178,13 @@ class ClientResponse(BaseModel):
     newsletter_subscribed: Optional[bool] = True
     must_change_password: Optional[bool] = False
     devis_id: Optional[str] = None  # Linked devis from devis site
+    expires_at: Optional[str] = None  # Account expiration date (6 months from creation)
+    extension_requested: Optional[bool] = False
+    extension_paid: Optional[bool] = False
 
+class ExtensionRequest(BaseModel):
+    payment_method: str  # "card", "transfer"
+    
 class ClientFile(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
