@@ -1770,6 +1770,9 @@ async def register_client(data: ClientCreate):
         raise HTTPException(status_code=400, detail="Email déjà utilisé")
     
     client_id = str(uuid.uuid4())
+    # Set expiration date to 6 months from now
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=180)).isoformat()
+    
     client_doc = {
         "id": client_id,
         "email": data.email,
@@ -1777,11 +1780,14 @@ async def register_client(data: ClientCreate):
         "name": data.name,
         "phone": data.phone,
         "newsletter_subscribed": True,  # Auto-subscribe to newsletter
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": expires_at,
+        "extension_requested": False,
+        "extension_paid": False
     }
     await db.clients.insert_one(client_doc)
     token = create_token(client_id, "client")
-    return {"token": token, "client": {"id": client_id, "email": data.email, "name": data.name, "phone": data.phone}}
+    return {"token": token, "client": {"id": client_id, "email": data.email, "name": data.name, "phone": data.phone, "expires_at": expires_at}}
 
 @api_router.post("/client/login", response_model=dict)
 async def login_client(data: ClientLogin):
@@ -1797,7 +1803,8 @@ async def login_client(data: ClientLogin):
             "email": client["email"], 
             "name": client["name"], 
             "phone": client.get("phone"),
-            "must_change_password": client.get("must_change_password", False)
+            "must_change_password": client.get("must_change_password", False),
+            "expires_at": client.get("expires_at")
         }
     }
 
@@ -1807,7 +1814,7 @@ async def get_client_me(client: dict = Depends(get_current_client)):
     full_client = await db.clients.find_one({"id": client["id"]}, {"_id": 0, "password": 0})
     if full_client:
         return ClientResponse(
-            id=full_client["id"], 
+            id=full_client["id"],
             email=full_client["email"], 
             name=full_client["name"], 
             phone=full_client.get("phone"),
