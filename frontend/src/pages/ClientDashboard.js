@@ -1341,6 +1341,103 @@ const ClientDashboard = () => {
         </div>
       )}
 
+      {/* Extension Payment Modal */}
+      {showExtensionModal && (
+        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-primary p-8 max-w-lg w-full">
+            <div className="text-center mb-6">
+              <CardIcon size={48} className="mx-auto text-primary mb-4" />
+              <h2 className="text-xl font-bold">Prolonger votre compte</h2>
+              <p className="text-white/60 text-sm mt-2">
+                Extension de 2 mois pour 20€
+              </p>
+            </div>
+
+            {accountStatus?.pending_order ? (
+              <div className="space-y-6">
+                <div className="bg-yellow-500/20 border border-yellow-500/50 p-4 text-center">
+                  <p className="text-yellow-400 font-bold">Paiement en attente de validation</p>
+                  <p className="text-sm text-white/60 mt-2">
+                    Votre demande a été enregistrée. Une fois le paiement reçu, votre compte sera prolongé automatiquement.
+                  </p>
+                </div>
+
+                <div className="bg-background border border-white/10 p-4">
+                  <h3 className="font-bold mb-3 text-primary">Instructions de paiement</h3>
+                  <p className="text-sm text-white/60 mb-4">Effectuez un virement de <strong className="text-white">20€</strong> avec les informations suivantes :</p>
+                  
+                  {bankDetails ? (
+                    <div className="space-y-2 text-sm">
+                      <p><span className="text-white/60">Bénéficiaire :</span> <strong>{bankDetails.account_holder}</strong></p>
+                      <p><span className="text-white/60">IBAN :</span> <strong className="font-mono">{bankDetails.iban}</strong></p>
+                      <p><span className="text-white/60">BIC :</span> <strong className="font-mono">{bankDetails.bic}</strong></p>
+                      <p><span className="text-white/60">Référence :</span> <strong>EXT-{accountStatus.pending_order?.id?.slice(0, 8).toUpperCase()}</strong></p>
+                    </div>
+                  ) : (
+                    <p className="text-white/60">Coordonnées bancaires envoyées par email.</p>
+                  )}
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={cancelExtension}
+                    className="btn-outline flex-1 py-3 text-red-400 border-red-400"
+                  >
+                    Annuler la demande
+                  </button>
+                  <button
+                    onClick={() => setShowExtensionModal(false)}
+                    className="btn-primary flex-1 py-3"
+                  >
+                    Fermer
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="bg-background border border-white/10 p-4">
+                  <h3 className="font-bold mb-3">Détails de l'offre</h3>
+                  <ul className="space-y-2 text-sm text-white/80">
+                    <li className="flex items-center gap-2">
+                      <Check size={16} className="text-green-400" /> Accès prolongé de 2 mois
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check size={16} className="text-green-400" /> Tous vos fichiers conservés
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check size={16} className="text-green-400" /> Téléchargement illimité pendant la période
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-primary">20€</p>
+                  <p className="text-white/60 text-sm">Paiement unique</p>
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => setShowExtensionModal(false)}
+                    className="btn-outline flex-1 py-3"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowExtensionModal(false);
+                      requestExtension();
+                    }}
+                    className="btn-primary flex-1 py-3"
+                  >
+                    Commander l'extension
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Client Chat Widget */}
       <ClientChat />
     </div>
