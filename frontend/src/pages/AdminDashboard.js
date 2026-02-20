@@ -3778,6 +3778,168 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Extensions Tab */}
+        {activeTab === "extensions" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="font-primary font-bold text-xl">💳 Gestion des Extensions</h2>
+              <div className="flex gap-3">
+                <button
+                  onClick={fetchArchivedClients}
+                  className="btn-outline px-4 py-2 text-sm"
+                >
+                  Voir archives
+                </button>
+                <button
+                  onClick={cleanupExpiredAccounts}
+                  className="bg-red-500/20 text-red-400 border border-red-500/50 px-4 py-2 text-sm hover:bg-red-500/30"
+                >
+                  Archiver comptes expirés
+                </button>
+              </div>
+            </div>
+
+            {/* Info Banner */}
+            <div className="bg-blue-500/10 border border-blue-500/30 p-4">
+              <p className="text-sm text-blue-300">
+                <strong>Système d'expiration :</strong> Chaque compte client expire automatiquement 6 mois après sa création. 
+                Les clients peuvent demander une extension de 2 mois pour 20€. 
+                Les fichiers des comptes expirés sont archivés dans le dossier <code className="bg-black/30 px-1">uploads/archives</code>.
+              </p>
+            </div>
+
+            {/* Pending Extension Orders */}
+            <div className="bg-card border border-white/10 p-6">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <Clock size={20} className="text-yellow-400" /> Demandes en attente
+              </h3>
+              
+              {extensionOrders.filter(o => o.status === "pending").length === 0 ? (
+                <p className="text-white/50 text-center py-8">Aucune demande en attente</p>
+              ) : (
+                <div className="space-y-4">
+                  {extensionOrders.filter(o => o.status === "pending").map((order) => (
+                    <div key={order.id} className="bg-background border border-yellow-500/30 p-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold">{order.client_name}</p>
+                        <p className="text-white/60 text-sm">{order.client_email}</p>
+                        <p className="text-xs text-white/40 mt-1">
+                          Demandé le {new Date(order.created_at).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-xl font-bold text-primary">{order.amount}€</p>
+                          <p className="text-xs text-white/40">+{order.extension_days} jours</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => validateExtension(order.id)}
+                            className="btn-primary px-4 py-2 text-sm"
+                          >
+                            ✓ Valider
+                          </button>
+                          <button
+                            onClick={() => deleteExtensionOrder(order.id)}
+                            className="btn-outline px-4 py-2 text-sm text-red-400 border-red-400"
+                          >
+                            ✗
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Validated Orders History */}
+            <div className="bg-card border border-white/10 p-6">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <Check size={20} className="text-green-400" /> Historique des validations
+              </h3>
+              
+              {extensionOrders.filter(o => o.status === "paid").length === 0 ? (
+                <p className="text-white/50 text-center py-4">Aucune extension validée</p>
+              ) : (
+                <div className="space-y-2">
+                  {extensionOrders.filter(o => o.status === "paid").slice(0, 10).map((order) => (
+                    <div key={order.id} className="bg-background border border-green-500/20 p-3 flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-4">
+                        <Check size={16} className="text-green-400" />
+                        <span className="font-semibold">{order.client_name}</span>
+                        <span className="text-white/40">{order.client_email}</span>
+                      </div>
+                      <div className="flex items-center gap-4 text-white/60">
+                        <span>{order.amount}€</span>
+                        <span>Validé le {new Date(order.paid_at).toLocaleDateString('fr-FR')}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Archived Clients */}
+            {archivedClients.length > 0 && (
+              <div className="bg-card border border-white/10 p-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <FileArchive size={20} className="text-white/40" /> Clients archivés
+                </h3>
+                <div className="space-y-2">
+                  {archivedClients.map((client) => (
+                    <div key={client.id} className="bg-background border border-white/10 p-3 flex items-center justify-between text-sm">
+                      <div>
+                        <span className="font-semibold">{client.name}</span>
+                        <span className="text-white/40 ml-2">{client.email}</span>
+                      </div>
+                      <div className="text-white/40 text-xs">
+                        Archivé le {new Date(client.archived_at).toLocaleDateString('fr-FR')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Clients Near Expiration */}
+            <div className="bg-card border border-white/10 p-6">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <AlertTriangle size={20} className="text-orange-400" /> Clients proches de l'expiration
+              </h3>
+              <div className="space-y-2">
+                {clients
+                  .filter(c => {
+                    if (!c.expires_at) return false;
+                    const daysLeft = Math.ceil((new Date(c.expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+                    return daysLeft <= 30 && daysLeft > 0;
+                  })
+                  .map((client) => {
+                    const daysLeft = Math.ceil((new Date(client.expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+                    return (
+                      <div key={client.id} className="bg-background border border-orange-500/20 p-3 flex items-center justify-between text-sm">
+                        <div>
+                          <span className="font-semibold">{client.name}</span>
+                          <span className="text-white/40 ml-2">{client.email}</span>
+                        </div>
+                        <span className={`px-2 py-1 rounded text-xs ${daysLeft <= 7 ? 'bg-red-500/20 text-red-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                          {daysLeft} jours restants
+                        </span>
+                      </div>
+                    );
+                  })}
+                {clients.filter(c => {
+                  if (!c.expires_at) return false;
+                  const daysLeft = Math.ceil((new Date(c.expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+                  return daysLeft <= 30 && daysLeft > 0;
+                }).length === 0 && (
+                  <p className="text-white/50 text-center py-4">Aucun client proche de l'expiration</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Newsletter Tab */}
         {activeTab === "newsletter" && (
           <div className="space-y-6">
