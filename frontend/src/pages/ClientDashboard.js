@@ -624,69 +624,104 @@ const ClientDashboard = () => {
                 <p className="text-white/40 text-sm mt-2">Les étapes de votre projet apparaîtront ici.</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {projectStatus.map((item, index) => (
-                  <div 
-                    key={item.id} 
-                    className={`bg-card border p-6 ${
-                      item.status === "completed" 
-                        ? "border-green-500/30" 
-                        : item.status === "in_progress"
-                        ? "border-primary/50"
-                        : "border-white/10"
-                    }`}
-                    data-testid={`project-status-item-${item.id}`}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        item.status === "completed" 
-                          ? "bg-green-500/20 text-green-400" 
-                          : item.status === "in_progress"
-                          ? "bg-primary/20 text-primary"
-                          : "bg-white/10 text-white/40"
-                      }`}>
-                        {item.status === "completed" ? (
-                          <Check size={20} />
-                        ) : (
-                          <span className="font-bold">{index + 1}</span>
-                        )}
-                      </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className={`font-semibold text-lg ${
-                            item.status === "completed" ? "text-green-400" : "text-white"
-                          }`}>
-                            {item.client_status_label || item.title}
-                          </h3>
-                          <span className={`px-2 py-0.5 text-xs rounded ${
+              <>
+                {/* Progress Bar */}
+                <div className="bg-card border border-white/10 p-6">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-white/60 text-sm">Progression globale</span>
+                    <span className="text-primary font-bold">
+                      {Math.round((projectStatus.filter(s => s.status === "completed").length / projectStatus.length) * 100)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="bg-gradient-to-r from-primary to-green-500 h-3 rounded-full transition-all duration-500"
+                      style={{ width: `${(projectStatus.filter(s => s.status === "completed").length / projectStatus.length) * 100}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between mt-2 text-xs text-white/40">
+                    <span>{projectStatus.filter(s => s.status === "completed").length} étapes terminées</span>
+                    <span>{projectStatus.length} étapes au total</span>
+                  </div>
+                </div>
+
+                {/* Timeline */}
+                <div className="bg-card border border-white/10 p-6">
+                  <div className="relative">
+                    {/* Vertical line */}
+                    <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-white/10" />
+                    
+                    <div className="space-y-0">
+                      {projectStatus.map((item, index) => (
+                        <div 
+                          key={item.id} 
+                          className="relative pl-14 pb-8 last:pb-0"
+                          data-testid={`project-status-item-${item.id}`}
+                        >
+                          {/* Circle indicator */}
+                          <div className={`absolute left-0 w-10 h-10 rounded-full flex items-center justify-center border-2 ${
                             item.status === "completed" 
-                              ? "bg-green-500/20 text-green-400" 
+                              ? "bg-green-500/20 border-green-500 text-green-400" 
                               : item.status === "in_progress"
-                              ? "bg-blue-500/20 text-blue-400"
-                              : "bg-white/10 text-white/60"
+                              ? "bg-primary/20 border-primary text-primary animate-pulse"
+                              : "bg-white/5 border-white/20 text-white/40"
                           }`}>
-                            {item.status === "completed" ? "Terminé" : item.status === "in_progress" ? "En cours" : "À venir"}
-                          </span>
+                            {item.status === "completed" ? (
+                              <Check size={18} />
+                            ) : (
+                              <span className="font-bold text-sm">{item.step_number || index + 1}</span>
+                            )}
+                          </div>
+                          
+                          {/* Content */}
+                          <div className={`${item.status === "completed" ? "opacity-80" : ""}`}>
+                            <div className="flex items-center gap-3 mb-1 flex-wrap">
+                              <h3 className={`font-semibold ${
+                                item.status === "completed" 
+                                  ? "text-green-400" 
+                                  : item.status === "in_progress"
+                                  ? "text-primary"
+                                  : "text-white"
+                              }`}>
+                                {item.client_status_label || item.title}
+                              </h3>
+                              <span className={`px-2 py-0.5 text-xs rounded-full ${
+                                item.status === "completed" 
+                                  ? "bg-green-500/20 text-green-400" 
+                                  : item.status === "in_progress"
+                                  ? "bg-primary/20 text-primary"
+                                  : "bg-white/10 text-white/40"
+                              }`}>
+                                {item.status === "completed" ? "Terminé" : item.status === "in_progress" ? "En cours" : "À venir"}
+                              </span>
+                            </div>
+                            
+                            {/* Assigned team members */}
+                            {item.assigned_names && item.assigned_names.length > 0 && item.status === "in_progress" && (
+                              <p className="text-primary/80 text-sm mb-1">
+                                Par {item.assigned_names.join(", ")}
+                              </p>
+                            )}
+                            
+                            {item.completed_at && item.status === "completed" && (
+                              <p className="text-green-400/60 text-sm">
+                                Terminé le {new Date(item.completed_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                              </p>
+                            )}
+                            
+                            {item.due_date && item.status !== "completed" && (
+                              <p className="text-white/40 text-sm flex items-center gap-1">
+                                <Clock size={12} />
+                                Prévu le {new Date(item.due_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        
-                        {item.due_date && (
-                          <p className="text-white/40 text-sm flex items-center gap-1">
-                            <Clock size={14} />
-                            Prévu le {new Date(item.due_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                          </p>
-                        )}
-                        
-                        {item.updated_at && item.status === "completed" && (
-                          <p className="text-green-400/60 text-sm mt-1">
-                            Terminé le {new Date(item.updated_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                          </p>
-                        )}
-                      </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              </>
             )}
             
             {/* Info box */}
