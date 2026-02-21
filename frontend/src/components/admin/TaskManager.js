@@ -601,7 +601,7 @@ const TaskManager = ({ token, clients = [] }) => {
                   <select
                     value={newTask.priority}
                     onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
                     data-testid="task-priority-select"
                   >
                     <option value="low">Basse</option>
@@ -616,7 +616,7 @@ const TaskManager = ({ token, clients = [] }) => {
                 <select
                   value={newTask.client_id}
                   onChange={(e) => setNewTask({ ...newTask, client_id: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
                   data-testid="task-client-select"
                 >
                   <option value="">Aucun client</option>
