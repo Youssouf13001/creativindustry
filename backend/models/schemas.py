@@ -533,3 +533,98 @@ class ManualNewsletterRequest(BaseModel):
 class RollbackRequest(BaseModel):
     commit_hash: str
     reason: Optional[str] = None
+
+
+
+# ==================== TASK MANAGEMENT MODELS ====================
+
+class TeamUser(BaseModel):
+    """Team members who can access and manage tasks"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: EmailStr
+    password: str
+    name: str
+    role: str = "reader"  # admin, editor, reader
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_by: Optional[str] = None
+
+class TeamUserCreate(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+    role: str = "reader"
+
+class TeamUserUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class TeamUserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class TeamUserResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    email: str
+    name: str
+    role: str
+    is_active: bool
+
+
+class TaskReminder(BaseModel):
+    """Reminder settings for a task"""
+    enabled: bool = True
+    days_before: int = 1  # -1 = day after, 0 = day of, 1 = day before
+    email_sent: bool = False
+    last_sent_at: Optional[datetime] = None
+
+class Task(BaseModel):
+    """Task model for team management"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    description: Optional[str] = None
+    due_date: str  # ISO date string
+    priority: str = "medium"  # high, medium, low
+    status: str = "pending"  # pending, in_progress, completed
+    client_id: Optional[str] = None  # Link to a client if relevant
+    client_name: Optional[str] = None
+    assigned_to: List[str] = []  # List of team user IDs
+    assigned_names: List[str] = []  # List of assigned names for display
+    created_by: str  # admin or team user ID
+    created_by_name: str = ""
+    # Reminder settings
+    reminders: List[dict] = []  # [{"days_before": 1, "enabled": True, "sent": False}]
+    # For client visibility - project status
+    client_visible: bool = False  # If true, client sees this as project status
+    client_status_label: Optional[str] = None  # e.g., "Montage en cours", "Tri des photos"
+    # Timestamps
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+class TaskCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    due_date: str
+    priority: str = "medium"
+    client_id: Optional[str] = None
+    assigned_to: List[str] = []
+    reminders: List[dict] = []  # [{"days_before": 1, "enabled": True}]
+    client_visible: bool = False
+    client_status_label: Optional[str] = None
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    due_date: Optional[str] = None
+    priority: Optional[str] = None
+    status: Optional[str] = None
+    client_id: Optional[str] = None
+    assigned_to: Optional[List[str]] = None
+    reminders: Optional[List[dict]] = None
+    client_visible: Optional[bool] = None
+    client_status_label: Optional[str] = None
