@@ -778,7 +778,7 @@ const TaskManager = ({ token, clients = [] }) => {
                     type="date"
                     value={editingTask.due_date}
                     onChange={(e) => setEditingTask({ ...editingTask, due_date: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white"
                   />
                 </div>
                 
@@ -787,7 +787,7 @@ const TaskManager = ({ token, clients = [] }) => {
                   <select
                     value={editingTask.priority}
                     onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
                   >
                     <option value="low">Basse</option>
                     <option value="medium">Moyenne</option>
@@ -800,7 +800,7 @@ const TaskManager = ({ token, clients = [] }) => {
                   <select
                     value={editingTask.status}
                     onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
                   >
                     <option value="pending">En attente</option>
                     <option value="in_progress">En cours</option>
@@ -814,7 +814,7 @@ const TaskManager = ({ token, clients = [] }) => {
                 <select
                   value={editingTask.client_id || ""}
                   onChange={(e) => setEditingTask({ ...editingTask, client_id: e.target.value || null })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
                 >
                   <option value="">Aucun client</option>
                   {clients.map(client => (
