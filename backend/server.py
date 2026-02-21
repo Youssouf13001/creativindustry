@@ -1205,6 +1205,26 @@ class ClientFileCreate(BaseModel):
     thumbnail_url: Optional[str] = None
 
 
+# ==================== CLIENT DOCUMENTS (Admin uploaded invoices/quotes) ====================
+
+class ClientDocument(BaseModel):
+    """Document (invoice/quote) uploaded by admin for a client"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    client_email: str
+    document_type: str  # "invoice" or "quote"
+    title: str
+    description: Optional[str] = None
+    amount: float
+    file_url: str
+    filename: str
+    status: str = "pending"  # pending, paid, partial
+    paid_amount: float = 0
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    due_date: Optional[str] = None
+
+
 # ==================== INTEGRATION MODELS (from Devis site) ====================
 
 class IntegrationCreateClient(BaseModel):
