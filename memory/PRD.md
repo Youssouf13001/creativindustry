@@ -20,6 +20,57 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V18 - Gestion des Tâches et Collaborateurs (21 Fév 2026)
+- ✅ **Système de gestion des tâches complet** :
+  - Créer des tâches avec titre, description, date d'échéance, priorité (Haute/Moyenne/Basse)
+  - Marquer comme fait/non fait avec toggle rapide
+  - Statuts : En attente, En cours, Terminée
+  - Indicateur visuel des tâches en retard et dues aujourd'hui
+  - Statistiques : Total, En attente, En cours, Terminées, En retard, Aujourd'hui, Priorité haute
+  - Filtres : Recherche, Statut, Priorité, Client
+- ✅ **Gestion des collaborateurs** :
+  - 3 niveaux : Admin (accès total), Éditeur (peut modifier), Lecteur (peut voir ses tâches)
+  - Créer/Modifier/Supprimer des collaborateurs
+  - Connexion séparée pour les collaborateurs (`/api/team/login`)
+- ✅ **Assignation des tâches** :
+  - Assigner une tâche à plusieurs collaborateurs
+  - Affichage des noms assignés sur chaque tâche
+- ✅ **Lien avec les clients** :
+  - Associer une tâche à un client existant
+  - Exemple : "Montage pour Mohamed"
+- ✅ **Relances par e-mail personnalisables** :
+  - 1 jour avant l'échéance
+  - Le jour même
+  - 1 jour après (si non fait)
+  - Endpoint cron : `POST /api/tasks/check-reminders`
+- ✅ **Visibilité client (Suivi de projet)** :
+  - Rendre une tâche visible au client avec un message personnalisé
+  - Exemple : "Montage en cours de finalisation"
+  - Nouvel onglet "Mon Projet" dans l'espace client
+  - Le client voit l'avancement de son projet
+- ✅ **Endpoints Backend** :
+  - `POST /api/admin/team-users` - Créer collaborateur
+  - `GET /api/admin/team-users` - Liste des collaborateurs
+  - `PUT /api/admin/team-users/{id}` - Modifier collaborateur
+  - `DELETE /api/admin/team-users/{id}` - Supprimer collaborateur
+  - `POST /api/team/login` - Connexion collaborateur
+  - `GET /api/team/me` - Profil collaborateur connecté
+  - `POST /api/tasks` - Créer tâche
+  - `GET /api/tasks` - Liste des tâches (avec filtres)
+  - `GET /api/tasks/{id}` - Détail d'une tâche
+  - `PUT /api/tasks/{id}` - Modifier tâche
+  - `DELETE /api/tasks/{id}` - Supprimer tâche
+  - `POST /api/tasks/{id}/toggle-status` - Toggle statut
+  - `GET /api/tasks/stats/overview` - Statistiques
+  - `GET /api/client/project-status` - Statut projet pour client
+- ✅ **Composant Frontend** :
+  - `/app/frontend/src/components/admin/TaskManager.js` - Gestion complète des tâches et équipe
+  - Nouvel onglet "📋 Tâches" dans AdminDashboard
+  - Onglet "Mon Projet" dans ClientDashboard
+- ✅ **Tests** :
+  - 21 tests unitaires backend (100% passés)
+  - `/app/backend/tests/test_task_management.py`
+
 ### V17 - Chat WebSocket, PDF Downloads, ZIP & Upload Multiple (19 Fév 2026)
 - ✅ **Chat Messagerie Instantanée (WebSocket)** :
   - Communication en temps réel entre admin et clients
