@@ -2740,6 +2740,170 @@ async def download_client_document(document_id: str, client: dict = Depends(get_
     )
 
 
+# ==================== EXTERNAL FILE LINKS (Synology/Cloud) ====================
+
+class ExternalFileLink(BaseModel):
+    """External file link (Synology, Google Drive, etc.) for large files"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    client_email: str
+    title: str
+    description: Optional[str] = None
+    file_size: Optional[str] = None  # "2.5 GB", "10 GB", etc.
+    external_url: str  # Synology QuickConnect link or other
+    source: str = "synology"  # synology, google_drive, dropbox, other
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    expires_at: Optional[str] = None  # Optional expiration date
+    download_count: int = 0
+    is_active: bool = True
+
+
+@api_router.post("/admin/clients/{client_id}/external-links")
+async def add_external_file_link(
+    client_id: str,
+    title: str = Form(...),
+    external_url: str = Form(...),
+    description: str = Form(None),
+    file_size: str = Form(None),
+    source: str = Form("synology"),
+    expires_at: str = Form(None),
+    admin: dict = Depends(get_current_admin)
+):
+    """Add an external file link (Synology, etc.) for a client"""
+    # Validate client exists
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouve")
+    
+    # Create link record
+    link = {
+        "id": str(uuid.uuid4()),
+        "client_id": client_id,
+        "client_email": client.get("email"),
+        "title": title,
+        "description": description,
+        "file_size": file_size,
+        "external_url": external_url,
+        "source": source,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": expires_at,
+        "download_count": 0,
+        "is_active": True,
+        "created_by": admin.get("email")
+    }
+    
+    await db.external_file_links.insert_one(link)
+    link.pop("_id", None)
+    
+    logging.info(f"External link added for client {client.get('email')}: {title} ({source})")
+    
+    # Optionally send email notification to client
+    try:
+        html_content = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #C9A227;">Nouveau fichier disponible</h2>
+            <p>Bonjour {client.get('name', '')},</p>
+            <p>Un nouveau fichier volumineux est disponible pour vous :</p>
+            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Titre :</strong> {title}</p>
+                {f'<p><strong>Description :</strong> {description}</p>' if description else ''}
+                {f'<p><strong>Taille :</strong> {file_size}</p>' if file_size else ''}
+            </div>
+            <p>Connectez-vous a votre espace client pour acceder au lien de telechargement.</p>
+            <p style="color: #666; font-size: 12px; margin-top: 30px;">
+                CREATIVINDUSTRY France
+            </p>
+        </div>
+        """
+        send_email(client.get("email"), f"Nouveau fichier disponible : {title}", html_content)
+    except Exception as e:
+        logging.error(f"Failed to send notification email: {e}")
+    
+    return {"success": True, "link": link}
+
+
+@api_router.get("/admin/clients/{client_id}/external-links")
+async def get_client_external_links_admin(client_id: str, admin: dict = Depends(get_current_admin)):
+    """Get all external file links for a client (admin view)"""
+    links = await db.external_file_links.find(
+        {"client_id": client_id}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return links
+
+
+@api_router.delete("/admin/external-links/{link_id}")
+async def delete_external_link(link_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete an external file link"""
+    link = await db.external_file_links.find_one({"id": link_id}, {"_id": 0})
+    if not link:
+        raise HTTPException(status_code=404, detail="Lien non trouve")
+    
+    await db.external_file_links.delete_one({"id": link_id})
+    
+    logging.info(f"External link deleted: {link.get('title')} by admin {admin.get('email')}")
+    
+    return {"success": True, "message": "Lien supprime"}
+
+
+@api_router.put("/admin/external-links/{link_id}/toggle")
+async def toggle_external_link(link_id: str, admin: dict = Depends(get_current_admin)):
+    """Toggle active status of an external link"""
+    link = await db.external_file_links.find_one({"id": link_id}, {"_id": 0})
+    if not link:
+        raise HTTPException(status_code=404, detail="Lien non trouve")
+    
+    new_status = not link.get("is_active", True)
+    await db.external_file_links.update_one(
+        {"id": link_id},
+        {"$set": {"is_active": new_status}}
+    )
+    
+    return {"success": True, "is_active": new_status}
+
+
+# Client endpoints for external links
+@api_router.get("/client/external-links")
+async def get_my_external_links(client: dict = Depends(get_current_client)):
+    """Get all external file links for the logged-in client"""
+    links = await db.external_file_links.find(
+        {"client_id": client["id"], "is_active": True}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Filter out expired links
+    now = datetime.now(timezone.utc).isoformat()
+    active_links = []
+    for link in links:
+        if link.get("expires_at") and link["expires_at"] < now:
+            continue
+        active_links.append(link)
+    
+    return active_links
+
+
+@api_router.post("/client/external-links/{link_id}/track-download")
+async def track_external_link_download(link_id: str, client: dict = Depends(get_current_client)):
+    """Track when a client clicks on an external download link"""
+    link = await db.external_file_links.find_one(
+        {"id": link_id, "client_id": client["id"]}, 
+        {"_id": 0}
+    )
+    if not link:
+        raise HTTPException(status_code=404, detail="Lien non trouve")
+    
+    # Increment download count
+    await db.external_file_links.update_one(
+        {"id": link_id},
+        {"$inc": {"download_count": 1}}
+    )
+    
+    logging.info(f"External link download tracked: {link.get('title')} by client {client.get('email')}")
+    
+    return {"success": True, "external_url": link["external_url"]}
+
+
 # ==================== USER ACTIVITY TRACKING ====================
 
 @api_router.post("/client/activity/heartbeat")
