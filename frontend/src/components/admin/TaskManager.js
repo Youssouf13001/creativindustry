@@ -952,7 +952,7 @@ const TaskManager = ({ token, clients = [] }) => {
                 <select
                   value={newTeamUser.role}
                   onChange={(e) => setNewTeamUser({ ...newTeamUser, role: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
                   data-testid="team-user-role-select"
                 >
                   <option value="reader">Lecteur - Peut voir ses tâches assignées</option>
@@ -1000,7 +1000,7 @@ const TaskManager = ({ token, clients = [] }) => {
                   type="text"
                   value={editingTeamUser.name}
                   onChange={(e) => setEditingTeamUser({ ...editingTeamUser, name: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white"
                 />
               </div>
               
@@ -1009,7 +1009,7 @@ const TaskManager = ({ token, clients = [] }) => {
                 <select
                   value={editingTeamUser.role}
                   onChange={(e) => setEditingTeamUser({ ...editingTeamUser, role: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
                 >
                   <option value="reader">Lecteur</option>
                   <option value="editor">Éditeur</option>
