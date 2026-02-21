@@ -679,6 +679,84 @@ const AdminDashboard = () => {
     }
   };
 
+  // Open document modal for a client
+  const openDocumentModal = async (client) => {
+    setDocumentModalClient(client);
+    setShowDocumentModal(true);
+    setNewDocument({ type: "invoice", title: "", amount: "", description: "", due_date: "", file: null });
+    try {
+      const res = await axios.get(`${API}/admin/clients/${client.id}/documents`, { headers });
+      setClientDocuments(res.data);
+    } catch (e) {
+      setClientDocuments([]);
+    }
+  };
+
+  // Upload document for client
+  const uploadDocument = async () => {
+    if (!documentModalClient || !newDocument.file || !newDocument.title || !newDocument.amount) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+    
+    setUploadingDocument(true);
+    const formData = new FormData();
+    formData.append("document_type", newDocument.type);
+    formData.append("title", newDocument.title);
+    formData.append("amount", parseFloat(newDocument.amount));
+    formData.append("description", newDocument.description || "");
+    formData.append("due_date", newDocument.due_date || "");
+    formData.append("file", newDocument.file);
+    
+    try {
+      await axios.post(`${API}/admin/clients/${documentModalClient.id}/documents`, formData, {
+        headers: { ...headers, "Content-Type": "multipart/form-data" }
+      });
+      toast.success("Document ajouté avec succès !");
+      setNewDocument({ type: "invoice", title: "", amount: "", description: "", due_date: "", file: null });
+      // Refresh documents
+      const res = await axios.get(`${API}/admin/clients/${documentModalClient.id}/documents`, { headers });
+      setClientDocuments(res.data);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de l'upload");
+    } finally {
+      setUploadingDocument(false);
+    }
+  };
+
+  // Delete document
+  const deleteDocument = async (documentId) => {
+    if (!window.confirm("Supprimer ce document ?")) return;
+    try {
+      await axios.delete(`${API}/admin/documents/${documentId}`, { headers });
+      toast.success("Document supprimé");
+      setClientDocuments(clientDocuments.filter(d => d.id !== documentId));
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  // Add payment to document
+  const addDocumentPayment = async (documentId, amount) => {
+    const paymentAmount = prompt("Montant du paiement reçu (€) :");
+    if (!paymentAmount || isNaN(parseFloat(paymentAmount))) return;
+    
+    const formData = new FormData();
+    formData.append("amount", parseFloat(paymentAmount));
+    
+    try {
+      const res = await axios.post(`${API}/admin/documents/${documentId}/payment`, formData, {
+        headers: { ...headers, "Content-Type": "multipart/form-data" }
+      });
+      toast.success(`Paiement de ${paymentAmount}€ enregistré`);
+      // Refresh documents
+      const docsRes = await axios.get(`${API}/admin/clients/${documentModalClient.id}/documents`, { headers });
+      setClientDocuments(docsRes.data);
+    } catch (e) {
+      toast.error("Erreur lors de l'enregistrement du paiement");
+    }
+  };
+
   // Upload file to client
   const uploadFileToClient = async (fileType, file) => {
     if (!showClientFileTransfer || !file) return;
