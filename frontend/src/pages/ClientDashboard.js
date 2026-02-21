@@ -1108,6 +1108,134 @@ const ClientDashboard = () => {
               </div>
             )}
             
+            {/* Admin Uploaded Documents */}
+            {adminDocuments.length > 0 && (
+              <div className="mt-8">
+                <h3 className="font-primary font-bold text-lg mb-4">📎 Documents supplémentaires</h3>
+                <div className="space-y-3">
+                  {adminDocuments.map((doc) => {
+                    const remaining = doc.amount - (doc.paid_amount || 0);
+                    return (
+                      <div key={doc.id} className="bg-card border border-white/10 p-4">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <h4 className="font-bold text-lg">{doc.title}</h4>
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                doc.document_type === 'invoice' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'
+                              }`}>
+                                {doc.document_type === 'invoice' ? 'FACTURE' : 'DEVIS'}
+                              </span>
+                              <span className={`text-xs px-2 py-1 rounded ${
+                                doc.status === 'paid' ? "bg-green-500/20 text-green-400" :
+                                doc.status === 'partial' ? "bg-yellow-500/20 text-yellow-400" :
+                                "bg-red-500/20 text-red-400"
+                              }`}>
+                                {doc.status === 'paid' ? "Soldé" : doc.status === 'partial' ? "Partiel" : "En attente"}
+                              </span>
+                            </div>
+                            {doc.description && <p className="text-white/60 text-sm">{doc.description}</p>}
+                            <p className="text-white/60 text-sm">
+                              Ajouté le {new Date(doc.created_at).toLocaleDateString('fr-FR')}
+                              {doc.due_date && ` • Échéance: ${new Date(doc.due_date).toLocaleDateString('fr-FR')}`}
+                            </p>
+                            {doc.paid_amount > 0 && remaining > 0 && (
+                              <p className="text-sm text-yellow-400 mt-1">
+                                Payé: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(doc.paid_amount)} • Reste: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <p className="text-2xl font-bold text-primary">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(doc.amount)}</p>
+                            <button
+                              onClick={() => setSelectedAdminDocument(doc)}
+                              className="btn-outline px-4 py-2 text-sm flex items-center gap-2"
+                            >
+                              <Eye size={16} /> Voir
+                            </button>
+                            <a
+                              href={`${API}/client/documents/${doc.id}/download`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                            >
+                              <Download size={16} /> PDF
+                            </a>
+                          </div>
+                        </div>
+                        
+                        {/* PayPal Payment Section */}
+                        {remaining > 0 && (
+                          <div className="mt-4 pt-4 border-t border-white/10">
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                              <div className="text-sm text-white/60">
+                                <span className="text-white font-semibold">Reste à payer :</span> {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)}
+                              </div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {doc.paid_amount > 0 && (
+                                  <a
+                                    href={`https://paypal.me/creativindustryfranc/${remaining.toFixed(2)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-[#0070ba] hover:bg-[#005ea6] text-white px-4 py-2 text-sm rounded flex items-center gap-2 transition-colors"
+                                  >
+                                    <CreditCard size={16} /> Payer le reste
+                                  </a>
+                                )}
+                                <a
+                                  href={`https://paypal.me/creativindustryfranc/${doc.amount.toFixed(2)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-[#0070ba] hover:bg-[#005ea6] text-white px-4 py-2 text-sm rounded flex items-center gap-2 transition-colors"
+                                >
+                                  <CreditCard size={16} /> {doc.paid_amount > 0 ? "Payer la totalité" : "Payer avec PayPal"}
+                                </a>
+                              </div>
+                            </div>
+                            <p className="text-xs text-white/40 mt-2">
+                              Après votre paiement PayPal, il sera enregistré par notre équipe sous 24h.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            
+            {/* Modal Admin Document Preview */}
+            {selectedAdminDocument && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                <div className="bg-background border border-white/10 rounded-lg max-w-2xl w-full">
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="font-bold text-xl">{selectedAdminDocument.title}</h3>
+                      <button onClick={() => setSelectedAdminDocument(null)} className="text-white/60 hover:text-white text-2xl">×</button>
+                    </div>
+                    <iframe
+                      src={`${API.replace('/api', '')}${selectedAdminDocument.file_url}`}
+                      className="w-full h-[60vh] border border-white/10"
+                      title="Document Preview"
+                    />
+                    <div className="mt-4 flex justify-end gap-3">
+                      <button onClick={() => setSelectedAdminDocument(null)} className="btn-outline px-4 py-2">
+                        Fermer
+                      </button>
+                      <a
+                        href={`${API}/client/documents/${selectedAdminDocument.id}/download`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn-primary px-4 py-2 flex items-center gap-2"
+                      >
+                        <Download size={16} /> Télécharger
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Modal Invoice Preview */}
             {selectedInvoicePreview && (
               <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center overflow-y-auto p-4">
