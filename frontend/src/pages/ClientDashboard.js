@@ -46,6 +46,10 @@ const ClientDashboard = () => {
   const [showExtensionModal, setShowExtensionModal] = useState(false);
   const [bankDetails, setBankDetails] = useState(null);
   
+  // Document preview states
+  const [selectedDevisPreview, setSelectedDevisPreview] = useState(null);
+  const [selectedInvoicePreview, setSelectedInvoicePreview] = useState(null);
+  
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
   const headers = { Authorization: `Bearer ${token}` };
