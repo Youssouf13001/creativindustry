@@ -1009,57 +1009,93 @@ const ClientDashboard = () => {
                   const remaining = (invoice.amount || 0) - totalPaid;
                   
                   return (
-                    <div key={invoice.invoice_id} className="bg-card border border-white/10 p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="font-bold text-lg">Facture N° {invoice.invoice_number || invoice.invoice_id?.slice(-8)}</h3>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            remaining <= 0 ? "bg-green-500/20 text-green-400" :
-                            totalPaid > 0 ? "bg-yellow-500/20 text-yellow-400" :
-                            "bg-red-500/20 text-red-400"
-                          }`}>
-                            {remaining <= 0 ? "Soldée" : totalPaid > 0 ? "Partiel" : "En attente"}
-                          </span>
-                        </div>
-                        <p className="text-white/60 text-sm">
-                          Émise le {new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}
-                          {invoice.event_type && ` • ${invoice.event_type}`}
-                        </p>
-                        {totalPaid > 0 && remaining > 0 && (
-                          <p className="text-sm text-yellow-400 mt-1">
-                            Payé: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(totalPaid)} • Reste: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)}
+                    <div key={invoice.invoice_id} className="bg-card border border-white/10 p-4">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="font-bold text-lg">Facture N° {invoice.invoice_number || invoice.invoice_id?.slice(-8)}</h3>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              remaining <= 0 ? "bg-green-500/20 text-green-400" :
+                              totalPaid > 0 ? "bg-yellow-500/20 text-yellow-400" :
+                              "bg-red-500/20 text-red-400"
+                            }`}>
+                              {remaining <= 0 ? "Soldée" : totalPaid > 0 ? "Partiel" : "En attente"}
+                            </span>
+                          </div>
+                          <p className="text-white/60 text-sm">
+                            Émise le {new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}
+                            {invoice.event_type && ` • ${invoice.event_type}`}
                           </p>
-                        )}
+                          {totalPaid > 0 && remaining > 0 && (
+                            <p className="text-sm text-yellow-400 mt-1">
+                              Payé: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(totalPaid)} • Reste: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <p className="text-2xl font-bold text-primary">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(invoice.amount || 0)}</p>
+                          <button
+                            onClick={() => setSelectedInvoicePreview(invoice)}
+                            className="btn-outline px-4 py-2 text-sm flex items-center gap-2"
+                          >
+                            <Eye size={16} /> Voir
+                          </button>
+                          <button
+                            onClick={() => {
+                              fetch(`${API}/client/invoice/${invoice.invoice_id}/pdf`, { headers })
+                                .then(res => res.blob())
+                                .then(blob => {
+                                  const url = window.URL.createObjectURL(blob);
+                                  const a = document.createElement('a');
+                                  a.href = url;
+                                  a.download = `Facture_${invoice.invoice_number || invoice.invoice_id?.slice(-8)}.pdf`;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  window.URL.revokeObjectURL(url);
+                                  a.remove();
+                                })
+                                .catch(() => toast.error("Erreur lors du téléchargement"));
+                            }}
+                            className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                          >
+                            <Download size={16} /> PDF
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <p className="text-2xl font-bold text-primary">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(invoice.amount || 0)}</p>
-                        <button
-                          onClick={() => setSelectedInvoicePreview(invoice)}
-                          className="btn-outline px-4 py-2 text-sm flex items-center gap-2"
-                        >
-                          <Eye size={16} /> Voir
-                        </button>
-                        <button
-                          onClick={() => {
-                            fetch(`${API}/client/invoice/${invoice.invoice_id}/pdf`, { headers })
-                              .then(res => res.blob())
-                              .then(blob => {
-                                const url = window.URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = `Facture_${invoice.invoice_number || invoice.invoice_id?.slice(-8)}.pdf`;
-                                document.body.appendChild(a);
-                                a.click();
-                                window.URL.revokeObjectURL(url);
-                                a.remove();
-                              })
-                              .catch(() => toast.error("Erreur lors du téléchargement"));
-                          }}
-                          className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
-                        >
-                          <Download size={16} /> PDF
-                        </button>
-                      </div>
+                      
+                      {/* PayPal Payment Section */}
+                      {remaining > 0 && (
+                        <div className="mt-4 pt-4 border-t border-white/10">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="text-sm text-white/60">
+                              <span className="text-white font-semibold">Reste à payer :</span> {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {totalPaid > 0 && (
+                                <a
+                                  href={`https://paypal.me/creativindustryfranc/${remaining.toFixed(2)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-[#0070ba] hover:bg-[#005ea6] text-white px-4 py-2 text-sm rounded flex items-center gap-2 transition-colors"
+                                >
+                                  <CreditCard size={16} /> Payer le reste ({new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)})
+                                </a>
+                              )}
+                              <a
+                                href={`https://paypal.me/creativindustryfranc/${(invoice.amount || 0).toFixed(2)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-[#0070ba] hover:bg-[#005ea6] text-white px-4 py-2 text-sm rounded flex items-center gap-2 transition-colors"
+                              >
+                                <CreditCard size={16} /> {totalPaid > 0 ? "Payer la totalité" : "Payer avec PayPal"}
+                              </a>
+                            </div>
+                          </div>
+                          <p className="text-xs text-white/40 mt-2">
+                            Après votre paiement PayPal, il sera enregistré par notre équipe sous 24h.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
