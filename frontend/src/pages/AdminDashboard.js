@@ -96,6 +96,7 @@ const AdminDashboard = () => {
   const [deployLogs, setDeployLogs] = useState([]);
   // Backup reminder state
   const [backupStatus, setBackupStatus] = useState(null);
+  const [backupProgress, setBackupProgress] = useState({ active: false, step: '', progress: 0 });
   // Chat state
   const [showChat, setShowChat] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
