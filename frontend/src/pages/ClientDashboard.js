@@ -625,28 +625,84 @@ const ClientDashboard = () => {
               </div>
             ) : (
               <>
-                {/* Progress Bar */}
+                {/* Progress Bar with Steps */}
                 <div className="bg-card border border-white/10 p-6">
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-white/60 text-sm">Progression globale</span>
-                    <span className="text-primary font-bold">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-white font-semibold">Progression de votre projet</span>
+                    <span className="text-primary font-bold text-2xl">
                       {Math.round((projectStatus.filter(s => s.status === "completed").length / projectStatus.length) * 100)}%
                     </span>
                   </div>
-                  <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
-                    <div 
-                      className="bg-gradient-to-r from-primary to-green-500 h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${(projectStatus.filter(s => s.status === "completed").length / projectStatus.length) * 100}%` }}
-                    />
+                  
+                  {/* Visual Steps Bar */}
+                  <div className="relative mb-6">
+                    {/* Background bar */}
+                    <div className="w-full bg-white/10 rounded-full h-4 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-primary via-yellow-500 to-green-500 h-4 rounded-full transition-all duration-700 ease-out"
+                        style={{ width: `${(projectStatus.filter(s => s.status === "completed").length / projectStatus.length) * 100}%` }}
+                      />
+                    </div>
+                    
+                    {/* Step markers on the bar */}
+                    <div className="absolute top-0 left-0 right-0 h-4 flex items-center justify-between px-1">
+                      {projectStatus.map((step, idx) => (
+                        <div 
+                          key={step.id}
+                          className={`w-3 h-3 rounded-full border-2 ${
+                            step.status === "completed" 
+                              ? "bg-green-500 border-green-400" 
+                              : step.status === "in_progress"
+                              ? "bg-primary border-primary animate-pulse"
+                              : "bg-white/20 border-white/30"
+                          }`}
+                          title={step.client_status_label || `Étape ${step.step_number || idx + 1}`}
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex justify-between mt-2 text-xs text-white/40">
-                    <span>{projectStatus.filter(s => s.status === "completed").length} étapes terminées</span>
-                    <span>{projectStatus.length} étapes au total</span>
+                  
+                  {/* Completed steps summary */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {projectStatus.map((step, idx) => (
+                      <div 
+                        key={step.id}
+                        className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
+                          step.status === "completed" 
+                            ? "bg-green-500/20 text-green-400 border border-green-500/30" 
+                            : step.status === "in_progress"
+                            ? "bg-primary/20 text-primary border border-primary/50 animate-pulse"
+                            : "bg-white/5 text-white/40 border border-white/10"
+                        }`}
+                      >
+                        {step.status === "completed" && <Check size={12} />}
+                        {step.status === "in_progress" && <Clock size={12} />}
+                        Étape {step.step_number || idx + 1}
+                        {step.status === "completed" && " ✓"}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Stats */}
+                  <div className="grid grid-cols-3 gap-4 text-center border-t border-white/10 pt-4">
+                    <div>
+                      <div className="text-2xl font-bold text-green-400">{projectStatus.filter(s => s.status === "completed").length}</div>
+                      <div className="text-xs text-white/40">Terminées</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-primary">{projectStatus.filter(s => s.status === "in_progress").length}</div>
+                      <div className="text-xs text-white/40">En cours</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white/60">{projectStatus.filter(s => s.status === "pending").length}</div>
+                      <div className="text-xs text-white/40">À venir</div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Timeline */}
+                {/* Detailed Timeline */}
                 <div className="bg-card border border-white/10 p-6">
+                  <h3 className="font-semibold mb-4 text-white/80">Détail des étapes</h3>
                   <div className="relative">
                     {/* Vertical line */}
                     <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-white/10" />
@@ -692,7 +748,7 @@ const ClientDashboard = () => {
                                   ? "bg-primary/20 text-primary"
                                   : "bg-white/10 text-white/40"
                               }`}>
-                                {item.status === "completed" ? "Terminé" : item.status === "in_progress" ? "En cours" : "À venir"}
+                                {item.status === "completed" ? "Terminé ✓" : item.status === "in_progress" ? "En cours..." : "À venir"}
                               </span>
                             </div>
                             
