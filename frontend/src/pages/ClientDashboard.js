@@ -1497,7 +1497,7 @@ const ClientDashboard = () => {
 
                 <div className="bg-background border border-white/10 p-4">
                   <h3 className="font-bold mb-3 text-primary">Instructions de paiement</h3>
-                  <p className="text-sm text-white/60 mb-4">Effectuez un virement de <strong className="text-white">20€</strong> avec les informations suivantes :</p>
+                  <p className="text-sm text-white/60 mb-4">Effectuez un virement de <strong className="text-white">24€ TTC</strong> avec les informations suivantes :</p>
                   
                   {bankDetails ? (
                     <div className="space-y-2 text-sm">
