@@ -54,6 +54,9 @@ const ClientDashboard = () => {
   const [adminDocuments, setAdminDocuments] = useState([]);
   const [selectedAdminDocument, setSelectedAdminDocument] = useState(null);
   
+  // Project status (visible tasks from admin)
+  const [projectStatus, setProjectStatus] = useState([]);
+  
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
   const headers = { Authorization: `Bearer ${token}` };
