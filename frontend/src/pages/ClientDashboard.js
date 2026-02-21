@@ -588,7 +588,7 @@ const ClientDashboard = () => {
                     ) : (
                       <CardIcon size={16} />
                     )}
-                    Prolonger de 2 mois (20€)
+                    Prolonger de 2 mois (24€)
                   </button>
                 )}
               </div>
