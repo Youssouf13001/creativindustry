@@ -28,7 +28,7 @@ def api_client():
 @pytest.fixture(scope="module")
 def admin_token(api_client):
     """Get admin authentication token"""
-    response = api_client.post(f"{BASE_URL}/api/admin/login", json={
+    response = api_client.post(f"{BASE_URL}/api/auth/login", json={
         "email": ADMIN_EMAIL,
         "password": ADMIN_PASSWORD
     })
