@@ -1153,14 +1153,26 @@ const ClientDashboard = () => {
                             >
                               <Eye size={16} /> Voir
                             </button>
-                            <a
-                              href={`${API}/client/documents/${doc.id}/download`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              onClick={() => {
+                                fetch(`${API}/client/documents/${doc.id}/download`, { headers })
+                                  .then(res => res.blob())
+                                  .then(blob => {
+                                    const url = window.URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = doc.filename || `${doc.document_type}_${doc.id}.pdf`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    window.URL.revokeObjectURL(url);
+                                    a.remove();
+                                  })
+                                  .catch(() => toast.error("Erreur lors du téléchargement"));
+                              }}
                               className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
                             >
                               <Download size={16} /> PDF
-                            </a>
+                            </button>
                           </div>
                         </div>
                         
