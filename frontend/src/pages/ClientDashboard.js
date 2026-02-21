@@ -610,6 +610,95 @@ const ClientDashboard = () => {
       )}
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Project Status Tab */}
+        {activeTab === "project" && (
+          <div className="space-y-6" data-testid="client-project-status">
+            <h2 className="font-primary font-bold text-xl flex items-center gap-2">
+              <ClipboardList size={20} className="text-primary" /> Suivi de votre projet
+            </h2>
+            
+            {projectStatus.length === 0 ? (
+              <div className="bg-card border border-white/10 p-8 text-center">
+                <ClipboardList size={48} className="mx-auto mb-4 text-white/20" />
+                <p className="text-white/60">Aucune mise à jour de projet pour le moment.</p>
+                <p className="text-white/40 text-sm mt-2">Les étapes de votre projet apparaîtront ici.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {projectStatus.map((item, index) => (
+                  <div 
+                    key={item.id} 
+                    className={`bg-card border p-6 ${
+                      item.status === "completed" 
+                        ? "border-green-500/30" 
+                        : item.status === "in_progress"
+                        ? "border-primary/50"
+                        : "border-white/10"
+                    }`}
+                    data-testid={`project-status-item-${item.id}`}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        item.status === "completed" 
+                          ? "bg-green-500/20 text-green-400" 
+                          : item.status === "in_progress"
+                          ? "bg-primary/20 text-primary"
+                          : "bg-white/10 text-white/40"
+                      }`}>
+                        {item.status === "completed" ? (
+                          <Check size={20} />
+                        ) : (
+                          <span className="font-bold">{index + 1}</span>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className={`font-semibold text-lg ${
+                            item.status === "completed" ? "text-green-400" : "text-white"
+                          }`}>
+                            {item.client_status_label || item.title}
+                          </h3>
+                          <span className={`px-2 py-0.5 text-xs rounded ${
+                            item.status === "completed" 
+                              ? "bg-green-500/20 text-green-400" 
+                              : item.status === "in_progress"
+                              ? "bg-blue-500/20 text-blue-400"
+                              : "bg-white/10 text-white/60"
+                          }`}>
+                            {item.status === "completed" ? "Terminé" : item.status === "in_progress" ? "En cours" : "À venir"}
+                          </span>
+                        </div>
+                        
+                        {item.due_date && (
+                          <p className="text-white/40 text-sm flex items-center gap-1">
+                            <Clock size={14} />
+                            Prévu le {new Date(item.due_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                          </p>
+                        )}
+                        
+                        {item.updated_at && item.status === "completed" && (
+                          <p className="text-green-400/60 text-sm mt-1">
+                            Terminé le {new Date(item.updated_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Info box */}
+            <div className="bg-primary/10 border border-primary/30 p-4 rounded-lg">
+              <p className="text-primary text-sm">
+                <Bell size={16} className="inline mr-2" />
+                Vous recevrez une notification par email à chaque mise à jour importante de votre projet.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Settings Tab */}
         {activeTab === "settings" && (
           <div className="max-w-2xl mx-auto space-y-8">
