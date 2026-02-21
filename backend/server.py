@@ -6707,6 +6707,7 @@ async def create_task(data: TaskCreate, admin: dict = Depends(get_current_admin)
         "reminders": reminders,
         "client_visible": data.client_visible,
         "client_status_label": data.client_status_label,
+        "step_number": data.step_number,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": None,
         "completed_at": None
