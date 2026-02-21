@@ -1361,7 +1361,11 @@ def generate_qr_code(secret: str, email: str) -> str:
 
 @api_router.post("/admin/create-admin", response_model=dict)
 async def create_admin_account(data: AdminCreate, admin: dict = Depends(get_current_admin)):
-    """Create a new admin account - Only accessible by existing admins"""
+    """Create a new admin account - Only accessible by existing admins with 'complet' role"""
+    # Check if current admin has permission
+    if admin.get("role", "complet") != "complet":
+        raise HTTPException(status_code=403, detail="Seuls les administrateurs complets peuvent créer des comptes")
+    
     existing = await db.admins.find_one({"email": data.email})
     if existing:
         raise HTTPException(status_code=400, detail="Cet email est déjà utilisé")
@@ -1372,6 +1376,9 @@ async def create_admin_account(data: AdminCreate, admin: dict = Depends(get_curr
         "email": data.email,
         "password": hash_password(data.password),
         "name": data.name,
+        "role": data.role,
+        "allowed_tabs": data.allowed_tabs if data.role != "complet" else [],
+        "is_active": True,
         "mfa_enabled": False,
         "mfa_secret": None,
         "backup_codes": [],
@@ -1380,12 +1387,19 @@ async def create_admin_account(data: AdminCreate, admin: dict = Depends(get_curr
     }
     await db.admins.insert_one(admin_doc)
     
-    logging.info(f"New admin account created: {data.email} by {admin.get('email')}")
+    logging.info(f"New admin account created: {data.email} with role {data.role} by {admin.get('email')}")
     
     return {
         "success": True,
         "message": "Compte administrateur créé avec succès",
-        "admin": {"id": admin_id, "email": data.email, "name": data.name}
+        "admin": {
+            "id": admin_id, 
+            "email": data.email, 
+            "name": data.name,
+            "role": data.role,
+            "allowed_tabs": admin_doc["allowed_tabs"],
+            "is_active": True
+        }
     }
 
 @api_router.get("/admin/admins-list")
@@ -1393,13 +1407,57 @@ async def get_admins_list(admin: dict = Depends(get_current_admin)):
     """Get list of all admin accounts - Only accessible by existing admins"""
     admins = await db.admins.find(
         {},
-        {"_id": 0, "id": 1, "email": 1, "name": 1, "mfa_enabled": 1, "created_at": 1, "created_by": 1}
+        {"_id": 0, "id": 1, "email": 1, "name": 1, "mfa_enabled": 1, "created_at": 1, "created_by": 1, "role": 1, "allowed_tabs": 1, "is_active": 1}
     ).to_list(100)
+    # Ensure defaults for older accounts
+    for a in admins:
+        if "role" not in a:
+            a["role"] = "complet"
+        if "allowed_tabs" not in a:
+            a["allowed_tabs"] = []
+        if "is_active" not in a:
+            a["is_active"] = True
     return admins
+
+@api_router.put("/admin/update-admin/{admin_id}")
+async def update_admin_account(admin_id: str, data: AdminUpdate, admin: dict = Depends(get_current_admin)):
+    """Update an admin account - Only accessible by admins with 'complet' role"""
+    # Check if current admin has permission (can update self, or must be complet to update others)
+    is_self = admin_id == admin.get("id")
+    if not is_self and admin.get("role", "complet") != "complet":
+        raise HTTPException(status_code=403, detail="Seuls les administrateurs complets peuvent modifier d'autres comptes")
+    
+    target_admin = await db.admins.find_one({"id": admin_id})
+    if not target_admin:
+        raise HTTPException(status_code=404, detail="Administrateur non trouvé")
+    
+    update_data = {}
+    if data.name is not None:
+        update_data["name"] = data.name
+    if data.role is not None and not is_self:  # Can't change own role
+        update_data["role"] = data.role
+    if data.allowed_tabs is not None:
+        update_data["allowed_tabs"] = data.allowed_tabs
+    if data.is_active is not None and not is_self:  # Can't deactivate self
+        update_data["is_active"] = data.is_active
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Aucune donnée à mettre à jour")
+    
+    await db.admins.update_one({"id": admin_id}, {"$set": update_data})
+    
+    updated_admin = await db.admins.find_one({"id": admin_id}, {"_id": 0, "password": 0, "mfa_secret": 0, "backup_codes": 0})
+    
+    logging.info(f"Admin account updated: {target_admin.get('email')} by {admin.get('email')}")
+    
+    return {"success": True, "admin": updated_admin}
 
 @api_router.delete("/admin/delete-admin/{admin_id}")
 async def delete_admin_account(admin_id: str, admin: dict = Depends(get_current_admin)):
     """Delete an admin account - Cannot delete yourself"""
+    if admin.get("role", "complet") != "complet":
+        raise HTTPException(status_code=403, detail="Seuls les administrateurs complets peuvent supprimer des comptes")
+    
     if admin_id == admin.get("id"):
         raise HTTPException(status_code=400, detail="Vous ne pouvez pas supprimer votre propre compte")
     
