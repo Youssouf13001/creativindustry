@@ -47,9 +47,7 @@ const TaskManager = ({ token, clients = [] }) => {
   
   // Modals
   const [showAddTask, setShowAddTask] = useState(false);
-  const [showAddTeamUser, setShowAddTeamUser] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [editingTeamUser, setEditingTeamUser] = useState(null);
   
   // Form data
   const [newTask, setNewTask] = useState({
@@ -63,13 +61,6 @@ const TaskManager = ({ token, clients = [] }) => {
     client_visible: false,
     client_status_label: "",
     step_number: 1
-  });
-  
-  const [newTeamUser, setNewTeamUser] = useState({
-    name: "",
-    email: "",
-    password: "",
-    role: "reader"
   });
   
   const headers = { Authorization: `Bearer ${token}` };
