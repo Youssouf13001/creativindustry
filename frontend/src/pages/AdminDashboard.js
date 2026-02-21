@@ -4569,22 +4569,51 @@ const AdminDashboard = () => {
                   <span className="text-green-400">✓</span> Instructions de restauration
                 </li>
               </ul>
+              
+              {/* Progress Bar */}
+              {backupProgress.active && (
+                <div className="mb-6 bg-background border border-white/10 p-4 rounded">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">{backupProgress.step}</span>
+                    <span className="text-sm text-primary">{backupProgress.progress}%</span>
+                  </div>
+                  <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
+                    <div 
+                      className="bg-primary h-3 rounded-full transition-all duration-300"
+                      style={{ width: `${backupProgress.progress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              
               <button 
+                disabled={backupProgress.active}
                 onClick={async () => {
-                  toast.info("Création de la sauvegarde en cours... Cela peut prendre quelques minutes.");
+                  setBackupProgress({ active: true, step: 'Préparation de la sauvegarde...', progress: 5 });
                   try {
                     // Step 1: Create the backup file
+                    setBackupProgress({ active: true, step: 'Création de la sauvegarde...', progress: 20 });
                     const createResponse = await axios.post(`${API}/admin/backup/create`, {}, { headers });
                     
                     if (createResponse.data.success) {
-                      toast.success(`Sauvegarde créée (${createResponse.data.size_mb} MB). Téléchargement...`);
+                      setBackupProgress({ active: true, step: `Sauvegarde créée (${createResponse.data.size_mb} MB). Téléchargement...`, progress: 50 });
                       
-                      // Step 2: Download the file (download_url already includes /api prefix)
+                      // Step 2: Download the file with progress
                       const downloadUrl = createResponse.data.download_url.replace('/api', '');
                       const downloadResponse = await axios.get(`${API}${downloadUrl}`, {
                         headers,
-                        responseType: 'blob'
+                        responseType: 'blob',
+                        onDownloadProgress: (progressEvent) => {
+                          const percentCompleted = Math.round(50 + (progressEvent.loaded / progressEvent.total) * 45);
+                          setBackupProgress({ 
+                            active: true, 
+                            step: `Téléchargement... ${Math.round(progressEvent.loaded / 1024 / 1024)} MB`, 
+                            progress: percentCompleted 
+                          });
+                        }
                       });
+                      
+                      setBackupProgress({ active: true, step: 'Finalisation...', progress: 98 });
                       
                       const url = window.URL.createObjectURL(new Blob([downloadResponse.data]));
                       const link = document.createElement('a');
@@ -4594,18 +4623,33 @@ const AdminDashboard = () => {
                       link.click();
                       link.remove();
                       window.URL.revokeObjectURL(url);
+                      
+                      setBackupProgress({ active: true, step: 'Terminé !', progress: 100 });
                       toast.success("Sauvegarde téléchargée avec succès !");
-                      // Confirm the backup was downloaded to update reminder
                       confirmBackupDownload();
+                      
+                      // Reset progress after 2 seconds
+                      setTimeout(() => {
+                        setBackupProgress({ active: false, step: '', progress: 0 });
+                      }, 2000);
                     }
                   } catch (e) {
                     console.error('Backup error:', e);
+                    setBackupProgress({ active: false, step: '', progress: 0 });
                     toast.error("Erreur lors de la création de la sauvegarde. Vérifiez les permissions du serveur.");
                   }
                 }}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 font-bold flex items-center gap-2"
+                className={`${backupProgress.active ? 'bg-gray-600 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white px-6 py-3 font-bold flex items-center gap-2`}
               >
-                <Download size={20} /> Télécharger la sauvegarde ZIP
+                {backupProgress.active ? (
+                  <>
+                    <Loader size={20} className="animate-spin" /> Sauvegarde en cours...
+                  </>
+                ) : (
+                  <>
+                    <Download size={20} /> Télécharger la sauvegarde ZIP
+                  </>
+                )}
               </button>
               {backupStatus?.last_backup && (
                 <p className="text-xs text-green-400 mt-2">
