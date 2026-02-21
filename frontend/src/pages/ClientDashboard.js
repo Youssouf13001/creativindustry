@@ -1519,7 +1519,7 @@ const ClientDashboard = () => {
                     Annuler la demande
                   </button>
                   <a
-                    href="https://paypal.me/creativindustryfranc/20"
+                    href="https://paypal.me/creativindustryfranc/24"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-primary flex-1 py-3 text-center flex items-center justify-center gap-2"
@@ -1527,7 +1527,7 @@ const ClientDashboard = () => {
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
                       <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.77.77 0 0 1 .757-.64h6.67c2.205 0 3.902.57 4.904 1.65.944 1.02 1.28 2.47.997 4.3-.02.13-.04.26-.07.4-.71 3.69-3.12 5.5-7.18 5.5H9.19l-1.04 5.53a.64.64 0 0 1-.63.54h-.45l.01-.03z"/>
                     </svg>
-                    Payer 20€ avec PayPal
+                    Payer 24€ avec PayPal
                   </a>
                 </div>
                 <p className="text-center text-white/40 text-xs mt-4">
