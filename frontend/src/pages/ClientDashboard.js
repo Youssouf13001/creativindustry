@@ -1001,29 +1001,103 @@ const ClientDashboard = () => {
                 <p className="text-white/60">Aucune facture pour le moment</p>
               </div>
             ) : (
-              <div className="space-y-8">
-                {myInvoices.map((invoice) => (
-                  <InvoicePreview
-                    key={invoice.invoice_id}
-                    invoice={invoice}
-                    payments={myPayments.payments || []}
-                    onDownload={(inv) => {
-                      fetch(`${API}/client/invoice/${inv.invoice_id}/pdf`, { headers })
-                        .then(res => res.blob())
-                        .then(blob => {
-                          const url = window.URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = `Facture_${inv.invoice_number || inv.invoice_id?.slice(-8)}.pdf`;
-                          document.body.appendChild(a);
-                          a.click();
-                          window.URL.revokeObjectURL(url);
-                          a.remove();
-                        })
-                        .catch(() => toast.error("Erreur lors du téléchargement"));
-                    }}
-                  />
-                ))}
+              <div className="space-y-3">
+                {myInvoices.map((invoice) => {
+                  const totalPaid = (myPayments.payments || [])
+                    .filter(p => p.invoice_id === invoice.invoice_id || p.devis_id === invoice.devis_id)
+                    .reduce((sum, p) => sum + (p.amount || 0), 0);
+                  const remaining = (invoice.amount || 0) - totalPaid;
+                  
+                  return (
+                    <div key={invoice.invoice_id} className="bg-card border border-white/10 p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <h3 className="font-bold text-lg">Facture N° {invoice.invoice_number || invoice.invoice_id?.slice(-8)}</h3>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            remaining <= 0 ? "bg-green-500/20 text-green-400" :
+                            totalPaid > 0 ? "bg-yellow-500/20 text-yellow-400" :
+                            "bg-red-500/20 text-red-400"
+                          }`}>
+                            {remaining <= 0 ? "Soldée" : totalPaid > 0 ? "Partiel" : "En attente"}
+                          </span>
+                        </div>
+                        <p className="text-white/60 text-sm">
+                          Émise le {new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}
+                          {invoice.event_type && ` • ${invoice.event_type}`}
+                        </p>
+                        {totalPaid > 0 && remaining > 0 && (
+                          <p className="text-sm text-yellow-400 mt-1">
+                            Payé: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(totalPaid)} • Reste: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="text-2xl font-bold text-primary">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(invoice.amount || 0)}</p>
+                        <button
+                          onClick={() => setSelectedInvoicePreview(invoice)}
+                          className="btn-outline px-4 py-2 text-sm flex items-center gap-2"
+                        >
+                          <Eye size={16} /> Voir
+                        </button>
+                        <button
+                          onClick={() => {
+                            fetch(`${API}/client/invoice/${invoice.invoice_id}/pdf`, { headers })
+                              .then(res => res.blob())
+                              .then(blob => {
+                                const url = window.URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `Facture_${invoice.invoice_number || invoice.invoice_id?.slice(-8)}.pdf`;
+                                document.body.appendChild(a);
+                                a.click();
+                                window.URL.revokeObjectURL(url);
+                                a.remove();
+                              })
+                              .catch(() => toast.error("Erreur lors du téléchargement"));
+                          }}
+                          className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                        >
+                          <Download size={16} /> PDF
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* Modal Invoice Preview */}
+            {selectedInvoicePreview && (
+              <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center overflow-y-auto p-4">
+                <div className="bg-background border border-white/10 rounded-lg max-w-4xl w-full my-8 relative">
+                  <button
+                    onClick={() => setSelectedInvoicePreview(null)}
+                    className="absolute top-4 right-4 text-white/60 hover:text-white z-10 bg-black/50 rounded-full p-2"
+                  >
+                    <X size={24} />
+                  </button>
+                  <div className="max-h-[80vh] overflow-y-auto">
+                    <InvoicePreview
+                      invoice={selectedInvoicePreview}
+                      payments={myPayments.payments || []}
+                      onDownload={(inv) => {
+                        fetch(`${API}/client/invoice/${inv.invoice_id}/pdf`, { headers })
+                          .then(res => res.blob())
+                          .then(blob => {
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `Facture_${inv.invoice_number || inv.invoice_id?.slice(-8)}.pdf`;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            a.remove();
+                          })
+                          .catch(() => toast.error("Erreur lors du téléchargement"));
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
             )}
           </div>
