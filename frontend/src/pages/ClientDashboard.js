@@ -50,6 +50,10 @@ const ClientDashboard = () => {
   const [selectedDevisPreview, setSelectedDevisPreview] = useState(null);
   const [selectedInvoicePreview, setSelectedInvoicePreview] = useState(null);
   
+  // Admin uploaded documents
+  const [adminDocuments, setAdminDocuments] = useState([]);
+  const [selectedAdminDocument, setSelectedAdminDocument] = useState(null);
+  
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
   const headers = { Authorization: `Bearer ${token}` };
