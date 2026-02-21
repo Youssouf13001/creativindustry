@@ -1795,6 +1795,12 @@ async def login_client(data: ClientLogin):
     if not client or not verify_password(data.password, client["password"]):
         raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
     
+    # Update last_login
+    await db.clients.update_one(
+        {"id": client["id"]},
+        {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
+    )
+    
     token = create_token(client["id"], "client")
     return {
         "token": token, 
