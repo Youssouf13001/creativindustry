@@ -2593,6 +2593,153 @@ async def delete_client_completely(client_id: str, admin: dict = Depends(get_cur
     }
 
 
+# ==================== CLIENT DOCUMENTS (Admin uploaded invoices/quotes) ====================
+
+@api_router.post("/admin/clients/{client_id}/documents")
+async def upload_client_document(
+    client_id: str,
+    document_type: str = Form(...),
+    title: str = Form(...),
+    amount: float = Form(...),
+    description: str = Form(None),
+    due_date: str = Form(None),
+    file: UploadFile = File(...),
+    admin: dict = Depends(get_current_admin)
+):
+    """Upload a document (invoice/quote) for a client"""
+    # Validate client exists
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Validate document type
+    if document_type not in ["invoice", "quote"]:
+        raise HTTPException(status_code=400, detail="Type de document invalide. Utilisez 'invoice' ou 'quote'")
+    
+    # Validate file type (PDF only)
+    if not file.filename.lower().endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="Seuls les fichiers PDF sont acceptés")
+    
+    # Create upload directory
+    doc_folder = UPLOADS_DIR / "client_documents" / client_id
+    doc_folder.mkdir(parents=True, exist_ok=True)
+    
+    # Generate unique filename
+    doc_id = str(uuid.uuid4())
+    safe_filename = f"{document_type}_{doc_id}.pdf"
+    file_path = doc_folder / safe_filename
+    
+    # Save file
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+    
+    # Create document record
+    document = {
+        "id": doc_id,
+        "client_id": client_id,
+        "client_email": client.get("email"),
+        "document_type": document_type,
+        "title": title,
+        "description": description,
+        "amount": amount,
+        "file_url": f"/uploads/client_documents/{client_id}/{safe_filename}",
+        "filename": file.filename,
+        "status": "pending",
+        "paid_amount": 0,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "due_date": due_date,
+        "uploaded_by": admin.get("email")
+    }
+    
+    await db.client_documents.insert_one(document)
+    
+    # Remove _id for response
+    document.pop("_id", None)
+    
+    logging.info(f"Document uploaded for client {client.get('email')}: {title} ({document_type})")
+    
+    return {"success": True, "document": document}
+
+
+@api_router.get("/admin/clients/{client_id}/documents")
+async def get_client_documents_admin(client_id: str, admin: dict = Depends(get_current_admin)):
+    """Get all documents for a client (admin view)"""
+    documents = await db.client_documents.find(
+        {"client_id": client_id}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return documents
+
+
+@api_router.delete("/admin/documents/{document_id}")
+async def delete_client_document(document_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a client document"""
+    document = await db.client_documents.find_one({"id": document_id}, {"_id": 0})
+    if not document:
+        raise HTTPException(status_code=404, detail="Document non trouvé")
+    
+    # Delete file from filesystem
+    file_path = UPLOADS_DIR / "client_documents" / document["client_id"] / f"{document['document_type']}_{document_id}.pdf"
+    if file_path.exists():
+        file_path.unlink()
+    
+    # Delete from database
+    await db.client_documents.delete_one({"id": document_id})
+    
+    return {"success": True, "message": "Document supprimé"}
+
+
+@api_router.post("/admin/documents/{document_id}/payment")
+async def add_document_payment(document_id: str, amount: float = Form(...), admin: dict = Depends(get_current_admin)):
+    """Add a payment to a document"""
+    document = await db.client_documents.find_one({"id": document_id}, {"_id": 0})
+    if not document:
+        raise HTTPException(status_code=404, detail="Document non trouvé")
+    
+    new_paid_amount = document.get("paid_amount", 0) + amount
+    new_status = "paid" if new_paid_amount >= document["amount"] else "partial"
+    
+    await db.client_documents.update_one(
+        {"id": document_id},
+        {"$set": {"paid_amount": new_paid_amount, "status": new_status}}
+    )
+    
+    return {"success": True, "paid_amount": new_paid_amount, "status": new_status}
+
+
+# Client endpoints for documents
+@api_router.get("/client/documents")
+async def get_my_documents(client: dict = Depends(get_current_client)):
+    """Get all documents for the logged-in client"""
+    documents = await db.client_documents.find(
+        {"client_id": client["id"]}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return documents
+
+
+@api_router.get("/client/documents/{document_id}/download")
+async def download_client_document(document_id: str, client: dict = Depends(get_current_client)):
+    """Download a document"""
+    document = await db.client_documents.find_one(
+        {"id": document_id, "client_id": client["id"]}, 
+        {"_id": 0}
+    )
+    if not document:
+        raise HTTPException(status_code=404, detail="Document non trouvé")
+    
+    file_path = UPLOADS_DIR / "client_documents" / client["id"] / f"{document['document_type']}_{document_id}.pdf"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+    
+    return FileResponse(
+        path=str(file_path),
+        filename=document.get("filename", f"{document['document_type']}_{document_id}.pdf"),
+        media_type="application/pdf"
+    )
+
+
 # ==================== USER ACTIVITY TRACKING ====================
 
 @api_router.post("/client/activity/heartbeat")
