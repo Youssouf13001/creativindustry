@@ -330,7 +330,7 @@ const TaskManager = ({ token, clients = [] }) => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+              className="bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
               data-testid="filter-status"
             >
               <option value="">Tous les statuts</option>
@@ -342,7 +342,7 @@ const TaskManager = ({ token, clients = [] }) => {
             <select
               value={filterPriority}
               onChange={(e) => setFilterPriority(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+              className="bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
               data-testid="filter-priority"
             >
               <option value="">Toutes priorités</option>
@@ -354,7 +354,7 @@ const TaskManager = ({ token, clients = [] }) => {
             <select
               value={filterClient}
               onChange={(e) => setFilterClient(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+              className="bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
               data-testid="filter-client"
             >
               <option value="">Tous les clients</option>
