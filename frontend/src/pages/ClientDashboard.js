@@ -1482,7 +1482,7 @@ const ClientDashboard = () => {
               <CardIcon size={48} className="mx-auto text-primary mb-4" />
               <h2 className="text-xl font-bold">Prolonger votre compte</h2>
               <p className="text-white/60 text-sm mt-2">
-                Extension de 2 mois pour 20€
+                Extension de 2 mois pour 24€ TTC
               </p>
             </div>
 
