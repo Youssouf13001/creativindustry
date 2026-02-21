@@ -20,6 +20,11 @@ const AdminDashboard = () => {
   const [showAddClient, setShowAddClient] = useState(false);
   const [showAddFile, setShowAddFile] = useState(false);
   const [showAddPortfolio, setShowAddPortfolio] = useState(false);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
+  const [documentModalClient, setDocumentModalClient] = useState(null);
+  const [clientDocuments, setClientDocuments] = useState([]);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [newDocument, setNewDocument] = useState({ type: "invoice", title: "", amount: "", description: "", due_date: "", file: null });
   const [newClient, setNewClient] = useState({ name: "", email: "", password: "", phone: "" });
   const [newFile, setNewFile] = useState({ title: "", description: "", file_type: "video", file_url: "", thumbnail_url: "" });
   const [newPortfolioItem, setNewPortfolioItem] = useState({ title: "", description: "", media_type: "photo", media_url: "", thumbnail_url: "", category: "wedding", client_name: "", is_featured: false, story_duration: 3 });
