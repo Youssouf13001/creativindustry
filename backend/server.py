@@ -6926,8 +6926,8 @@ async def get_client_project_status(client: dict = Depends(get_current_client)):
             "client_id": client["id"],
             "client_visible": True
         },
-        {"_id": 0, "id": 1, "title": 1, "client_status_label": 1, "status": 1, "due_date": 1, "updated_at": 1}
-    ).sort("updated_at", -1).to_list(50)
+        {"_id": 0, "id": 1, "title": 1, "client_status_label": 1, "status": 1, "due_date": 1, "updated_at": 1, "step_number": 1, "assigned_names": 1, "completed_at": 1}
+    ).sort("step_number", 1).to_list(50)
     
     return tasks
 
