@@ -3839,7 +3839,7 @@ const AdminDashboard = () => {
             <div className="bg-blue-500/10 border border-blue-500/30 p-4">
               <p className="text-sm text-blue-300">
                 <strong>Système d'expiration :</strong> Chaque compte client expire automatiquement 6 mois après sa création. 
-                Les clients peuvent demander une extension de 2 mois pour 20€. 
+                Les clients peuvent demander une extension de 2 mois pour 24€ TTC (20€ HT + 4€ TVA). 
                 Les fichiers des comptes expirés sont archivés dans le dossier <code className="bg-black/30 px-1">uploads/archives</code>.
               </p>
             </div>
