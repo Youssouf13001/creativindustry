@@ -4974,13 +4974,13 @@ const AdminDashboard = () => {
             <div className="bg-card border border-white/10 p-6 mt-6">
               <h3 className="font-primary font-bold text-lg mb-4">👥 Gestion des Administrateurs</h3>
               <p className="text-white/60 text-sm mb-6">
-                Créez et gérez les comptes administrateurs. Seuls les administrateurs existants peuvent créer de nouveaux comptes.
+                Créez et gérez les comptes administrateurs avec leurs rôles et accès aux onglets.
               </p>
               
               {/* Create New Admin Form */}
               <div className="bg-background border border-white/10 p-4 mb-6">
                 <h4 className="font-bold text-sm mb-4 text-primary">+ Créer un nouvel administrateur</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <input
                     type="text"
                     placeholder="Nom"
@@ -5005,11 +5005,61 @@ const AdminDashboard = () => {
                     className="bg-card border border-white/20 px-3 py-2 text-sm"
                     data-testid="new-admin-password"
                   />
+                  <select
+                    value={newAdminData?.role || "complet"}
+                    onChange={(e) => setNewAdminData({ ...newAdminData, role: e.target.value })}
+                    className="bg-card border border-white/20 px-3 py-2 text-sm"
+                    data-testid="new-admin-role"
+                  >
+                    <option value="complet">Admin Complet - Accès total</option>
+                    <option value="editeur">Éditeur - Peut modifier</option>
+                    <option value="lecteur">Lecteur - Lecture seule</option>
+                  </select>
                 </div>
+                
+                {/* Tab Selection for non-complet roles */}
+                {newAdminData?.role && newAdminData.role !== "complet" && (
+                  <div className="mb-4">
+                    <label className="block text-white/60 text-xs mb-2">Onglets accessibles :</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: "overview", label: "Aperçu" },
+                        { id: "tasks", label: "Tâches" },
+                        { id: "calendar", label: "Calendrier" },
+                        { id: "galleries", label: "Galeries" },
+                        { id: "content", label: "Contenu" },
+                        { id: "portfolio", label: "Portfolio" },
+                        { id: "quotes", label: "Devis" },
+                        { id: "bookings", label: "Réservations" },
+                        { id: "clients", label: "Clients" },
+                        { id: "messages", label: "Messages" },
+                        { id: "appointments", label: "RDV" }
+                      ].map(tab => (
+                        <label key={tab.id} className="flex items-center gap-1 text-xs cursor-pointer bg-white/5 px-2 py-1 rounded">
+                          <input
+                            type="checkbox"
+                            checked={(newAdminData?.allowed_tabs || []).includes(tab.id)}
+                            onChange={(e) => {
+                              const tabs = newAdminData?.allowed_tabs || [];
+                              if (e.target.checked) {
+                                setNewAdminData({ ...newAdminData, allowed_tabs: [...tabs, tab.id] });
+                              } else {
+                                setNewAdminData({ ...newAdminData, allowed_tabs: tabs.filter(t => t !== tab.id) });
+                              }
+                            }}
+                            className="rounded"
+                          />
+                          {tab.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 <button
                   onClick={createNewAdmin}
                   disabled={!newAdminData?.name || !newAdminData?.email || !newAdminData?.password}
-                  className="btn-primary px-6 py-2 mt-4 text-sm disabled:opacity-50"
+                  className="btn-primary px-6 py-2 text-sm disabled:opacity-50"
                   data-testid="create-admin-btn"
                 >
                   Créer le compte
@@ -5018,33 +5068,141 @@ const AdminDashboard = () => {
 
               {/* Admin List */}
               <div>
-                <h4 className="font-bold text-sm mb-4">Liste des administrateurs</h4>
-                <div className="space-y-2">
+                <h4 className="font-bold text-sm mb-4">Liste des administrateurs ({adminsList.length})</h4>
+                <div className="space-y-3">
                   {adminsList.map((adminItem) => (
-                    <div key={adminItem.id} className="flex items-center justify-between py-3 px-4 bg-background border border-white/10">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                          <User size={18} className="text-primary" />
+                    <div key={adminItem.id} className="py-4 px-4 bg-background border border-white/10 rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                            <User size={18} className="text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">{adminItem.name}</p>
+                            <p className="text-white/40 text-xs">{adminItem.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold text-sm">{adminItem.name}</p>
-                          <p className="text-white/40 text-xs">{adminItem.email}</p>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            adminItem.role === "complet" ? "bg-red-500/20 text-red-400" :
+                            adminItem.role === "editeur" ? "bg-blue-500/20 text-blue-400" :
+                            "bg-gray-500/20 text-gray-400"
+                          }`}>
+                            {adminItem.role === "complet" ? "Admin Complet" : adminItem.role === "editeur" ? "Éditeur" : "Lecteur"}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded ${adminItem.mfa_enabled ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                            {adminItem.mfa_enabled ? 'MFA ✓' : 'MFA ✗'}
+                          </span>
+                          {adminItem.is_active === false && (
+                            <span className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400">Désactivé</span>
+                          )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <span className={`text-xs px-2 py-1 rounded ${adminItem.mfa_enabled ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
-                          {adminItem.mfa_enabled ? 'MFA ✓' : 'MFA ✗'}
-                        </span>
-                        {adminItem.id !== JSON.parse(localStorage.getItem("admin_user") || "{}").id && (
-                          <button
-                            onClick={() => deleteAdmin(adminItem.id)}
-                            className="text-red-400 hover:text-red-300 text-xs"
-                            data-testid={`delete-admin-${adminItem.id}`}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
+                      
+                      {/* Edit permissions (only for non-self admins) */}
+                      {adminItem.id !== JSON.parse(localStorage.getItem("admin_user") || "{}").id && (
+                        <div className="border-t border-white/10 pt-3 mt-2">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <select
+                              value={adminItem.role || "complet"}
+                              onChange={async (e) => {
+                                try {
+                                  await axios.put(`${API}/admin/update-admin/${adminItem.id}`, 
+                                    { role: e.target.value }, 
+                                    { headers: { Authorization: `Bearer ${token}` } }
+                                  );
+                                  loadAdminsList();
+                                  toast.success("Rôle mis à jour");
+                                } catch (err) {
+                                  toast.error(err.response?.data?.detail || "Erreur");
+                                }
+                              }}
+                              className="bg-card border border-white/20 px-2 py-1 text-xs rounded"
+                            >
+                              <option value="complet">Admin Complet</option>
+                              <option value="editeur">Éditeur</option>
+                              <option value="lecteur">Lecteur</option>
+                            </select>
+                            
+                            <label className="flex items-center gap-1 text-xs cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={adminItem.is_active !== false}
+                                onChange={async (e) => {
+                                  try {
+                                    await axios.put(`${API}/admin/update-admin/${adminItem.id}`, 
+                                      { is_active: e.target.checked }, 
+                                      { headers: { Authorization: `Bearer ${token}` } }
+                                    );
+                                    loadAdminsList();
+                                    toast.success(e.target.checked ? "Compte activé" : "Compte désactivé");
+                                  } catch (err) {
+                                    toast.error(err.response?.data?.detail || "Erreur");
+                                  }
+                                }}
+                                className="rounded"
+                              />
+                              Actif
+                            </label>
+                            
+                            <button
+                              onClick={() => deleteAdmin(adminItem.id)}
+                              className="text-red-400 hover:text-red-300 text-xs flex items-center gap-1"
+                              data-testid={`delete-admin-${adminItem.id}`}
+                            >
+                              <Trash2 size={14} /> Supprimer
+                            </button>
+                          </div>
+                          
+                          {/* Allowed tabs for non-complet */}
+                          {adminItem.role !== "complet" && (
+                            <div className="mt-3">
+                              <p className="text-white/40 text-xs mb-2">Onglets accessibles :</p>
+                              <div className="flex flex-wrap gap-1">
+                                {[
+                                  { id: "overview", label: "Aperçu" },
+                                  { id: "tasks", label: "Tâches" },
+                                  { id: "calendar", label: "Calendrier" },
+                                  { id: "galleries", label: "Galeries" },
+                                  { id: "content", label: "Contenu" },
+                                  { id: "portfolio", label: "Portfolio" },
+                                  { id: "quotes", label: "Devis" },
+                                  { id: "bookings", label: "Réservations" },
+                                  { id: "clients", label: "Clients" },
+                                  { id: "messages", label: "Messages" },
+                                  { id: "appointments", label: "RDV" }
+                                ].map(tab => (
+                                  <label key={tab.id} className={`flex items-center gap-1 text-xs cursor-pointer px-2 py-1 rounded ${
+                                    (adminItem.allowed_tabs || []).includes(tab.id) ? "bg-primary/20 text-primary" : "bg-white/5 text-white/40"
+                                  }`}>
+                                    <input
+                                      type="checkbox"
+                                      checked={(adminItem.allowed_tabs || []).includes(tab.id)}
+                                      onChange={async (e) => {
+                                        const tabs = adminItem.allowed_tabs || [];
+                                        const newTabs = e.target.checked 
+                                          ? [...tabs, tab.id]
+                                          : tabs.filter(t => t !== tab.id);
+                                        try {
+                                          await axios.put(`${API}/admin/update-admin/${adminItem.id}`, 
+                                            { allowed_tabs: newTabs }, 
+                                            { headers: { Authorization: `Bearer ${token}` } }
+                                          );
+                                          loadAdminsList();
+                                        } catch (err) {
+                                          toast.error(err.response?.data?.detail || "Erreur");
+                                        }
+                                      }}
+                                      className="rounded hidden"
+                                    />
+                                    {tab.label}
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
