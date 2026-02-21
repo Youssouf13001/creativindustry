@@ -161,47 +161,6 @@ const TaskManager = ({ token, clients = [] }) => {
     }
   };
   
-  const handleCreateTeamUser = async (e) => {
-    e.preventDefault();
-    if (!newTeamUser.name || !newTeamUser.email || !newTeamUser.password) {
-      toast.error("Veuillez remplir tous les champs obligatoires");
-      return;
-    }
-    
-    try {
-      const res = await axios.post(`${API}/admin/team-users`, newTeamUser, { headers });
-      setTeamUsers([res.data.user, ...teamUsers]);
-      setShowAddTeamUser(false);
-      setNewTeamUser({ name: "", email: "", password: "", role: "reader" });
-      toast.success("Collaborateur créé avec succès");
-    } catch (error) {
-      toast.error(error.response?.data?.detail || "Erreur lors de la création");
-    }
-  };
-  
-  const handleUpdateTeamUser = async (userId, data) => {
-    try {
-      const res = await axios.put(`${API}/admin/team-users/${userId}`, data, { headers });
-      setTeamUsers(teamUsers.map(u => u.id === userId ? res.data.user : u));
-      setEditingTeamUser(null);
-      toast.success("Collaborateur mis à jour");
-    } catch (error) {
-      toast.error("Erreur lors de la mise à jour");
-    }
-  };
-  
-  const handleDeleteTeamUser = async (userId) => {
-    if (!window.confirm("Supprimer ce collaborateur ?")) return;
-    
-    try {
-      await axios.delete(`${API}/admin/team-users/${userId}`, { headers });
-      setTeamUsers(teamUsers.filter(u => u.id !== userId));
-      toast.success("Collaborateur supprimé");
-    } catch (error) {
-      toast.error("Erreur lors de la suppression");
-    }
-  };
-  
   // Filter tasks
   const filteredTasks = tasks.filter(task => {
     if (filterStatus && task.status !== filterStatus) return false;
