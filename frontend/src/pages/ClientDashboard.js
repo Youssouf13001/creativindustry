@@ -1552,8 +1552,8 @@ const ClientDashboard = () => {
                 </div>
 
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-primary">20€</p>
-                  <p className="text-white/60 text-sm">Paiement unique - TVA incluse</p>
+                  <p className="text-3xl font-bold text-primary">24€ <span className="text-lg font-normal text-white/60">TTC</span></p>
+                  <p className="text-white/60 text-sm">20€ HT + 4€ TVA (20%)</p>
                 </div>
 
                 {/* PayPal Button */}
