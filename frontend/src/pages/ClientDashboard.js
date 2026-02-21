@@ -1219,29 +1219,48 @@ const ClientDashboard = () => {
             {/* Modal Admin Document Preview */}
             {selectedAdminDocument && (
               <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-                <div className="bg-background border border-white/10 rounded-lg max-w-2xl w-full">
-                  <div className="p-6">
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="font-bold text-xl">{selectedAdminDocument.title}</h3>
+                <div className="bg-background border border-white/10 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                  <div className="p-6 flex flex-col h-full">
+                    <div className="flex justify-between items-center mb-4">
+                      <div>
+                        <h3 className="font-bold text-xl">{selectedAdminDocument.title}</h3>
+                        <p className="text-sm text-white/60">
+                          {selectedAdminDocument.document_type === 'invoice' ? 'Facture' : 'Devis'} • {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(selectedAdminDocument.amount)}
+                        </p>
+                      </div>
                       <button onClick={() => setSelectedAdminDocument(null)} className="text-white/60 hover:text-white text-2xl">×</button>
                     </div>
-                    <iframe
-                      src={`${API.replace('/api', '')}${selectedAdminDocument.file_url}`}
-                      className="w-full h-[60vh] border border-white/10"
-                      title="Document Preview"
-                    />
+                    <div className="flex-1 bg-white/5 border border-white/10 flex items-center justify-center min-h-[300px]">
+                      <div className="text-center p-8">
+                        <FileText size={64} className="mx-auto text-primary mb-4" />
+                        <p className="text-white/60 mb-4">Aperçu PDF non disponible</p>
+                        <p className="text-sm text-white/40">Cliquez sur "Télécharger" pour voir le document</p>
+                      </div>
+                    </div>
                     <div className="mt-4 flex justify-end gap-3">
                       <button onClick={() => setSelectedAdminDocument(null)} className="btn-outline px-4 py-2">
                         Fermer
                       </button>
-                      <a
-                        href={`${API}/client/documents/${selectedAdminDocument.id}/download`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => {
+                          fetch(`${API}/client/documents/${selectedAdminDocument.id}/download`, { headers })
+                            .then(res => res.blob())
+                            .then(blob => {
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = selectedAdminDocument.filename || `${selectedAdminDocument.document_type}_${selectedAdminDocument.id}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                              a.remove();
+                            })
+                            .catch(() => toast.error("Erreur lors du téléchargement"));
+                        }}
                         className="btn-primary px-4 py-2 flex items-center gap-2"
                       >
                         <Download size={16} /> Télécharger
-                      </a>
+                      </button>
                     </div>
                   </div>
                 </div>
