@@ -3569,6 +3569,23 @@ const AdminDashboard = () => {
                               )}
                             </p>
                             <p className="text-white/60 text-sm">{client.email}</p>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-white/50">
+                              {client.phone && (
+                                <span className="flex items-center gap-1">
+                                  <Phone size={12} /> {client.phone}
+                                </span>
+                              )}
+                              {client.created_at && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar size={12} /> Inscrit le {new Date(client.created_at).toLocaleDateString('fr-FR')}
+                                </span>
+                              )}
+                              {client.last_login && (
+                                <span className="flex items-center gap-1">
+                                  <Clock size={12} /> Dernière connexion : {new Date(client.last_login).toLocaleDateString('fr-FR')} à {new Date(client.last_login).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              )}
+                            </div>
                           </button>
                           <div className="flex items-center gap-2">
                             {isOnline && (
