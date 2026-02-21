@@ -601,6 +601,7 @@ class Task(BaseModel):
     # For client visibility - project status
     client_visible: bool = False  # If true, client sees this as project status
     client_status_label: Optional[str] = None  # e.g., "Montage en cours", "Tri des photos"
+    step_number: int = 1  # Order for client display
     # Timestamps
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: Optional[datetime] = None
@@ -616,6 +617,7 @@ class TaskCreate(BaseModel):
     reminders: List[dict] = []  # [{"days_before": 1, "enabled": True}]
     client_visible: bool = False
     client_status_label: Optional[str] = None
+    step_number: int = 1
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
