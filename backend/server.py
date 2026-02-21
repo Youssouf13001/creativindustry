@@ -36,6 +36,9 @@ from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 
+# Import models early to avoid circular imports
+from models.schemas import AdminCreate, AdminUpdate, AdminResponse
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
