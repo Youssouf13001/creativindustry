@@ -612,7 +612,8 @@ const TaskManager = ({ token, clients = [] }) => {
               </div>
               
               <div>
-                <label className="block text-white/60 text-sm mb-1">Client associé</label>
+                <label className="block text-white/60 text-sm mb-1">Client concerné</label>
+                <p className="text-white/40 text-xs mb-2">Le client qui verra l'avancement de cette tâche</p>
                 <select
                   value={newTask.client_id}
                   onChange={(e) => setNewTask({ ...newTask, client_id: e.target.value })}
@@ -627,8 +628,9 @@ const TaskManager = ({ token, clients = [] }) => {
               </div>
               
               <div>
-                <label className="block text-white/60 text-sm mb-1">Assigner à</label>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
+                <label className="block text-white/60 text-sm mb-1">Responsable de la tâche</label>
+                <p className="text-white/40 text-xs mb-2">Membre(s) de l'équipe qui réaliseront cette tâche</p>
+                <div className="space-y-2 max-h-32 overflow-y-auto bg-white/5 rounded-lg p-3">
                   {teamUsers.map(user => (
                     <label key={user.id} className="flex items-center gap-2 cursor-pointer">
                       <input
