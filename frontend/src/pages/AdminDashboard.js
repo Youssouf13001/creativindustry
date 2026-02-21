@@ -5043,6 +5043,167 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Client Documents Modal */}
+        {showDocumentModal && documentModalClient && (
+          <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+            <div className="bg-card border border-primary p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-primary font-bold text-xl">
+                  📄 Documents de {documentModalClient.name}
+                </h3>
+                <button onClick={() => { setShowDocumentModal(false); setDocumentModalClient(null); }} className="text-white/60 hover:text-white text-2xl">×</button>
+              </div>
+
+              {/* Upload New Document */}
+              <div className="bg-background border border-white/10 p-4 mb-6">
+                <h4 className="font-bold mb-4">Ajouter un document</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm text-white/60 mb-1">Type *</label>
+                    <select
+                      value={newDocument.type}
+                      onChange={(e) => setNewDocument({...newDocument, type: e.target.value})}
+                      className="w-full bg-background border border-white/20 p-2 text-white"
+                    >
+                      <option value="invoice">Facture</option>
+                      <option value="quote">Devis</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-white/60 mb-1">Montant (€) *</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={newDocument.amount}
+                      onChange={(e) => setNewDocument({...newDocument, amount: e.target.value})}
+                      className="w-full bg-background border border-white/20 p-2 text-white"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm text-white/60 mb-1">Titre *</label>
+                    <input
+                      type="text"
+                      value={newDocument.title}
+                      onChange={(e) => setNewDocument({...newDocument, title: e.target.value})}
+                      className="w-full bg-background border border-white/20 p-2 text-white"
+                      placeholder="Ex: Facture prestation mariage"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-white/60 mb-1">Description</label>
+                    <input
+                      type="text"
+                      value={newDocument.description}
+                      onChange={(e) => setNewDocument({...newDocument, description: e.target.value})}
+                      className="w-full bg-background border border-white/20 p-2 text-white"
+                      placeholder="Description optionnelle"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-white/60 mb-1">Date d'échéance</label>
+                    <input
+                      type="date"
+                      value={newDocument.due_date}
+                      onChange={(e) => setNewDocument({...newDocument, due_date: e.target.value})}
+                      className="w-full bg-background border border-white/20 p-2 text-white"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm text-white/60 mb-1">Fichier PDF *</label>
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => setNewDocument({...newDocument, file: e.target.files[0]})}
+                      className="w-full bg-background border border-white/20 p-2 text-white"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={uploadDocument}
+                  disabled={uploadingDocument}
+                  className="mt-4 btn-primary px-6 py-2 flex items-center gap-2"
+                >
+                  {uploadingDocument ? <Loader size={16} className="animate-spin" /> : <Upload size={16} />}
+                  {uploadingDocument ? "Envoi en cours..." : "Ajouter le document"}
+                </button>
+              </div>
+
+              {/* Documents List */}
+              <div>
+                <h4 className="font-bold mb-4">Documents ({clientDocuments.length})</h4>
+                {clientDocuments.length === 0 ? (
+                  <p className="text-white/60 text-center py-8">Aucun document pour ce client</p>
+                ) : (
+                  <div className="space-y-3">
+                    {clientDocuments.map((doc) => {
+                      const remaining = doc.amount - (doc.paid_amount || 0);
+                      return (
+                        <div key={doc.id} className="bg-background border border-white/10 p-4">
+                          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`text-xs px-2 py-0.5 rounded ${doc.document_type === 'invoice' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                                  {doc.document_type === 'invoice' ? 'FACTURE' : 'DEVIS'}
+                                </span>
+                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                  doc.status === 'paid' ? 'bg-green-500/20 text-green-400' :
+                                  doc.status === 'partial' ? 'bg-yellow-500/20 text-yellow-400' :
+                                  'bg-red-500/20 text-red-400'
+                                }`}>
+                                  {doc.status === 'paid' ? 'Payé' : doc.status === 'partial' ? 'Partiel' : 'En attente'}
+                                </span>
+                              </div>
+                              <p className="font-semibold">{doc.title}</p>
+                              {doc.description && <p className="text-sm text-white/60">{doc.description}</p>}
+                              <p className="text-xs text-white/40 mt-1">
+                                Ajouté le {new Date(doc.created_at).toLocaleDateString('fr-FR')}
+                                {doc.due_date && ` • Échéance: ${new Date(doc.due_date).toLocaleDateString('fr-FR')}`}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <p className="text-xl font-bold text-primary">{doc.amount.toFixed(2)}€</p>
+                                {doc.paid_amount > 0 && remaining > 0 && (
+                                  <p className="text-xs text-yellow-400">Payé: {doc.paid_amount.toFixed(2)}€ • Reste: {remaining.toFixed(2)}€</p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={`${API.replace('/api', '')}${doc.file_url}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn-outline px-3 py-1 text-xs flex items-center gap-1"
+                                >
+                                  <Eye size={12} /> Voir
+                                </a>
+                                {doc.status !== 'paid' && (
+                                  <button
+                                    onClick={() => addDocumentPayment(doc.id, remaining)}
+                                    className="bg-green-500/20 text-green-400 border border-green-500/50 px-3 py-1 text-xs flex items-center gap-1 hover:bg-green-500/30"
+                                  >
+                                    <CreditCard size={12} /> Paiement
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => deleteDocument(doc.id)}
+                                  className="bg-red-500/20 text-red-400 border border-red-500/50 px-3 py-1 text-xs flex items-center gap-1 hover:bg-red-500/30"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Client File Transfer Modal */}
         {showClientFileTransfer && (
           <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
