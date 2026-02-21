@@ -6519,6 +6519,514 @@ async def get_client_unread_count(client: dict = Depends(get_current_client)):
     return {"unread_count": count}
 
 
+# ==================== TASK MANAGEMENT ROUTES ====================
+
+from models.schemas import TeamUser, TeamUserCreate, TeamUserUpdate, TeamUserLogin, TeamUserResponse, Task, TaskCreate, TaskUpdate
+
+# Team User Management
+
+@api_router.post("/admin/team-users", response_model=dict)
+async def create_team_user(data: TeamUserCreate, admin: dict = Depends(get_current_admin)):
+    """Create a new team user (admin only)"""
+    # Check if email already exists
+    existing = await db.team_users.find_one({"email": data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Cet email est déjà utilisé")
+    
+    user_id = str(uuid.uuid4())
+    user_doc = {
+        "id": user_id,
+        "email": data.email,
+        "password": hash_password(data.password),
+        "name": data.name,
+        "role": data.role,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": admin["id"]
+    }
+    await db.team_users.insert_one(user_doc)
+    
+    logging.info(f"Team user created: {data.email} with role {data.role} by admin {admin.get('email')}")
+    
+    return {
+        "success": True,
+        "user": {
+            "id": user_id,
+            "email": data.email,
+            "name": data.name,
+            "role": data.role,
+            "is_active": True
+        }
+    }
+
+
+@api_router.get("/admin/team-users")
+async def get_team_users(admin: dict = Depends(get_current_admin)):
+    """Get all team users"""
+    users = await db.team_users.find({}, {"_id": 0, "password": 0}).sort("created_at", -1).to_list(100)
+    return users
+
+
+@api_router.put("/admin/team-users/{user_id}")
+async def update_team_user(user_id: str, data: TeamUserUpdate, admin: dict = Depends(get_current_admin)):
+    """Update a team user"""
+    user = await db.team_users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Aucune donnée à mettre à jour")
+    
+    await db.team_users.update_one({"id": user_id}, {"$set": update_data})
+    
+    updated_user = await db.team_users.find_one({"id": user_id}, {"_id": 0, "password": 0})
+    return {"success": True, "user": updated_user}
+
+
+@api_router.delete("/admin/team-users/{user_id}")
+async def delete_team_user(user_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a team user"""
+    user = await db.team_users.find_one({"id": user_id}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    await db.team_users.delete_one({"id": user_id})
+    
+    logging.info(f"Team user deleted: {user.get('email')} by admin {admin.get('email')}")
+    
+    return {"success": True, "message": "Utilisateur supprimé"}
+
+
+@api_router.post("/team/login")
+async def login_team_user(data: TeamUserLogin):
+    """Login for team users"""
+    user = await db.team_users.find_one({"email": data.email}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+    
+    if not verify_password(data.password, user["password"]):
+        raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
+    
+    if not user.get("is_active", True):
+        raise HTTPException(status_code=401, detail="Ce compte est désactivé")
+    
+    # Update last login
+    await db.team_users.update_one(
+        {"id": user["id"]},
+        {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    token = create_token(user["id"], "team")
+    return {
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "email": user["email"],
+            "name": user["name"],
+            "role": user["role"]
+        }
+    }
+
+
+async def get_current_team_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get current team user from JWT token"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "team":
+            raise HTTPException(status_code=401, detail="Token invalide")
+        user = await db.team_users.find_one({"id": payload["sub"]}, {"_id": 0, "password": 0})
+        if not user:
+            raise HTTPException(status_code=401, detail="Utilisateur non trouvé")
+        if not user.get("is_active", True):
+            raise HTTPException(status_code=401, detail="Compte désactivé")
+        return user
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expiré")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Token invalide")
+
+
+@api_router.get("/team/me")
+async def get_team_me(user: dict = Depends(get_current_team_user)):
+    """Get current team user profile"""
+    return TeamUserResponse(
+        id=user["id"],
+        email=user["email"],
+        name=user["name"],
+        role=user["role"],
+        is_active=user.get("is_active", True)
+    )
+
+
+# Task Management
+
+@api_router.post("/tasks", response_model=dict)
+async def create_task(data: TaskCreate, admin: dict = Depends(get_current_admin)):
+    """Create a new task (admin only)"""
+    task_id = str(uuid.uuid4())
+    
+    # Get assigned user names
+    assigned_names = []
+    if data.assigned_to:
+        for user_id in data.assigned_to:
+            user = await db.team_users.find_one({"id": user_id}, {"_id": 0, "name": 1})
+            if user:
+                assigned_names.append(user["name"])
+    
+    # Get client name if linked
+    client_name = None
+    if data.client_id:
+        client = await db.clients.find_one({"id": data.client_id}, {"_id": 0, "name": 1})
+        if client:
+            client_name = client["name"]
+    
+    # Prepare reminders
+    reminders = []
+    for r in data.reminders:
+        reminders.append({
+            "days_before": r.get("days_before", 1),
+            "enabled": r.get("enabled", True),
+            "sent": False,
+            "last_sent_at": None
+        })
+    
+    task_doc = {
+        "id": task_id,
+        "title": data.title,
+        "description": data.description,
+        "due_date": data.due_date,
+        "priority": data.priority,
+        "status": "pending",
+        "client_id": data.client_id,
+        "client_name": client_name,
+        "assigned_to": data.assigned_to,
+        "assigned_names": assigned_names,
+        "created_by": admin["id"],
+        "created_by_name": admin.get("name", "Admin"),
+        "reminders": reminders,
+        "client_visible": data.client_visible,
+        "client_status_label": data.client_status_label,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": None,
+        "completed_at": None
+    }
+    
+    await db.tasks.insert_one(task_doc)
+    
+    logging.info(f"Task created: {data.title} by admin {admin.get('email')}")
+    
+    # Remove _id before returning
+    task_doc.pop("_id", None)
+    return {"success": True, "task": task_doc}
+
+
+@api_router.get("/tasks")
+async def get_tasks(
+    status: Optional[str] = None,
+    priority: Optional[str] = None,
+    client_id: Optional[str] = None,
+    admin: dict = Depends(get_current_admin)
+):
+    """Get all tasks with optional filters"""
+    query = {}
+    if status:
+        query["status"] = status
+    if priority:
+        query["priority"] = priority
+    if client_id:
+        query["client_id"] = client_id
+    
+    tasks = await db.tasks.find(query, {"_id": 0}).sort("due_date", 1).to_list(500)
+    return tasks
+
+
+@api_router.get("/tasks/{task_id}")
+async def get_task(task_id: str, admin: dict = Depends(get_current_admin)):
+    """Get a single task"""
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tâche non trouvée")
+    return task
+
+
+@api_router.put("/tasks/{task_id}")
+async def update_task(task_id: str, data: TaskUpdate, admin: dict = Depends(get_current_admin)):
+    """Update a task"""
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tâche non trouvée")
+    
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    
+    # Update assigned names if assigned_to changed
+    if "assigned_to" in update_data:
+        assigned_names = []
+        for user_id in update_data["assigned_to"]:
+            user = await db.team_users.find_one({"id": user_id}, {"_id": 0, "name": 1})
+            if user:
+                assigned_names.append(user["name"])
+        update_data["assigned_names"] = assigned_names
+    
+    # Update client name if client_id changed
+    if "client_id" in update_data:
+        if update_data["client_id"]:
+            client = await db.clients.find_one({"id": update_data["client_id"]}, {"_id": 0, "name": 1})
+            update_data["client_name"] = client["name"] if client else None
+        else:
+            update_data["client_name"] = None
+    
+    # Set completed_at if status changed to completed
+    if update_data.get("status") == "completed" and task.get("status") != "completed":
+        update_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+    elif update_data.get("status") != "completed":
+        update_data["completed_at"] = None
+    
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.tasks.update_one({"id": task_id}, {"$set": update_data})
+    
+    updated_task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    return {"success": True, "task": updated_task}
+
+
+@api_router.delete("/tasks/{task_id}")
+async def delete_task(task_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a task"""
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tâche non trouvée")
+    
+    await db.tasks.delete_one({"id": task_id})
+    
+    logging.info(f"Task deleted: {task.get('title')} by admin {admin.get('email')}")
+    
+    return {"success": True, "message": "Tâche supprimée"}
+
+
+@api_router.post("/tasks/{task_id}/toggle-status")
+async def toggle_task_status(task_id: str, admin: dict = Depends(get_current_admin)):
+    """Quick toggle between pending and completed"""
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tâche non trouvée")
+    
+    new_status = "completed" if task["status"] != "completed" else "pending"
+    update_data = {
+        "status": new_status,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if new_status == "completed":
+        update_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+    else:
+        update_data["completed_at"] = None
+    
+    await db.tasks.update_one({"id": task_id}, {"$set": update_data})
+    
+    return {"success": True, "status": new_status}
+
+
+@api_router.get("/tasks/stats/overview")
+async def get_tasks_stats(admin: dict = Depends(get_current_admin)):
+    """Get task statistics"""
+    total = await db.tasks.count_documents({})
+    pending = await db.tasks.count_documents({"status": "pending"})
+    in_progress = await db.tasks.count_documents({"status": "in_progress"})
+    completed = await db.tasks.count_documents({"status": "completed"})
+    
+    # Get overdue tasks
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    overdue = await db.tasks.count_documents({
+        "status": {"$ne": "completed"},
+        "due_date": {"$lt": today}
+    })
+    
+    # Get tasks due today
+    due_today = await db.tasks.count_documents({
+        "status": {"$ne": "completed"},
+        "due_date": today
+    })
+    
+    # Get high priority pending
+    high_priority = await db.tasks.count_documents({
+        "status": {"$ne": "completed"},
+        "priority": "high"
+    })
+    
+    return {
+        "total": total,
+        "pending": pending,
+        "in_progress": in_progress,
+        "completed": completed,
+        "overdue": overdue,
+        "due_today": due_today,
+        "high_priority": high_priority
+    }
+
+
+# Team user access to tasks (based on role)
+
+@api_router.get("/team/tasks")
+async def get_team_tasks(
+    status: Optional[str] = None,
+    user: dict = Depends(get_current_team_user)
+):
+    """Get tasks for team user (only assigned to them or all if editor/admin role)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    # Readers only see tasks assigned to them
+    if user["role"] == "reader":
+        query["assigned_to"] = user["id"]
+    
+    tasks = await db.tasks.find(query, {"_id": 0}).sort("due_date", 1).to_list(500)
+    return tasks
+
+
+@api_router.put("/team/tasks/{task_id}/status")
+async def update_team_task_status(task_id: str, status: str, user: dict = Depends(get_current_team_user)):
+    """Update task status (editors and assigned users can update)"""
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tâche non trouvée")
+    
+    # Check permissions
+    if user["role"] == "reader" and user["id"] not in task.get("assigned_to", []):
+        raise HTTPException(status_code=403, detail="Vous n'êtes pas autorisé à modifier cette tâche")
+    
+    if status not in ["pending", "in_progress", "completed"]:
+        raise HTTPException(status_code=400, detail="Statut invalide")
+    
+    update_data = {
+        "status": status,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if status == "completed":
+        update_data["completed_at"] = datetime.now(timezone.utc).isoformat()
+    else:
+        update_data["completed_at"] = None
+    
+    await db.tasks.update_one({"id": task_id}, {"$set": update_data})
+    
+    return {"success": True, "status": status}
+
+
+# Client project status endpoint
+
+@api_router.get("/client/project-status")
+async def get_client_project_status(client: dict = Depends(get_current_client)):
+    """Get project status updates visible to the client"""
+    # Find tasks linked to this client that are visible to them
+    tasks = await db.tasks.find(
+        {
+            "client_id": client["id"],
+            "client_visible": True
+        },
+        {"_id": 0, "id": 1, "title": 1, "client_status_label": 1, "status": 1, "due_date": 1, "updated_at": 1}
+    ).sort("updated_at", -1).to_list(50)
+    
+    return tasks
+
+
+# Task reminder check endpoint (to be called by cron)
+
+@api_router.post("/tasks/check-reminders")
+async def check_task_reminders(request: Request):
+    """Check and send task reminders - called by cron job"""
+    # Verify internal call or admin
+    auth_header = request.headers.get("Authorization")
+    internal_key = os.environ.get("INTERNAL_API_KEY", "")
+    
+    if auth_header != f"Bearer {internal_key}" and internal_key:
+        # Try to verify as admin
+        try:
+            if auth_header and auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1]
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                if payload.get("type") != "admin":
+                    raise HTTPException(status_code=401, detail="Non autorisé")
+            else:
+                raise HTTPException(status_code=401, detail="Non autorisé")
+        except:
+            raise HTTPException(status_code=401, detail="Non autorisé")
+    
+    today = datetime.now(timezone.utc).date()
+    reminders_sent = 0
+    
+    # Get all pending/in_progress tasks
+    tasks = await db.tasks.find(
+        {"status": {"$ne": "completed"}},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    for task in tasks:
+        task_due_date = datetime.strptime(task["due_date"], "%Y-%m-%d").date()
+        
+        for i, reminder in enumerate(task.get("reminders", [])):
+            if not reminder.get("enabled", True) or reminder.get("sent", False):
+                continue
+            
+            days_before = reminder.get("days_before", 1)
+            reminder_date = task_due_date - timedelta(days=days_before)
+            
+            if reminder_date == today:
+                # Send reminder emails to assigned users
+                for user_id in task.get("assigned_to", []):
+                    user = await db.team_users.find_one({"id": user_id}, {"_id": 0})
+                    if user and user.get("email"):
+                        # Prepare email
+                        days_text = "aujourd'hui" if days_before == 0 else f"dans {days_before} jour(s)" if days_before > 0 else f"depuis {-days_before} jour(s)"
+                        
+                        html_content = f"""
+                        <html>
+                        <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+                            <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; padding: 30px; border-radius: 10px;">
+                                <h1 style="color: #D4AF37;">⏰ Rappel de tâche</h1>
+                                <p>Bonjour {user.get('name', '')},</p>
+                                <p>Ceci est un rappel pour la tâche suivante :</p>
+                                <div style="background-color: #3a3a3a; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                                    <h2 style="color: #D4AF37; margin-top: 0;">{task['title']}</h2>
+                                    <p><strong>Échéance :</strong> {task['due_date']} ({days_text})</p>
+                                    <p><strong>Priorité :</strong> {task['priority'].upper()}</p>
+                                    {f"<p><strong>Client :</strong> {task['client_name']}</p>" if task.get('client_name') else ""}
+                                    {f"<p>{task['description']}</p>" if task.get('description') else ""}
+                                </div>
+                                <p style="color: #888;">Connectez-vous à votre espace pour marquer cette tâche comme terminée.</p>
+                            </div>
+                        </body>
+                        </html>
+                        """
+                        
+                        try:
+                            send_email(user["email"], f"⏰ Rappel : {task['title']}", html_content)
+                            reminders_sent += 1
+                        except Exception as e:
+                            logging.error(f"Failed to send reminder to {user['email']}: {e}")
+                
+                # Also send to admin email
+                admin_email = os.environ.get("SMTP_EMAIL")
+                if admin_email:
+                    try:
+                        send_email(admin_email, f"⏰ Rappel de tâche : {task['title']}", html_content)
+                    except:
+                        pass
+                
+                # Mark reminder as sent
+                task["reminders"][i]["sent"] = True
+                task["reminders"][i]["last_sent_at"] = datetime.now(timezone.utc).isoformat()
+                
+                await db.tasks.update_one(
+                    {"id": task["id"]},
+                    {"$set": {"reminders": task["reminders"]}}
+                )
+    
+    logging.info(f"Task reminders checked: {reminders_sent} sent")
+    return {"success": True, "reminders_sent": reminders_sent}
+
+
 app.include_router(api_router)
 
 # Mount static files for uploads
