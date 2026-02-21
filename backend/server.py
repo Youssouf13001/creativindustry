@@ -1482,6 +1482,10 @@ async def login_admin(data: AdminLogin):
     if not admin or not verify_password(data.password, admin["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
+    # Check if account is active
+    if not admin.get("is_active", True):
+        raise HTTPException(status_code=401, detail="Ce compte est désactivé")
+    
     # Check if MFA is enabled
     mfa_enabled = admin.get("mfa_enabled", False)
     
@@ -1512,7 +1516,9 @@ async def login_admin(data: AdminLogin):
             "id": admin["id"], 
             "email": admin["email"], 
             "name": admin["name"],
-            "mfa_enabled": mfa_enabled
+            "mfa_enabled": mfa_enabled,
+            "role": admin.get("role", "complet"),
+            "allowed_tabs": admin.get("allowed_tabs", [])
         }
     }
 
@@ -1522,7 +1528,10 @@ async def get_me(admin: dict = Depends(get_current_admin)):
         id=admin["id"], 
         email=admin["email"], 
         name=admin["name"],
-        mfa_enabled=admin.get("mfa_enabled", False)
+        mfa_enabled=admin.get("mfa_enabled", False),
+        role=admin.get("role", "complet"),
+        allowed_tabs=admin.get("allowed_tabs", []),
+        is_active=admin.get("is_active", True)
     )
 
 # ==================== MFA ROUTES ====================
