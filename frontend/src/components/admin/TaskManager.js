@@ -61,7 +61,8 @@ const TaskManager = ({ token, clients = [] }) => {
     assigned_to: [],
     reminders: [{ days_before: 1, enabled: true }],
     client_visible: false,
-    client_status_label: ""
+    client_status_label: "",
+    step_number: 1
   });
   
   const [newTeamUser, setNewTeamUser] = useState({
