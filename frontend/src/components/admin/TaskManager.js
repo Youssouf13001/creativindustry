@@ -292,15 +292,14 @@ const TaskManager = ({ token, clients = [] }) => {
           data-testid="add-btn"
         >
           <Plus className="w-4 h-4" />
-          {activeView === "tasks" ? "Nouvelle tâche" : "Nouveau collaborateur"}
+          Nouvelle tâche
         </button>
       </div>
       
-      {/* Tasks View */}
-      {activeView === "tasks" && (
-        <>
-          {/* Filters */}
-          <div className="flex flex-wrap gap-4 items-center bg-white/5 p-4 rounded-lg">
+      {/* Tasks List */}
+      <>
+        {/* Filters */}
+        <div className="flex flex-wrap gap-4 items-center bg-white/5 p-4 rounded-lg">
             <div className="flex-1 min-w-[200px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
