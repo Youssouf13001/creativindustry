@@ -252,10 +252,15 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - `/api/admin/client/{client_id}/files-zip` - Télécharger fichiers client en ZIP
 
 ## Backlog
-- P1: Refactoring AdminDashboard.js (4700+ lignes) en composants séparés
-- P1: Refactoring server.py en plusieurs routers FastAPI
+- P0: Refactoring AdminDashboard.js (5500+ lignes) en composants séparés - CRITIQUE
+- P0: Refactoring server.py (6900+ lignes) en plusieurs routers FastAPI - CRITIQUE
+- P1: Tableau de bord du site `devis` affiche zéro (bug signalé)
+- P1: E-mails de création de compte arrivent en spam (configuration DNS SPF/DKIM/DMARC)
+- P2: Page comptabilité ne se rafraîchit pas après envoi de rapport (site `devis`)
+- P2: Chat client/admin - vérification utilisateur en attente
 - P2: Rappels automatiques 24h avant le RDV
 - P2: Compression automatique des images à l'upload
+- P2: Fonctionnalité liens Synology pour fichiers volumineux (reportée)
 
 ## Problèmes Résolus (19 Fév 2026)
 - ✅ **Problème de miniatures** : Les URLs relatives n'étaient pas préfixées avec `BACKEND_URL` dans `PortfolioPage.js`. Corrigé en ajoutant des vérifications `startsWith('http')` sur toutes les URLs de médias.
