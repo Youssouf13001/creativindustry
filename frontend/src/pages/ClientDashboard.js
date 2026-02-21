@@ -94,13 +94,15 @@ const ClientDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [filesRes, galleriesRes, meRes] = await Promise.all([
+      const [filesRes, galleriesRes, meRes, adminDocsRes] = await Promise.all([
         axios.get(`${API}/client/files`, { headers }),
         axios.get(`${API}/client/galleries`, { headers }),
-        axios.get(`${API}/client/me`, { headers }).catch(() => ({ data: null }))
+        axios.get(`${API}/client/me`, { headers }).catch(() => ({ data: null })),
+        axios.get(`${API}/client/documents`, { headers }).catch(() => ({ data: [] }))
       ]);
       setFiles(filesRes.data);
       setGalleries(galleriesRes.data);
+      setAdminDocuments(adminDocsRes.data || []);
       if (meRes.data) {
         // Update client user with latest data from server
         setClientUser(prev => ({ ...prev, ...meRes.data }));
