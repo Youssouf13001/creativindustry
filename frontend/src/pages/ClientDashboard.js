@@ -508,6 +508,7 @@ const ClientDashboard = () => {
             {/* Navigation Tabs */}
             <div className="flex items-center gap-2 flex-wrap justify-center">
               {[
+                { id: "project", label: "Mon Projet", icon: ClipboardList },
                 { id: "galleries", label: "Galeries", icon: FolderOpen },
                 { id: "files", label: "Fichiers", icon: FileText },
                 { id: "transfers", label: "Transferts", icon: UploadCloud },
