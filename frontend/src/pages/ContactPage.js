@@ -23,7 +23,7 @@ const ContactPage = () => {
   useEffect(() => {
     const fetchContactInfo = async () => {
       try {
-        const res = await axios.get(`${API}/site-content`);
+        const res = await axios.get(`${API}/content`);
         if (res.data) {
           setContactInfo({
             phone: res.data.phone || "+33 1 23 45 67 89",
