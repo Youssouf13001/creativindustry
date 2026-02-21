@@ -9,15 +9,30 @@ import uuid
 
 # ==================== ADMIN MODELS ====================
 
+# Available tabs for admin access control
+ADMIN_TABS = [
+    "overview", "tasks", "calendar", "galleries", "content", "portfolio",
+    "quotes", "bookings", "clients", "extensions", "newsletter", "deployment",
+    "services", "options", "messages", "appointments", "settings", "security"
+]
+
 class AdminCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
+    role: str = "complet"  # complet, editeur, lecteur
+    allowed_tabs: List[str] = []  # Empty = all tabs (for complet role)
 
 class AdminLogin(BaseModel):
     email: EmailStr
     password: str
     totp_code: Optional[str] = None
+
+class AdminUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    allowed_tabs: Optional[List[str]] = None
+    is_active: Optional[bool] = None
 
 class AdminResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -25,6 +40,9 @@ class AdminResponse(BaseModel):
     email: str
     name: str
     mfa_enabled: bool = False
+    role: str = "complet"
+    allowed_tabs: List[str] = []
+    is_active: bool = True
 
 
 # ==================== MFA MODELS ====================
