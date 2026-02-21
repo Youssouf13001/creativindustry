@@ -735,23 +735,12 @@ def send_admin_appointment_notification(appointment_id: str, client_name: str, c
     return send_email(SMTP_EMAIL, subject, html_content)
 
 # ==================== MODELS ====================
-
-class AdminCreate(BaseModel):
-    email: EmailStr
-    password: str
-    name: str
+# Main models are imported from models/schemas.py
 
 class AdminLogin(BaseModel):
     email: EmailStr
     password: str
     totp_code: Optional[str] = None  # Code MFA si activé
-
-class AdminResponse(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str
-    email: str
-    name: str
-    mfa_enabled: bool = False
 
 # MFA Models
 class MFASetupResponse(BaseModel):
