@@ -500,7 +500,7 @@ const TaskManager = ({ token, clients = [] }) => {
               
               <div>
                 <label className="block text-white/60 text-sm mb-1">Responsable de la tâche</label>
-                <p className="text-white/40 text-xs mb-2">Membre(s) de l'équipe qui réaliseront cette tâche</p>
+                <p className="text-white/40 text-xs mb-2">Administrateur(s) qui réaliseront cette tâche</p>
                 <div className="space-y-2 max-h-32 overflow-y-auto bg-white/5 rounded-lg p-3">
                   {teamUsers.map(user => (
                     <label key={user.id} className="flex items-center gap-2 cursor-pointer">
@@ -517,11 +517,11 @@ const TaskManager = ({ token, clients = [] }) => {
                         className="rounded border-white/20"
                       />
                       <span className="text-white">{user.name}</span>
-                      <span className="text-white/40 text-sm">({user.role})</span>
+                      <span className="text-white/40 text-sm">({user.role === "complet" ? "Admin complet" : user.role === "editeur" ? "Éditeur" : "Lecteur"})</span>
                     </label>
                   ))}
                   {teamUsers.length === 0 && (
-                    <p className="text-white/40 text-sm">Aucun collaborateur. Créez d'abord des membres d'équipe.</p>
+                    <p className="text-white/40 text-sm">Aucun administrateur disponible. Créez des comptes admin dans l'onglet Sécurité.</p>
                   )}
                 </div>
               </div>
