@@ -3676,6 +3676,13 @@ const AdminDashboard = () => {
                               <span className="text-xs text-green-400 bg-green-500/20 px-2 py-1 rounded">En ligne</span>
                             )}
                             <button
+                              onClick={() => openDocumentModal(client)}
+                              className="bg-primary/20 text-primary border border-primary/50 px-3 py-1 text-xs flex items-center gap-1 hover:bg-primary/30"
+                              title="Factures et Devis"
+                            >
+                              <FileText size={12} /> Documents
+                            </button>
+                            <button
                               onClick={() => openClientFileTransfer(client)}
                               className="btn-outline px-3 py-1 text-xs flex items-center gap-1"
                               title="Envoyer des fichiers"
