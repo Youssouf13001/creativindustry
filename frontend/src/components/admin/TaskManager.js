@@ -81,13 +81,19 @@ const TaskManager = ({ token, clients = [] }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [tasksRes, teamRes, statsRes] = await Promise.all([
+      const [tasksRes, adminsRes, statsRes] = await Promise.all([
         axios.get(`${API}/tasks`, { headers }),
-        axios.get(`${API}/admin/team-users`, { headers }),
+        axios.get(`${API}/admin/admins-list`, { headers }),
         axios.get(`${API}/tasks/stats/overview`, { headers })
       ]);
       setTasks(tasksRes.data);
-      setTeamUsers(teamRes.data);
+      // Use admins as team users for task assignment
+      setTeamUsers(adminsRes.data.map(a => ({
+        id: a.id,
+        name: a.name,
+        email: a.email,
+        role: a.role || "complet"
+      })));
       setStats(statsRes.data);
     } catch (error) {
       console.error("Error loading tasks:", error);
