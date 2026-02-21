@@ -213,14 +213,23 @@ const AdminDashboard = () => {
   // Create new admin
   const createNewAdmin = async () => {
     try {
-      await axios.post(`${API}/admin/create-admin`, newAdminData, { headers });
+      await axios.post(`${API}/admin/create-admin`, {
+        name: newAdminData.name,
+        email: newAdminData.email,
+        password: newAdminData.password,
+        role: newAdminData.role || "complet",
+        allowed_tabs: newAdminData.allowed_tabs || []
+      }, { headers });
       toast.success("Administrateur créé avec succès !");
-      setNewAdminData({ name: "", email: "", password: "" });
+      setNewAdminData({ name: "", email: "", password: "", role: "complet", allowed_tabs: [] });
       fetchAdminsList();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erreur lors de la création");
     }
   };
+
+  // Alias for loadAdminsList
+  const loadAdminsList = fetchAdminsList;
 
   // Delete admin
   const deleteAdmin = async (adminId) => {
