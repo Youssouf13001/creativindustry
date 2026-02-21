@@ -630,3 +630,4 @@ class TaskUpdate(BaseModel):
     reminders: Optional[List[dict]] = None
     client_visible: Optional[bool] = None
     client_status_label: Optional[str] = None
+    step_number: Optional[int] = None
