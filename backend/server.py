@@ -7178,6 +7178,7 @@ async def update_client_project(client_id: str, data: dict, admin: dict = Depend
     """Update project step for a client - sends email notification"""
     try:
         new_step = data.get("current_step", 1)
+        total_steps = len(PROJECT_STEPS)
         
         # Get current project status
         current_project = await db.client_projects.find_one({"client_id": client_id}, {"_id": 0})
@@ -7187,7 +7188,10 @@ async def update_client_project(client_id: str, data: dict, admin: dict = Depend
         steps_with_status = []
         for step_info in PROJECT_STEPS:
             step_num = step_info["step"]
-            if step_num < new_step:
+            # If new_step > total_steps, all steps are completed
+            if new_step > total_steps:
+                status = "completed"
+            elif step_num < new_step:
                 status = "completed"
             elif step_num == new_step:
                 status = "in_progress"
@@ -7200,7 +7204,8 @@ async def update_client_project(client_id: str, data: dict, admin: dict = Depend
             "current_step": new_step,
             "steps": steps_with_status,
             "updated_at": datetime.now(timezone.utc).isoformat(),
-            "updated_by": admin.get("email")
+            "updated_by": admin.get("email"),
+            "completed": new_step > total_steps
         }
         
         await db.client_projects.update_one(
@@ -7215,9 +7220,13 @@ async def update_client_project(client_id: str, data: dict, admin: dict = Depend
             client = await db.clients.find_one({"id": client_id}, {"_id": 0})
             if client and client.get("email"):
                 try:
-                    current_step_info = next((s for s in PROJECT_STEPS if s["step"] == new_step), None)
-                    if current_step_info:
-                        email_sent = await send_project_step_email(client, current_step_info, new_step, len(PROJECT_STEPS))
+                    if new_step > total_steps:
+                        # Project completed email
+                        email_sent = await send_project_completed_email(client)
+                    else:
+                        current_step_info = next((s for s in PROJECT_STEPS if s["step"] == new_step), None)
+                        if current_step_info:
+                            email_sent = await send_project_step_email(client, current_step_info, new_step, total_steps)
                 except Exception as e:
                     logging.error(f"Failed to send project step email: {e}")
         
