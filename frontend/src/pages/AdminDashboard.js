@@ -291,6 +291,117 @@ const AdminDashboard = () => {
     }
   }, [activeTab]);
 
+  // Load testimonials when switching to testimonials tab
+  useEffect(() => {
+    if (activeTab === "testimonials") {
+      fetchTestimonials();
+    }
+  }, [activeTab]);
+
+  // Load welcome popup when switching to popup tab
+  useEffect(() => {
+    if (activeTab === "welcome-popup") {
+      fetchWelcomePopup();
+    }
+  }, [activeTab]);
+
+  // Fetch testimonials
+  const fetchTestimonials = async () => {
+    setLoadingTestimonials(true);
+    try {
+      const res = await axios.get(`${API}/admin/testimonials`, { headers });
+      setTestimonials(res.data);
+    } catch (e) {
+      console.error("Error fetching testimonials:", e);
+    } finally {
+      setLoadingTestimonials(false);
+    }
+  };
+
+  // Update testimonial
+  const updateTestimonial = async (id, update) => {
+    try {
+      await axios.put(`${API}/admin/testimonials/${id}`, update, { headers });
+      toast.success("Témoignage mis à jour");
+      fetchTestimonials();
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  // Delete testimonial
+  const deleteTestimonial = async (id) => {
+    if (!window.confirm("Supprimer ce témoignage ?")) return;
+    try {
+      await axios.delete(`${API}/admin/testimonials/${id}`, { headers });
+      toast.success("Témoignage supprimé");
+      fetchTestimonials();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  // Fetch welcome popup
+  const fetchWelcomePopup = async () => {
+    try {
+      const res = await axios.get(`${API}/welcome-popup`);
+      setWelcomePopup(res.data);
+    } catch (e) {
+      console.error("Error fetching welcome popup:", e);
+    }
+  };
+
+  // Update welcome popup
+  const updateWelcomePopup = async (update) => {
+    try {
+      await axios.put(`${API}/admin/welcome-popup`, update, { headers });
+      toast.success("Popup d'accueil mis à jour");
+      fetchWelcomePopup();
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  // Upload welcome popup video
+  const uploadWelcomeVideo = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Check file size (max 100MB)
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("La vidéo est trop volumineuse (max 100MB)");
+      return;
+    }
+    
+    setUploadingPopupVideo(true);
+    const formData = new FormData();
+    formData.append("video", file);
+    
+    try {
+      const res = await axios.post(`${API}/admin/welcome-popup/video`, formData, {
+        headers: { ...headers, "Content-Type": "multipart/form-data" }
+      });
+      toast.success("Vidéo uploadée avec succès");
+      fetchWelcomePopup();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de l'upload");
+    } finally {
+      setUploadingPopupVideo(false);
+    }
+  };
+
+  // Delete welcome popup video
+  const deleteWelcomeVideo = async () => {
+    if (!window.confirm("Supprimer la vidéo ?")) return;
+    try {
+      await axios.delete(`${API}/admin/welcome-popup/video`, { headers });
+      toast.success("Vidéo supprimée");
+      fetchWelcomePopup();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
   // Fetch backup status for reminder
   const fetchBackupStatus = async () => {
     try {
