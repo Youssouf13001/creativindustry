@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ChatWidget from "./components/ChatWidget";
+import WelcomePopup from "./components/WelcomePopup";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -16,6 +17,7 @@ import BookingPage from "./pages/BookingPage";
 import AppointmentPage from "./pages/AppointmentPage";
 import AppointmentConfirmPage from "./pages/AppointmentConfirmPage";
 import ContactPage from "./pages/ContactPage";
+import TestimonialsPage from "./pages/TestimonialsPage";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientLogin from "./pages/ClientLogin";
@@ -39,6 +41,7 @@ function App() {
             <Route path="/rendez-vous" element={<AppointmentPage />} />
             <Route path="/rendez-vous/confirmer/:appointmentId/:token" element={<AppointmentConfirmPage />} />
             <Route path="/contact" element={<ContactPage />} />
+            <Route path="/temoignages" element={<TestimonialsPage />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/client" element={<ClientLogin />} />
@@ -48,6 +51,7 @@ function App() {
         </main>
         <Footer />
         <ChatWidget />
+        <WelcomePopup />
         <Toaster position="top-right" richColors />
       </div>
     </BrowserRouter>
