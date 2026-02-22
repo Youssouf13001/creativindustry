@@ -6896,13 +6896,21 @@ async def create_task(data: TaskCreate, admin: dict = Depends(get_current_admin)
     """Create a new task (admin only)"""
     task_id = str(uuid.uuid4())
     
-    # Get assigned user names
+    # Get assigned user names and details for email
     assigned_names = []
+    assigned_admins = []
     if data.assigned_to:
         for user_id in data.assigned_to:
-            user = await db.team_users.find_one({"id": user_id}, {"_id": 0, "name": 1})
+            # Check in admins collection
+            user = await db.admins.find_one({"id": user_id}, {"_id": 0, "id": 1, "name": 1, "email": 1})
             if user:
                 assigned_names.append(user["name"])
+                assigned_admins.append(user)
+            else:
+                # Fallback to team_users
+                user = await db.team_users.find_one({"id": user_id}, {"_id": 0, "name": 1})
+                if user:
+                    assigned_names.append(user["name"])
     
     # Get client name if linked
     client_name = None
@@ -6935,9 +6943,6 @@ async def create_task(data: TaskCreate, admin: dict = Depends(get_current_admin)
         "created_by": admin["id"],
         "created_by_name": admin.get("name", "Admin"),
         "reminders": reminders,
-        "client_visible": data.client_visible,
-        "client_status_label": data.client_status_label,
-        "step_number": data.step_number,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": None,
         "completed_at": None
@@ -6946,6 +6951,14 @@ async def create_task(data: TaskCreate, admin: dict = Depends(get_current_admin)
     await db.tasks.insert_one(task_doc)
     
     logging.info(f"Task created: {data.title} by admin {admin.get('email')}")
+    
+    # Send email notifications to assigned collaborators
+    assigner_name = admin.get("name", "Admin")
+    for collab in assigned_admins:
+        try:
+            await send_task_assignment_email(collab, task_doc, assigner_name)
+        except Exception as e:
+            logging.error(f"Failed to send task assignment email to {collab.get('email')}: {e}")
     
     # Remove _id before returning
     task_doc.pop("_id", None)
