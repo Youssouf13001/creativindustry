@@ -479,22 +479,6 @@ const TaskManager = ({ token, clients = [] }) => {
               </div>
               
               <div>
-                <label className="block text-white/60 text-sm mb-1">Client concerné</label>
-                <p className="text-white/40 text-xs mb-2">Le client qui verra l'avancement de cette tâche</p>
-                <select
-                  value={newTask.client_id}
-                  onChange={(e) => setNewTask({ ...newTask, client_id: e.target.value })}
-                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
-                  data-testid="task-client-select"
-                >
-                  <option value="">Aucun client</option>
-                  {clients.map(client => (
-                    <option key={client.id} value={client.id}>{client.name}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
                 <label className="block text-white/60 text-sm mb-1">Responsable de la tâche</label>
                 <p className="text-white/40 text-xs mb-2">Administrateur(s) qui réaliseront cette tâche</p>
                 <div className="space-y-2 max-h-32 overflow-y-auto bg-white/5 rounded-lg p-3">
