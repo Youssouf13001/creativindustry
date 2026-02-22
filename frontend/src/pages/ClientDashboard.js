@@ -102,12 +102,14 @@ const ClientDashboard = () => {
         axios.get(`${API}/client/galleries`, { headers }),
         axios.get(`${API}/client/me`, { headers }).catch(() => ({ data: null })),
         axios.get(`${API}/client/documents`, { headers }).catch(() => ({ data: [] })),
-        axios.get(`${API}/client/project-status`, { headers }).catch(() => ({ data: [] }))
+        axios.get(`${API}/client/project-progress`, { headers }).catch(() => ({ data: { steps: [], current_step: 0 } }))
       ]);
       setFiles(filesRes.data);
       setGalleries(galleriesRes.data);
       setAdminDocuments(adminDocsRes.data || []);
-      setProjectStatus(projectStatusRes.data || []);
+      // Use new project progress format
+      const projectData = projectStatusRes.data;
+      setProjectStatus(projectData.steps || []);
       if (meRes.data) {
         // Update client user with latest data from server
         setClientUser(prev => ({ ...prev, ...meRes.data }));
