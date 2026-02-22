@@ -7150,13 +7150,12 @@ async def get_client_project_status(client: dict = Depends(get_current_client)):
 
 # Predefined project steps
 PROJECT_STEPS = [
-    {"step": 1, "label": "Commande reçue", "description": "Votre commande a été reçue et enregistrée"},
-    {"step": 2, "label": "Vidage des cartes mémoire", "description": "Transfert de vos fichiers en cours"},
-    {"step": 3, "label": "Sauvegarde sur nos serveurs", "description": "Vos fichiers sont sauvegardés en sécurité"},
-    {"step": 4, "label": "Tri et sélection", "description": "Sélection des meilleures prises"},
-    {"step": 5, "label": "Retouche / Montage", "description": "Édition et retouche en cours"},
-    {"step": 6, "label": "Vérification qualité", "description": "Contrôle qualité final"},
-    {"step": 7, "label": "Livraison", "description": "Votre projet est prêt !"},
+    {"step": 1, "label": "Vidage des cartes mémoire", "description": "Transfert de vos fichiers en cours"},
+    {"step": 2, "label": "Sauvegarde sur nos serveurs", "description": "Vos fichiers sont sauvegardés en sécurité"},
+    {"step": 3, "label": "Tri et sélection", "description": "Sélection des meilleures prises"},
+    {"step": 4, "label": "Retouche / Montage", "description": "Édition et retouche en cours"},
+    {"step": 5, "label": "Vérification qualité", "description": "Contrôle qualité final"},
+    {"step": 6, "label": "Livraison", "description": "Votre projet est prêt !"},
 ]
 
 @api_router.get("/project-steps")
