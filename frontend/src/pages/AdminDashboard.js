@@ -3496,7 +3496,7 @@ const AdminDashboard = () => {
                         <>
                           <Upload size={48} className="text-white/30" />
                           <p className="text-white/60 mt-4">Cliquez pour uploader une vidéo</p>
-                          <p className="text-white/40 text-sm mt-2">MP4, WebM, MOV • Max 100MB</p>
+                          <p className="text-white/40 text-sm mt-2">MP4, WebM, MOV • Max 500MB</p>
                         </>
                       )}
                     </div>
