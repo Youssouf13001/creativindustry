@@ -1428,7 +1428,14 @@ const AdminDashboard = () => {
             { id: "appointments", label: "Rendez-vous" },
             { id: "settings", label: "Paramètres" },
             { id: "security", label: "🔐 Sécurité" }
-          ].map((tab) => (
+          ]
+          .filter(tab => {
+            // Admin "complet" sees all tabs
+            if (!currentAdmin || currentAdmin.role === "complet") return true;
+            // Other roles only see allowed tabs
+            return currentAdmin.allowed_tabs?.includes(tab.id);
+          })
+          .map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
