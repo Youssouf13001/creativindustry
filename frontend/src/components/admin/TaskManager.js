@@ -109,10 +109,7 @@ const TaskManager = ({ token, clients = [] }) => {
         priority: "medium",
         client_id: "",
         assigned_to: [],
-        reminders: [{ days_before: 1, enabled: true }],
-        client_visible: false,
-        client_status_label: "",
-        step_number: 1
+        reminders: [{ days_before: 1, enabled: true }]
       });
       toast.success("Tâche créée avec succès");
       loadData(); // Refresh stats
