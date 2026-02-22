@@ -200,39 +200,59 @@ const TaskManager = ({ token, currentAdmin }) => {
 
   return (
     <div className="space-y-6" data-testid="task-manager">
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-            <div className="text-2xl font-bold text-white">{stats.total}</div>
-            <div className="text-sm text-white/60">Total</div>
+      {/* Stats Cards - For collaborators, show stats based on their assigned tasks only */}
+      {(() => {
+        // Calculate stats based on filtered tasks for non-complet roles
+        const myStats = canManageTasks ? stats : {
+          total: filteredTasks.length,
+          pending: filteredTasks.filter(t => t.status === "pending").length,
+          in_progress: filteredTasks.filter(t => t.status === "in_progress").length,
+          completed: filteredTasks.filter(t => t.status === "completed").length,
+          overdue: filteredTasks.filter(t => {
+            if (t.status === "completed") return false;
+            const today = new Date().toISOString().split("T")[0];
+            return t.due_date < today;
+          }).length,
+          due_today: filteredTasks.filter(t => {
+            const today = new Date().toISOString().split("T")[0];
+            return t.due_date === today;
+          }).length,
+          high_priority: filteredTasks.filter(t => t.priority === "high").length
+        };
+        
+        return myStats && (
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+              <div className="text-2xl font-bold text-white">{myStats.total}</div>
+              <div className="text-sm text-white/60">Total</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+              <div className="text-2xl font-bold text-gray-400">{myStats.pending}</div>
+              <div className="text-sm text-white/60">En attente</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+              <div className="text-2xl font-bold text-blue-400">{myStats.in_progress}</div>
+              <div className="text-sm text-white/60">En cours</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+              <div className="text-2xl font-bold text-green-400">{myStats.completed}</div>
+              <div className="text-sm text-white/60">Terminées</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-4 border border-red-500/30">
+              <div className="text-2xl font-bold text-red-400">{myStats.overdue}</div>
+              <div className="text-sm text-white/60">En retard</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-4 border border-yellow-500/30">
+              <div className="text-2xl font-bold text-yellow-400">{myStats.due_today}</div>
+              <div className="text-sm text-white/60">Aujourd'hui</div>
+            </div>
+            <div className="bg-white/5 rounded-lg p-4 border border-orange-500/30">
+              <div className="text-2xl font-bold text-orange-400">{myStats.high_priority}</div>
+              <div className="text-sm text-white/60">Priorité haute</div>
+            </div>
           </div>
-          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-            <div className="text-2xl font-bold text-gray-400">{stats.pending}</div>
-            <div className="text-sm text-white/60">En attente</div>
-          </div>
-          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-            <div className="text-2xl font-bold text-blue-400">{stats.in_progress}</div>
-            <div className="text-sm text-white/60">En cours</div>
-          </div>
-          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-            <div className="text-2xl font-bold text-green-400">{stats.completed}</div>
-            <div className="text-sm text-white/60">Terminées</div>
-          </div>
-          <div className="bg-white/5 rounded-lg p-4 border border-red-500/30">
-            <div className="text-2xl font-bold text-red-400">{stats.overdue}</div>
-            <div className="text-sm text-white/60">En retard</div>
-          </div>
-          <div className="bg-white/5 rounded-lg p-4 border border-yellow-500/30">
-            <div className="text-2xl font-bold text-yellow-400">{stats.due_today}</div>
-            <div className="text-sm text-white/60">Aujourd'hui</div>
-          </div>
-          <div className="bg-white/5 rounded-lg p-4 border border-orange-500/30">
-            <div className="text-2xl font-bold text-orange-400">{stats.high_priority}</div>
-            <div className="text-sm text-white/60">Priorité haute</div>
-          </div>
-        </div>
-      )}
+        );
+      })()}
       
       {/* Header with Add Button */}
       <div className="flex items-center justify-between">
