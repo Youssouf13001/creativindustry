@@ -1450,7 +1450,7 @@ const AdminDashboard = () => {
         {activeTab === "tasks" && (
           <div data-testid="admin-tasks">
             <h2 className="font-primary font-bold text-xl mb-6">Gestion des Tâches</h2>
-            <TaskManager token={token} clients={clients} />
+            <TaskManager token={token} />
           </div>
         )}
 
