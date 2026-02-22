@@ -1350,48 +1350,116 @@ const AdminDashboard = () => {
             <span className="text-gold-gradient">Dashboard</span>
           </h1>
           
-          {/* Admin Profile Section */}
-          <div className="flex items-center gap-4">
-            {currentAdmin && (
-              <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full px-4 py-2">
-                {/* Avatar */}
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-yellow-600 flex items-center justify-center text-black font-bold text-sm">
-                  {currentAdmin.name?.charAt(0)?.toUpperCase() || "A"}
-                </div>
-                
-                {/* Info */}
-                <div className="hidden sm:block">
-                  <p className="text-white font-medium text-sm">{currentAdmin.name || "Admin"}</p>
-                  <p className="text-xs text-white/60 flex items-center gap-1">
-                    {currentAdmin.role === "complet" ? (
-                      <>
-                        <Shield className="w-3 h-3 text-primary" />
-                        <span className="text-primary">Admin complet</span>
-                      </>
-                    ) : currentAdmin.role === "editeur" ? (
-                      <>
-                        <User className="w-3 h-3 text-blue-400" />
-                        <span className="text-blue-400">Éditeur</span>
-                      </>
-                    ) : (
-                      <>
-                        <Eye className="w-3 h-3 text-gray-400" />
-                        <span className="text-gray-400">Lecteur</span>
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-            )}
-            
+          {/* Admin Profile Dropdown */}
+          <div className="relative">
             <button 
-              onClick={logout} 
-              className="btn-outline px-4 py-2 text-sm flex items-center gap-2" 
-              data-testid="admin-logout-btn"
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="flex items-center gap-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full pl-2 pr-4 py-2 transition-all"
+              data-testid="admin-profile-btn"
             >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Déconnexion</span>
+              {/* Avatar */}
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-yellow-600 flex items-center justify-center text-black font-bold text-sm">
+                {currentAdmin?.name?.charAt(0)?.toUpperCase() || "A"}
+              </div>
+              
+              {/* Name */}
+              <span className="text-white text-sm font-medium hidden sm:block">
+                {currentAdmin?.name || "Admin"}
+              </span>
+              
+              {/* Chevron */}
+              <svg className={`w-4 h-4 text-white/60 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
+            
+            {/* Dropdown Menu */}
+            {showProfileMenu && (
+              <>
+                {/* Backdrop to close menu */}
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowProfileMenu(false)}
+                />
+                
+                <div className="absolute right-0 mt-2 w-64 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
+                  {/* Profile Header */}
+                  <div className="p-4 border-b border-white/10 bg-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-yellow-600 flex items-center justify-center text-black font-bold text-lg">
+                        {currentAdmin?.name?.charAt(0)?.toUpperCase() || "A"}
+                      </div>
+                      <div>
+                        <p className="text-white font-semibold">{currentAdmin?.name || "Admin"}</p>
+                        <p className="text-white/50 text-xs">{currentAdmin?.email}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Role Badge */}
+                    <div className="mt-3">
+                      {currentAdmin?.role === "complet" ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-primary/20 text-primary border border-primary/30">
+                          <Shield className="w-3 h-3" />
+                          Admin complet
+                        </span>
+                      ) : currentAdmin?.role === "editeur" ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                          <User className="w-3 h-3" />
+                          Éditeur
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/30">
+                          <Eye className="w-3 h-3" />
+                          Lecteur
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Menu Items */}
+                  <div className="p-2">
+                    <button
+                      onClick={() => {
+                        setActiveTab("settings");
+                        setShowProfileMenu(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-sm"
+                    >
+                      <User className="w-4 h-4" />
+                      Mon profil
+                    </button>
+                    
+                    {currentAdmin?.role === "complet" && (
+                      <button
+                        onClick={() => {
+                          setActiveTab("security");
+                          setShowProfileMenu(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-sm"
+                      >
+                        <Shield className="w-4 h-4" />
+                        Sécurité
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Logout */}
+                  <div className="p-2 border-t border-white/10">
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        logout();
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors text-sm"
+                      data-testid="admin-logout-btn"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Déconnexion
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
