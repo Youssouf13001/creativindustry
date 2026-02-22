@@ -7627,6 +7627,28 @@ async def send_team_message(data: dict, admin: dict = Depends(get_current_admin)
     
     await db.team_chat.insert_one(message)
     
+    # Send email notifications
+    sender_name = admin.get("name")
+    recipient_id = data.get("recipient_id")
+    content = data.get("content")
+    
+    try:
+        if recipient_id:
+            # Private message - send to specific recipient
+            recipient = await db.admins.find_one({"id": recipient_id}, {"_id": 0})
+            if recipient:
+                await send_team_chat_email(recipient, sender_name, content, is_broadcast=False)
+        else:
+            # Broadcast - send to all other admins
+            all_admins = await db.admins.find(
+                {"id": {"$ne": admin.get("id")}}, 
+                {"_id": 0, "id": 1, "name": 1, "email": 1}
+            ).to_list(100)
+            for other_admin in all_admins:
+                await send_team_chat_email(other_admin, sender_name, content, is_broadcast=True)
+    except Exception as e:
+        logging.error(f"Failed to send chat notification emails: {e}")
+    
     # Return without _id
     message.pop("_id", None)
     return {"success": True, "message": message}
