@@ -125,6 +125,7 @@ const AdminDashboard = () => {
       navigate("/admin");
       return;
     }
+    fetchCurrentAdmin();
     fetchData();
     fetchBankDetails();
     fetchMfaStatus();
@@ -134,6 +135,20 @@ const AdminDashboard = () => {
     fetchAdminsList();
     fetchExtensionOrders();
   }, [token]);
+
+  // Fetch current admin info
+  const fetchCurrentAdmin = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/me`, { headers });
+      setCurrentAdmin(res.data);
+      // Set default tab based on allowed tabs
+      if (res.data.role !== "complet" && res.data.allowed_tabs?.length > 0) {
+        setActiveTab(res.data.allowed_tabs[0]);
+      }
+    } catch (e) {
+      console.error("Error fetching current admin:", e);
+    }
+  };
 
   // Fetch unread messages count
   const fetchUnreadMessages = async () => {
