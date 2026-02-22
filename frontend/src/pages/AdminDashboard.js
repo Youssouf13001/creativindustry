@@ -1439,6 +1439,13 @@ const AdminDashboard = () => {
           </button>
         </div>
 
+        {/* Project Tracker Tab */}
+        {activeTab === "project-tracker" && (
+          <div data-testid="admin-project-tracker">
+            <ProjectTracker token={token} clients={clients} />
+          </div>
+        )}
+
         {/* Tasks Tab */}
         {activeTab === "tasks" && (
           <div data-testid="admin-tasks">
