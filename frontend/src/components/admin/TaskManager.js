@@ -649,20 +649,6 @@ const TaskManager = ({ token, clients = [] }) => {
               </div>
               
               <div>
-                <label className="block text-white/60 text-sm mb-1">Client associé</label>
-                <select
-                  value={editingTask.client_id || ""}
-                  onChange={(e) => setEditingTask({ ...editingTask, client_id: e.target.value || null })}
-                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
-                >
-                  <option value="">Aucun client</option>
-                  {clients.map(client => (
-                    <option key={client.id} value={client.id}>{client.name}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
                 <label className="block text-white/60 text-sm mb-1">Assigner à</label>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
                   {teamUsers.map(user => (
