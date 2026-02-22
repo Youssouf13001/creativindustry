@@ -772,15 +772,28 @@ const TaskManager = ({ token, clients = [] }) => {
                   </label>
                   
                   {editingTask.client_visible && (
-                    <div>
-                      <label className="block text-white/60 text-sm mb-1">Message pour le client</label>
-                      <input
-                        type="text"
-                        value={editingTask.client_status_label || ""}
-                        onChange={(e) => setEditingTask({ ...editingTask, client_status_label: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
-                        placeholder="Ex: Montage en cours de finalisation"
-                      />
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-white/60 text-sm mb-1">Numéro d'étape</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={editingTask.step_number || 1}
+                          onChange={(e) => setEditingTask({ ...editingTask, step_number: parseInt(e.target.value) || 1 })}
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                          placeholder="1, 2, 3..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-white/60 text-sm mb-1">Message pour le client</label>
+                        <input
+                          type="text"
+                          value={editingTask.client_status_label || ""}
+                          onChange={(e) => setEditingTask({ ...editingTask, client_status_label: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                          placeholder="Ex: Montage en cours de finalisation"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
