@@ -112,6 +112,7 @@ const AdminDashboard = () => {
   const [newAdminData, setNewAdminData] = useState({ name: "", email: "", password: "" });
   // Current logged in admin
   const [currentAdmin, setCurrentAdmin] = useState(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   // Extension orders state
   const [extensionOrders, setExtensionOrders] = useState([]);
   const [archivedClients, setArchivedClients] = useState([]);
