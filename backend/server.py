@@ -7602,7 +7602,7 @@ async def send_team_chat_email(recipient: dict, sender_name: str, message_conten
                 <p style="font-size: 16px; margin-bottom: 20px;">Bonjour {recipient_name},</p>
                 
                 <p style="color: #ccc; margin-bottom: 15px;">
-                    <strong>{sender_name}</strong> vous a envoyé un message{' (à toute l\'équipe)' if is_broadcast else ''} :
+                    <strong>{sender_name}</strong> vous a envoyé un message{"" if not is_broadcast else " (à toute l'équipe)"} :
                 </p>
                 
                 <div style="background-color: #3a3a3a; padding: 20px; border-radius: 10px; border-left: 4px solid #D4AF37;">
