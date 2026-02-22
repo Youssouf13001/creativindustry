@@ -58,7 +58,8 @@ const ProjectTracker = ({ token, clients = [] }) => {
       setClientProject(res.data.project);
       toast.success(`Étape mise à jour ! Email envoyé à ${selectedClient.email}`);
     } catch (error) {
-      toast.error("Erreur lors de la mise à jour");
+      console.error("Project update error:", error.response?.data || error);
+      toast.error(error.response?.data?.detail || "Erreur lors de la mise à jour");
     } finally {
       setUpdating(false);
     }
