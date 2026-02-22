@@ -190,6 +190,27 @@ const ProjectTracker = ({ token, clients = [] }) => {
                     </button>
                   );
                 })}
+                
+                {/* Complete Project Button - Show when on last step */}
+                {currentStep === PROJECT_STEPS.length && (
+                  <button
+                    onClick={() => handleStepChange(PROJECT_STEPS.length + 1)}
+                    disabled={updating}
+                    className={`w-full flex items-center justify-center gap-3 p-4 rounded-lg border-2 border-green-500 bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-all ${updating ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                  >
+                    <Check className="w-6 h-6" />
+                    <span className="font-bold text-lg">✅ Marquer le projet comme TERMINÉ</span>
+                  </button>
+                )}
+                
+                {/* Project Completed State */}
+                {currentStep > PROJECT_STEPS.length && (
+                  <div className="w-full p-6 rounded-lg border-2 border-green-500 bg-green-500/20 text-center">
+                    <Check className="w-12 h-12 text-green-400 mx-auto mb-2" />
+                    <p className="text-green-400 font-bold text-xl">🎉 Projet terminé !</p>
+                    <p className="text-green-400/70 text-sm mt-1">Toutes les étapes sont complétées</p>
+                  </div>
+                )}
               </div>
 
               {/* Info Box */}
