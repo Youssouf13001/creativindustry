@@ -286,18 +286,6 @@ const TaskManager = ({ token, clients = [] }) => {
               <option value="medium">Moyenne</option>
               <option value="low">Basse</option>
             </select>
-            
-            <select
-              value={filterClient}
-              onChange={(e) => setFilterClient(e.target.value)}
-              className="bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
-              data-testid="filter-client"
-            >
-              <option value="">Tous les clients</option>
-              {clients.map(client => (
-                <option key={client.id} value={client.id}>{client.name}</option>
-              ))}
-            </select>
           </div>
           
           {/* Tasks List */}
