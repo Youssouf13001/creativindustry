@@ -346,16 +346,17 @@ const TaskManager = ({ token, clients = [] }) => {
                         <span className={`px-2 py-0.5 rounded text-xs ${STATUS_COLORS[task.status]}`}>
                           {STATUS_LABELS[task.status]}
                         </span>
-                        {task.client_visible && (
-                          <span className="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-400">
-                            <Eye className="w-3 h-3 inline mr-1" />
-                            Visible client
-                          </span>
-                        )}
                       </div>
                       
                       {task.description && (
                         <p className="text-white/60 text-sm mt-1">{task.description}</p>
+                      )}
+                      
+                      {/* Progress comment if any */}
+                      {task.progress_comment && (
+                        <p className="text-primary/80 text-sm mt-1 italic">
+                          💬 {task.progress_comment}
+                        </p>
                       )}
                       
                       <div className="flex items-center gap-4 mt-2 text-sm text-white/40 flex-wrap">
@@ -369,14 +370,14 @@ const TaskManager = ({ token, clients = [] }) => {
                         {task.client_name && (
                           <span className="flex items-center gap-1">
                             <User className="w-4 h-4" />
-                            {task.client_name}
+                            Pour: {task.client_name}
                           </span>
                         )}
                         
                         {task.assigned_names?.length > 0 && (
                           <span className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
-                            {task.assigned_names.join(", ")}
+                            Assigné à: {task.assigned_names.join(", ")}
                           </span>
                         )}
                         
@@ -384,12 +385,6 @@ const TaskManager = ({ token, clients = [] }) => {
                           <span className="flex items-center gap-1 text-primary">
                             <Bell className="w-4 h-4" />
                             Rappel
-                          </span>
-                        )}
-                        
-                        {task.client_status_label && (
-                          <span className="text-purple-400">
-                            "{task.client_status_label}"
                           </span>
                         )}
                       </div>
