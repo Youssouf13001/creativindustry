@@ -796,10 +796,11 @@ const TaskManager = ({ token, clients = [] }) => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-primary text-black rounded-lg font-medium hover:bg-primary/80"
+                  disabled={saving}
+                  className={`flex-1 px-4 py-2 bg-primary text-black rounded-lg font-medium hover:bg-primary/80 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
                   data-testid="update-task-btn"
                 >
-                  Enregistrer
+                  {saving ? "Enregistrement..." : "Enregistrer"}
                 </button>
               </div>
             </form>
