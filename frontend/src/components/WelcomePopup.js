@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Play, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import { API } from "../config/api";
+import { API, BACKEND_URL } from "../config/api";
 
 const WelcomePopup = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -56,6 +56,9 @@ const WelcomePopup = () => {
     return null;
   }
 
+  const hasVideo = popupData.video_url;
+  const videoUrl = hasVideo ? `${BACKEND_URL}${popupData.video_url}` : null;
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -77,7 +80,7 @@ const WelcomePopup = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ duration: 0.4, type: "spring", damping: 20 }}
-            className="relative w-full max-w-4xl bg-card border border-white/20 overflow-hidden shadow-2xl"
+            className={`relative w-full bg-card border border-white/20 overflow-hidden shadow-2xl ${hasVideo ? 'max-w-4xl' : 'max-w-lg'}`}
             data-testid="welcome-popup-content"
           >
             {/* Close Button */}
@@ -89,49 +92,51 @@ const WelcomePopup = () => {
               <X size={24} className="text-white/70 group-hover:text-white" />
             </button>
 
-            {/* Video Container */}
-            <div className="relative aspect-video bg-black">
-              {!isPlaying ? (
-                <>
-                  {/* Video Thumbnail / Preview */}
-                  <video
-                    src={`${API.replace('/api', '')}${popupData.video_url}`}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                    preload="metadata"
-                  />
-                  
-                  {/* Overlay with Play Button */}
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setIsPlaying(true)}
-                      className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30"
-                      data-testid="play-video-btn"
-                    >
-                      <Play size={36} className="text-black ml-1" fill="black" />
-                    </motion.button>
-                  </div>
+            {/* Video Container - only if video exists */}
+            {hasVideo && (
+              <div className="relative aspect-video bg-black">
+                {!isPlaying ? (
+                  <>
+                    {/* Video Thumbnail / Preview */}
+                    <video
+                      src={videoUrl}
+                      className="w-full h-full object-cover"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                    
+                    {/* Overlay with Play Button */}
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setIsPlaying(true)}
+                        className="w-20 h-20 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30"
+                        data-testid="play-video-btn"
+                      >
+                        <Play size={36} className="text-black ml-1" fill="black" />
+                      </motion.button>
+                    </div>
 
-                  {/* Gradient overlays */}
-                  <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-card to-transparent"></div>
-                </>
-              ) : (
-                <video
-                  src={`${API.replace('/api', '')}${popupData.video_url}`}
-                  className="w-full h-full object-contain bg-black"
-                  controls
-                  autoPlay
-                  playsInline
-                  data-testid="video-player"
-                />
-              )}
-            </div>
+                    {/* Gradient overlays */}
+                    <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-card to-transparent"></div>
+                  </>
+                ) : (
+                  <video
+                    src={videoUrl}
+                    className="w-full h-full object-contain bg-black"
+                    controls
+                    autoPlay
+                    playsInline
+                    data-testid="video-player"
+                  />
+                )}
+              </div>
+            )}
 
             {/* Text Content */}
-            <div className="p-8 text-center">
+            <div className={`p-8 text-center ${!hasVideo ? 'pt-12' : ''}`}>
               <motion.h2
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
