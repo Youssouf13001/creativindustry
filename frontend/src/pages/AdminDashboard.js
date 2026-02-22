@@ -5233,10 +5233,10 @@ const AdminDashboard = () => {
                         <div className="flex items-center gap-2">
                           <span className={`text-xs px-2 py-1 rounded ${
                             adminItem.role === "complet" ? "bg-red-500/20 text-red-400" :
-                            adminItem.role === "editeur" ? "bg-blue-500/20 text-blue-400" :
-                            "bg-gray-500/20 text-gray-400"
+                            adminItem.role !== "complet" ? "bg-blue-500/20 text-blue-400" :
+                            "bg-primary/20 text-primary"
                           }`}>
-                            {adminItem.role === "complet" ? "Admin Complet" : adminItem.role === "editeur" ? "Éditeur" : "Lecteur"}
+                            {adminItem.role === "complet" ? "Admin" : "Collaborateur"}
                           </span>
                           <span className={`text-xs px-2 py-1 rounded ${adminItem.mfa_enabled ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
                             {adminItem.mfa_enabled ? 'MFA ✓' : 'MFA ✗'}
