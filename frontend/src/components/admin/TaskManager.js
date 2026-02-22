@@ -32,7 +32,7 @@ const STATUS_LABELS = {
   completed: "Terminée"
 };
 
-const TaskManager = ({ token, clients = [] }) => {
+const TaskManager = ({ token }) => {
   const [tasks, setTasks] = useState([]);
   const [teamUsers, setTeamUsers] = useState([]);
   const [stats, setStats] = useState(null);
@@ -42,7 +42,6 @@ const TaskManager = ({ token, clients = [] }) => {
   // Filters
   const [filterStatus, setFilterStatus] = useState("");
   const [filterPriority, setFilterPriority] = useState("");
-  const [filterClient, setFilterClient] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   
   // Modals
