@@ -128,14 +128,20 @@ const TaskManager = ({ token, clients = [] }) => {
     e.preventDefault();
     if (!editingTask) return;
     
+    setSaving(true);
     try {
+      console.log("Updating task:", editingTask);
       const res = await axios.put(`${API}/tasks/${editingTask.id}`, editingTask, { headers });
+      console.log("Update response:", res.data);
       setTasks(tasks.map(t => t.id === editingTask.id ? res.data.task : t));
       setEditingTask(null);
       toast.success("Tâche mise à jour");
       loadData();
     } catch (error) {
+      console.error("Update error:", error);
       toast.error(error.response?.data?.detail || "Erreur lors de la mise à jour");
+    } finally {
+      setSaving(false);
     }
   };
   
