@@ -7411,6 +7411,204 @@ async def send_project_completed_email(client: dict):
         return False
 
 
+# ==================== EMAIL NOTIFICATION FUNCTIONS ====================
+
+async def send_task_assignment_email(collaborator: dict, task: dict, assigner_name: str):
+    """Send email when a task is assigned to a collaborator"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        return False
+    
+    collab_email = collaborator.get("email")
+    collab_name = collaborator.get("name", "Collaborateur")
+    
+    if not collab_email:
+        return False
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    priority_colors = {"high": "#ef4444", "medium": "#f59e0b", "low": "#22c55e"}
+    priority_labels = {"high": "Haute", "medium": "Moyenne", "low": "Basse"}
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 30px; text-align: center;">
+                <h1 style="margin: 0; color: #fff; font-size: 24px;">📋 Nouvelle tâche assignée</h1>
+            </div>
+            <div style="padding: 30px;">
+                <p style="font-size: 18px; margin-bottom: 20px;">Bonjour {collab_name},</p>
+                
+                <p style="color: #ccc; margin-bottom: 20px;">
+                    <strong>{assigner_name}</strong> vous a assigné une nouvelle tâche :
+                </p>
+                
+                <div style="background-color: #3a3a3a; padding: 20px; border-radius: 10px; margin: 20px 0; border-left: 4px solid {priority_colors.get(task.get('priority', 'medium'), '#f59e0b')};">
+                    <h3 style="margin: 0 0 10px 0; color: #fff;">{task.get('title')}</h3>
+                    {f'<p style="color: #ccc; margin: 0 0 15px 0;">{task.get("description")}</p>' if task.get('description') else ''}
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <span style="color: #888;">📅 Échéance: <strong style="color: #fff;">{task.get('due_date')}</strong></span>
+                        <span style="background-color: {priority_colors.get(task.get('priority', 'medium'), '#f59e0b')}20; color: {priority_colors.get(task.get('priority', 'medium'), '#f59e0b')}; padding: 2px 8px; border-radius: 4px; font-size: 12px;">
+                            Priorité {priority_labels.get(task.get('priority', 'medium'), 'Moyenne')}
+                        </span>
+                    </div>
+                </div>
+                
+                <a href="{site_url}/admin" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #fff; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 10px;">
+                    Voir mes tâches →
+                </a>
+            </div>
+            <div style="padding: 20px; background-color: #222; text-align: center; border-top: 1px solid #333;">
+                <p style="margin: 0; font-size: 12px; color: #666;">CREATIVINDUSTRY France - Communication interne</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"📋 Nouvelle tâche : {task.get('title')} - CREATIVINDUSTRY"
+    
+    try:
+        result = send_email(collab_email, subject, html_content)
+        if result:
+            logging.info(f"Task assignment email sent to {collab_email}")
+        return result
+    except Exception as e:
+        logging.error(f"Failed to send task assignment email: {e}")
+        return False
+
+
+async def send_task_response_email(admin: dict, task: dict, responder_name: str, response: str):
+    """Send email to admin when collaborator responds to a task"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        return False
+    
+    admin_email = admin.get("email")
+    admin_name = admin.get("name", "Admin")
+    
+    if not admin_email:
+        return False
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    
+    # Determine response type and color
+    if "✅" in response:
+        response_color = "#22c55e"
+        response_icon = "✅"
+        response_type = "Terminée"
+    elif "❌" in response:
+        response_color = "#ef4444"
+        response_icon = "❌"
+        response_type = "Problème signalé"
+    elif "⏳" in response:
+        response_color = "#3b82f6"
+        response_icon = "⏳"
+        response_type = "En cours"
+    else:
+        response_color = "#888"
+        response_icon = "○"
+        response_type = "Mise à jour"
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, {response_color} 0%, {response_color}cc 100%); padding: 30px; text-align: center;">
+                <h1 style="margin: 0; color: #fff; font-size: 24px;">{response_icon} Réponse à une tâche</h1>
+            </div>
+            <div style="padding: 30px;">
+                <p style="font-size: 18px; margin-bottom: 20px;">Bonjour {admin_name},</p>
+                
+                <p style="color: #ccc; margin-bottom: 20px;">
+                    <strong>{responder_name}</strong> a répondu à la tâche :
+                </p>
+                
+                <div style="background-color: #3a3a3a; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                    <h3 style="margin: 0 0 15px 0; color: #fff;">{task.get('title')}</h3>
+                    <div style="background-color: {response_color}20; border: 1px solid {response_color}50; padding: 15px; border-radius: 8px;">
+                        <p style="margin: 0; color: {response_color}; font-weight: bold;">{response_type}</p>
+                        <p style="margin: 10px 0 0 0; color: #ccc;">{response}</p>
+                    </div>
+                </div>
+                
+                <a href="{site_url}/admin" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 10px;">
+                    Voir la tâche →
+                </a>
+            </div>
+            <div style="padding: 20px; background-color: #222; text-align: center; border-top: 1px solid #333;">
+                <p style="margin: 0; font-size: 12px; color: #666;">CREATIVINDUSTRY France - Communication interne</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"{response_icon} {responder_name} a répondu : {task.get('title')}"
+    
+    try:
+        result = send_email(admin_email, subject, html_content)
+        if result:
+            logging.info(f"Task response email sent to {admin_email}")
+        return result
+    except Exception as e:
+        logging.error(f"Failed to send task response email: {e}")
+        return False
+
+
+async def send_team_chat_email(recipient: dict, sender_name: str, message_content: str, is_broadcast: bool = False):
+    """Send email notification for team chat message"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        return False
+    
+    recipient_email = recipient.get("email")
+    recipient_name = recipient.get("name", "Membre")
+    
+    if not recipient_email:
+        return False
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); padding: 25px; text-align: center;">
+                <h1 style="margin: 0; color: #000; font-size: 22px;">💬 Nouveau message</h1>
+            </div>
+            <div style="padding: 30px;">
+                <p style="font-size: 16px; margin-bottom: 20px;">Bonjour {recipient_name},</p>
+                
+                <p style="color: #ccc; margin-bottom: 15px;">
+                    <strong>{sender_name}</strong> vous a envoyé un message{' (à toute l\'équipe)' if is_broadcast else ''} :
+                </p>
+                
+                <div style="background-color: #3a3a3a; padding: 20px; border-radius: 10px; border-left: 4px solid #D4AF37;">
+                    <p style="margin: 0; color: #fff; font-size: 15px; line-height: 1.5;">{message_content}</p>
+                </div>
+                
+                <a href="{site_url}/admin" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color: #000; padding: 12px 25px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 20px; font-size: 14px;">
+                    Répondre →
+                </a>
+            </div>
+            <div style="padding: 15px; background-color: #222; text-align: center; border-top: 1px solid #333;">
+                <p style="margin: 0; font-size: 11px; color: #666;">CREATIVINDUSTRY France - Chat d'équipe</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"💬 Message de {sender_name} - CREATIVINDUSTRY"
+    
+    try:
+        result = send_email(recipient_email, subject, html_content)
+        if result:
+            logging.info(f"Team chat email sent to {recipient_email}")
+        return result
+    except Exception as e:
+        logging.error(f"Failed to send team chat email: {e}")
+        return False
+
+
 # ==================== INTERNAL TEAM CHAT ====================
 
 @api_router.post("/team-chat/send")
