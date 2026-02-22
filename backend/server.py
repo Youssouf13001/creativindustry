@@ -99,6 +99,160 @@ def send_email(to_email: str, subject: str, html_content: str):
         return False
 
 
+async def send_client_progress_email(client: dict, task: dict, new_status: str):
+    """Send email to client when their project task status changes"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        logging.warning("SMTP not configured - skipping client progress email")
+        return False
+    
+    client_email = client.get("email")
+    client_name = client.get("name", "Client")
+    
+    if not client_email:
+        logging.warning("Client has no email - skipping progress notification")
+        return False
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    
+    # Get all tasks for this client to calculate progress
+    all_tasks = await db.tasks.find(
+        {
+            "client_id": client["id"],
+            "client_visible": True
+        },
+        {"_id": 0}
+    ).sort("step_number", 1).to_list(50)
+    
+    total_tasks = len(all_tasks)
+    completed_tasks = sum(1 for t in all_tasks if t.get("status") == "completed")
+    
+    # Calculate progress percentage
+    progress_percentage = int((completed_tasks / total_tasks) * 100) if total_tasks > 0 else 0
+    
+    # Get completed, current, and upcoming steps
+    completed_steps = [t for t in all_tasks if t.get("status") == "completed"]
+    in_progress_steps = [t for t in all_tasks if t.get("status") == "in_progress"]
+    upcoming_steps = [t for t in all_tasks if t.get("status") == "pending"]
+    
+    # Determine email content based on status change
+    task_label = task.get("client_status_label") or task.get("title")
+    
+    if new_status == "completed":
+        subject = f"✅ Votre projet avance - {task_label} terminé"
+        status_emoji = "✅"
+        status_text = "terminée"
+        status_color = "#22c55e"
+    else:  # in_progress
+        subject = f"🔄 Votre projet avance - {task_label} en cours"
+        status_emoji = "🔄"
+        status_text = "en cours"
+        status_color = "#f59e0b"
+    
+    # Build completed steps HTML
+    completed_html = ""
+    for step in completed_steps:
+        step_label = step.get("client_status_label") or step.get("title")
+        completed_html += f'''
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #333;">
+                <span style="color: #22c55e; font-size: 18px;">✓</span>
+                <span style="color: #ccc;">{step_label}</span>
+            </div>
+        '''
+    
+    # Build in progress steps HTML
+    in_progress_html = ""
+    for step in in_progress_steps:
+        step_label = step.get("client_status_label") or step.get("title")
+        in_progress_html += f'''
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #333;">
+                <span style="color: #f59e0b; font-size: 18px;">⏳</span>
+                <span style="color: #fff; font-weight: bold;">{step_label}</span>
+            </div>
+        '''
+    
+    # Build upcoming steps HTML
+    upcoming_html = ""
+    for step in upcoming_steps[:3]:  # Limit to next 3 steps
+        step_label = step.get("client_status_label") or step.get("title")
+        upcoming_html += f'''
+            <div style="display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #333;">
+                <span style="color: #666; font-size: 18px;">○</span>
+                <span style="color: #888;">{step_label}</span>
+            </div>
+        '''
+    
+    if len(upcoming_steps) > 3:
+        remaining = len(upcoming_steps) - 3
+        upcoming_html += f'''
+            <div style="padding: 10px 0; color: #666; font-size: 12px;">
+                + {remaining} autre(s) étape(s) à venir
+            </div>
+        '''
+    
+    # Build progress bar
+    progress_bar_html = f'''
+        <div style="background-color: #333; border-radius: 10px; height: 20px; overflow: hidden; margin: 15px 0;">
+            <div style="background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); height: 100%; width: {progress_percentage}%; transition: width 0.3s;"></div>
+        </div>
+        <p style="text-align: center; color: #D4AF37; font-size: 24px; font-weight: bold; margin: 10px 0;">{progress_percentage}%</p>
+        <p style="text-align: center; color: #888; font-size: 14px; margin: 0;">de votre projet complété</p>
+    '''
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); padding: 30px; text-align: center;">
+                <h1 style="margin: 0; color: #000; font-size: 24px;">{status_emoji} Mise à jour de votre projet</h1>
+            </div>
+            <div style="padding: 30px;">
+                <p style="font-size: 18px; margin-bottom: 10px;">Bonjour {client_name},</p>
+                <p style="color: #ccc; margin-bottom: 20px;">
+                    L'étape <strong style="color: {status_color};">{task_label}</strong> est maintenant <strong style="color: {status_color};">{status_text}</strong>.
+                </p>
+                
+                <!-- Progress Section -->
+                <div style="background-color: #3a3a3a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 10px 0; color: #fff; font-size: 16px;">Progression globale</h3>
+                    {progress_bar_html}
+                </div>
+                
+                <!-- Timeline Section -->
+                <div style="background-color: #3a3a3a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 15px 0; color: #fff; font-size: 16px;">Détail des étapes</h3>
+                    
+                    {f'<div style="margin-bottom: 15px;"><h4 style="color: #22c55e; font-size: 14px; margin: 0 0 10px 0;">Étapes terminées</h4>{completed_html}</div>' if completed_html else ''}
+                    
+                    {f'<div style="margin-bottom: 15px;"><h4 style="color: #f59e0b; font-size: 14px; margin: 0 0 10px 0;">En cours</h4>{in_progress_html}</div>' if in_progress_html else ''}
+                    
+                    {f'<div><h4 style="color: #888; font-size: 14px; margin: 0 0 10px 0;">Prochaines étapes</h4>{upcoming_html}</div>' if upcoming_html else ''}
+                </div>
+                
+                <a href="{site_url}/client/login" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px;">
+                    Voir mon espace client →
+                </a>
+            </div>
+            <div style="padding: 20px; background-color: #222; text-align: center; border-top: 1px solid #333;">
+                <p style="margin: 0; font-size: 12px; color: #666;">
+                    CREATIVINDUSTRY France<br>
+                    <a href="{site_url}" style="color: #888;">creativindustry.com</a>
+                </p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    try:
+        result = send_email(client_email, subject, html_content)
+        if result:
+            logging.info(f"Progress email sent to client {client_email} for task {task.get('id')}")
+        return result
+    except Exception as e:
+        logging.error(f"Failed to send progress email to client: {e}")
+        return False
+
+
 async def send_newsletter_notification(media_type: str, title: str, media_url: str = ""):
     """Send newsletter notification to all subscribed clients when new video/story is published"""
     if not SMTP_EMAIL or not SMTP_PASSWORD:
