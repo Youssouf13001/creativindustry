@@ -21,8 +21,8 @@ const WelcomePopup = () => {
         
         setPopupData(data);
         
-        // Show popup if enabled and not shown this session (or if show_once_per_session is false)
-        if (data.enabled && data.video_url) {
+        // Show popup if enabled (with or without video)
+        if (data.enabled) {
           if (!data.show_once_per_session || !popupShown) {
             // Small delay for better UX
             setTimeout(() => {
@@ -52,7 +52,7 @@ const WelcomePopup = () => {
     }
   };
 
-  if (!popupData || !popupData.enabled || !popupData.video_url) {
+  if (!popupData || !popupData.enabled) {
     return null;
   }
 
