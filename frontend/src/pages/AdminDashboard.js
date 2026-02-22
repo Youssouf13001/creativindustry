@@ -1583,7 +1583,9 @@ const AdminDashboard = () => {
         {/* Tasks Tab */}
         {activeTab === "tasks" && (
           <div data-testid="admin-tasks">
-            <h2 className="font-primary font-bold text-xl mb-6">Gestion des Tâches</h2>
+            <h2 className="font-primary font-bold text-xl mb-6">
+              {currentAdmin?.role === "complet" ? "Gestion des Tâches" : "Mes Tâches"}
+            </h2>
             <TaskManager token={token} currentAdmin={currentAdmin} />
           </div>
         )}
