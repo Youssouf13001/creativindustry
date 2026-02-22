@@ -5268,8 +5268,7 @@ const AdminDashboard = () => {
                               className="bg-card border border-white/20 px-2 py-1 text-xs rounded"
                             >
                               <option value="complet">Admin Complet</option>
-                              <option value="editeur">Éditeur</option>
-                              <option value="lecteur">Lecteur</option>
+                              <option value="collaborateur">Collaborateur</option>
                             </select>
                             
                             <label className="flex items-center gap-1 text-xs cursor-pointer">
