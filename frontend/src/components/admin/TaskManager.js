@@ -238,19 +238,28 @@ const TaskManager = ({ token, currentAdmin }) => {
       <div className="flex items-center justify-between">
         <div className="flex gap-2 items-center">
           <Calendar className="w-5 h-5 text-primary" />
-          <span className="text-white/60 text-sm">
-            {teamUsers.length} administrateur(s) disponible(s) pour les tâches
-          </span>
+          {currentAdmin && currentAdmin.role !== "complet" ? (
+            <span className="text-white/60 text-sm">
+              Mes tâches assignées ({filteredTasks.length})
+            </span>
+          ) : (
+            <span className="text-white/60 text-sm">
+              {teamUsers.length} administrateur(s) disponible(s) pour les tâches
+            </span>
+          )}
         </div>
         
-        <button
-          onClick={() => setShowAddTask(true)}
-          className="bg-primary hover:bg-primary/80 text-black px-4 py-2 rounded-lg font-medium flex items-center gap-2"
-          data-testid="add-btn"
-        >
-          <Plus className="w-4 h-4" />
-          Nouvelle tâche
-        </button>
+        {/* Only show Add button for "complet" role */}
+        {canManageTasks && (
+          <button
+            onClick={() => setShowAddTask(true)}
+            className="bg-primary hover:bg-primary/80 text-black px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+            data-testid="add-btn"
+          >
+            <Plus className="w-4 h-4" />
+            Nouvelle tâche
+          </button>
+        )}
       </div>
       
       {/* Tasks List */}
