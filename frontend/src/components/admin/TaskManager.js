@@ -163,7 +163,6 @@ const TaskManager = ({ token }) => {
   const filteredTasks = tasks.filter(task => {
     if (filterStatus && task.status !== filterStatus) return false;
     if (filterPriority && task.priority !== filterPriority) return false;
-    if (filterClient && task.client_id !== filterClient) return false;
     if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
