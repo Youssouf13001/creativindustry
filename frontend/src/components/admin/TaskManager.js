@@ -395,13 +395,16 @@ const TaskManager = ({ token, currentAdmin }) => {
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => handleDeleteTask(task.id)}
-                        className="p-2 hover:bg-red-500/20 rounded-lg text-white/60 hover:text-red-400"
-                        data-testid={`delete-task-${task.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {/* Only show delete for "complet" role */}
+                      {canManageTasks && (
+                        <button
+                          onClick={() => handleDeleteTask(task.id)}
+                          className="p-2 hover:bg-red-500/20 rounded-lg text-white/60 hover:text-red-400"
+                          data-testid={`delete-task-${task.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -410,8 +413,8 @@ const TaskManager = ({ token, currentAdmin }) => {
           </div>
         </>
       
-      {/* Add Task Modal */}
-      {showAddTask && (
+      {/* Add Task Modal - Only for "complet" role */}
+      {showAddTask && canManageTasks && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-[#1a1a1a] rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="add-task-modal">
             <div className="sticky top-0 bg-[#1a1a1a] border-b border-white/10 p-4 flex justify-between items-center">
