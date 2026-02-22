@@ -7328,6 +7328,72 @@ async def send_project_step_email(client: dict, step_info: dict, current_step: i
         return False
 
 
+async def send_project_completed_email(client: dict):
+    """Send email to client when project is fully completed"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        return False
+    
+    client_email = client.get("email")
+    client_name = client.get("name", "Client")
+    
+    if not client_email:
+        return False
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px; text-align: center;">
+                <h1 style="margin: 0; color: #fff; font-size: 28px;">🎉 Votre projet est terminé !</h1>
+            </div>
+            <div style="padding: 30px;">
+                <p style="font-size: 18px; margin-bottom: 20px;">Bonjour {client_name},</p>
+                
+                <p style="color: #ccc; margin-bottom: 20px; font-size: 16px;">
+                    Excellente nouvelle ! Toutes les étapes de votre projet sont maintenant <strong style="color: #22c55e;">terminées</strong>.
+                </p>
+                
+                <!-- Success Box -->
+                <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #fff; padding: 25px; border-radius: 10px; margin: 25px 0; text-align: center;">
+                    <p style="margin: 0; font-size: 48px;">✅</p>
+                    <p style="margin: 10px 0 0 0; font-size: 24px; font-weight: bold;">100% Terminé</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">Votre projet est prêt à être récupéré</p>
+                </div>
+                
+                <p style="color: #ccc; margin-bottom: 20px;">
+                    Connectez-vous à votre espace client pour accéder à vos fichiers et télécharger votre projet final.
+                </p>
+                
+                <a href="{site_url}/client/login" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #fff; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 10px;">
+                    Accéder à mon projet →
+                </a>
+                
+                <p style="color: #888; margin-top: 30px; font-size: 14px;">
+                    Merci de votre confiance ! N'hésitez pas à nous contacter si vous avez des questions.
+                </p>
+            </div>
+            <div style="padding: 20px; background-color: #222; text-align: center; border-top: 1px solid #333;">
+                <p style="margin: 0; font-size: 12px; color: #666;">CREATIVINDUSTRY France</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"🎉 Votre projet est terminé ! - CREATIVINDUSTRY"
+    
+    try:
+        result = send_email(client_email, subject, html_content)
+        if result:
+            logging.info(f"Project completed email sent to {client_email}")
+        return result
+    except Exception as e:
+        logging.error(f"Failed to send project completed email: {e}")
+        return False
+
+
 # Task reminder check endpoint (to be called by cron)
 
 @api_router.post("/tasks/check-reminders")
