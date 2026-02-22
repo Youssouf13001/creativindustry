@@ -20,6 +20,49 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V20 - Témoignages & Popup Accueil (22 Fév 2026)
+- ✅ **Page Témoignages publique** (`/temoignages`) :
+  - Design élégant avec grille responsive 3 colonnes
+  - Affichage des témoignages approuvés avec étoiles dorées
+  - Badge "RECOMMANDÉ" pour les témoignages mis en avant (featured)
+  - Icônes de service (Caméra/Micro/TV) avec label
+  - Animation Framer Motion à l'apparition
+  - Formulaire de soumission de témoignage
+  - Message de succès après soumission
+- ✅ **Gestion Admin Témoignages** (onglet "⭐ Témoignages") :
+  - Liste tous les témoignages avec statut (En attente/Approuvé/Rejeté)
+  - Compteurs En attente et Approuvés
+  - Boutons Approuver/Rejeter/Supprimer
+  - Toggle "Mettre en avant" (featured) pour les témoignages approuvés
+  - Email de notification admin lors d'une nouvelle soumission
+- ✅ **Popup d'Accueil avec Vidéo** :
+  - Popup modal animé à l'arrivée sur le site
+  - Upload vidéo depuis l'admin (MP4, WebM, MOV - max 100MB)
+  - Bouton Play avec lecture vidéo intégrée
+  - Configuration : Titre, Sous-titre, Texte du bouton, Lien
+  - Toggle activation/désactivation
+  - Option "Une fois par session" (sessionStorage)
+- ✅ **Gestion Admin Popup** (onglet "🎬 Popup Accueil") :
+  - Zone d'upload vidéo avec preview
+  - Paramètres complets du popup
+  - Toggle ON/OFF pour activer le popup
+- ✅ **Endpoints Backend** :
+  - `POST /api/testimonials` - Soumettre témoignage (public)
+  - `GET /api/testimonials` - Liste témoignages approuvés (public)
+  - `GET /api/testimonials/featured` - Témoignages mis en avant
+  - `GET /api/admin/testimonials` - Tous les témoignages (admin)
+  - `PUT /api/admin/testimonials/{id}` - Modifier statut/featured
+  - `DELETE /api/admin/testimonials/{id}` - Supprimer
+  - `GET /api/welcome-popup` - Configuration popup (public)
+  - `PUT /api/admin/welcome-popup` - Modifier configuration
+  - `POST /api/admin/welcome-popup/video` - Upload vidéo
+  - `DELETE /api/admin/welcome-popup/video` - Supprimer vidéo
+- ✅ **Fichiers créés** :
+  - `/app/frontend/src/pages/TestimonialsPage.js`
+  - `/app/frontend/src/components/WelcomePopup.js`
+  - `/app/backend/tests/test_testimonials_and_popup.py`
+- ✅ **Tests** : 16/16 backend (100%), Frontend UI vérifié
+
 ### V19 - Notifications E-mail Progression Client (22 Fév 2026)
 - ✅ **E-mail automatique au client lors de l'avancement du projet** :
   - Envoyé quand une étape visible passe à "Terminé" ou "En cours"
