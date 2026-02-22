@@ -562,67 +562,6 @@ const TaskManager = ({ token, clients = [] }) => {
                 </div>
               </div>
               
-              {/* Client visibility */}
-              {newTask.client_id && (
-                <div className="border-t border-white/10 pt-4">
-                  <label className="flex items-center gap-2 cursor-pointer mb-3">
-                    <input
-                      type="checkbox"
-                      checked={newTask.client_visible}
-                      onChange={(e) => setNewTask({ ...newTask, client_visible: e.target.checked })}
-                      className="rounded border-white/20"
-                    />
-                    <Eye className="w-4 h-4 text-purple-400" />
-                    <span className="text-white">Visible par le client (suivi du projet)</span>
-                  </label>
-                  
-                  {newTask.client_visible && (
-                    <div className="space-y-4 pl-6">
-                      <div>
-                        <label className="block text-white/60 text-sm mb-1">N° d'étape (ordre d'affichage)</label>
-                        <input
-                          type="number"
-                          min="1"
-                          max="20"
-                          value={newTask.step_number || 1}
-                          onChange={(e) => setNewTask({ ...newTask, step_number: parseInt(e.target.value) || 1 })}
-                          className="w-24 bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-white/60 text-sm mb-1">Étape prédéfinie ou personnalisée</label>
-                        <select
-                          value={newTask.client_status_label || ""}
-                          onChange={(e) => setNewTask({ ...newTask, client_status_label: e.target.value })}
-                          className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white mb-2"
-                        >
-                          <option value="">-- Choisir une étape prédéfinie --</option>
-                          <option value="Vidage des cartes mémoire">1. Vidage des cartes mémoire</option>
-                          <option value="Vérification des vidéos et photos">2. Vérification des vidéos et photos</option>
-                          <option value="Sauvegarde de vos fichiers sur nos serveurs">3. Sauvegarde de vos fichiers sur nos serveurs</option>
-                          <option value="Début du montage de votre projet">4. Début du montage de votre projet</option>
-                          <option value="Dépôt de vos photos dans votre espace">5. Dépôt de vos photos dans votre espace</option>
-                          <option value="Montage vidéo en cours">6. Montage vidéo en cours</option>
-                          <option value="Montage terminé">7. Montage terminé</option>
-                          <option value="Vérification du montage">8. Vérification du montage</option>
-                          <option value="Fin de la vérification">9. Fin de la vérification</option>
-                          <option value="Livraison de votre projet">10. Livraison de votre projet</option>
-                        </select>
-                        <input
-                          type="text"
-                          value={newTask.client_status_label || ""}
-                          onChange={(e) => setNewTask({ ...newTask, client_status_label: e.target.value })}
-                          className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white"
-                          placeholder="Ou saisissez un message personnalisé..."
-                          data-testid="task-client-status-input"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"
