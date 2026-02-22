@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Calendar, Check, Camera, Mic, Tv, X, Clock, Users, FileText, Image, Video, Plus, Minus, User, LogOut, Upload, Loader, Download, Eye, Printer, ArrowLeft, Shield, Trash2, MessageSquare, FileArchive, AlertTriangle, CreditCard, Phone, ClipboardList } from "lucide-react";
 import TaskManager from "../components/admin/TaskManager";
+import ProjectTracker from "../components/admin/ProjectTracker";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 import AdminChat from "../components/AdminChat";
