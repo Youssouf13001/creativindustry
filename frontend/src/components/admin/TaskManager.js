@@ -690,47 +690,16 @@ const TaskManager = ({ token, clients = [] }) => {
                 </div>
               </div>
               
-              {/* Client visibility */}
-              {editingTask.client_id && (
-                <div className="border-t border-white/10 pt-4">
-                  <label className="flex items-center gap-2 cursor-pointer mb-3">
-                    <input
-                      type="checkbox"
-                      checked={editingTask.client_visible}
-                      onChange={(e) => setEditingTask({ ...editingTask, client_visible: e.target.checked })}
-                      className="rounded border-white/20"
-                    />
-                    <Eye className="w-4 h-4 text-purple-400" />
-                    <span className="text-white">Visible par le client</span>
-                  </label>
-                  
-                  {editingTask.client_visible && (
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-white/60 text-sm mb-1">Numéro d'étape</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={editingTask.step_number || 1}
-                          onChange={(e) => setEditingTask({ ...editingTask, step_number: parseInt(e.target.value) || 1 })}
-                          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
-                          placeholder="1, 2, 3..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-white/60 text-sm mb-1">Message pour le client</label>
-                        <input
-                          type="text"
-                          value={editingTask.client_status_label || ""}
-                          onChange={(e) => setEditingTask({ ...editingTask, client_status_label: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
-                          placeholder="Ex: Montage en cours de finalisation"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Progress comment for assigned user */}
+              <div className="border-t border-white/10 pt-4">
+                <label className="block text-white/60 text-sm mb-1">Commentaire de progression</label>
+                <textarea
+                  value={editingTask.progress_comment || ""}
+                  onChange={(e) => setEditingTask({ ...editingTask, progress_comment: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-20 resize-none"
+                  placeholder="Ex: En cours à 80%, bloqué sur le rendu vidéo..."
+                />
+              </div>
               
               <div className="flex gap-3 pt-4">
                 <button
