@@ -7031,6 +7031,17 @@ async def update_task(task_id: str, data: TaskUpdate, admin: dict = Depends(get_
     
     await db.tasks.update_one({"id": task_id}, {"$set": update_data})
     
+    # Send email to task creator if a collaborator updated the task with a response
+    progress_comment = update_data.get("progress_comment") or data.progress_comment
+    if progress_comment and admin.get("role") != "complet":
+        # This is a collaborator responding
+        try:
+            task_creator = await db.admins.find_one({"id": task.get("created_by")}, {"_id": 0})
+            if task_creator:
+                await send_task_response_email(task_creator, task, admin.get("name"), progress_comment)
+        except Exception as e:
+            logging.error(f"Failed to send task response email: {e}")
+    
     updated_task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
     return {"success": True, "task": updated_task}
 
