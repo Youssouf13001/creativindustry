@@ -5161,8 +5161,7 @@ const AdminDashboard = () => {
                     data-testid="new-admin-role"
                   >
                     <option value="complet">Admin Complet - Accès total</option>
-                    <option value="editeur">Éditeur - Peut modifier</option>
-                    <option value="lecteur">Lecteur - Lecture seule</option>
+                    <option value="collaborateur">Collaborateur - Exécute les tâches</option>
                   </select>
                 </div>
                 
