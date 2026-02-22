@@ -159,7 +159,7 @@ const TaskManager = ({ token, currentAdmin }) => {
     }
   };
   
-  // Check if current admin can manage tasks (create, delete)
+  // Check if current admin can manage tasks (create, delete, assign)
   const canManageTasks = !currentAdmin || currentAdmin.role === "complet";
   
   // Filter tasks - non-complet admins only see their assigned tasks
