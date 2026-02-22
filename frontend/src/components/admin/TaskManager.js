@@ -106,7 +106,6 @@ const TaskManager = ({ token, clients = [] }) => {
         description: "",
         due_date: "",
         priority: "medium",
-        client_id: "",
         assigned_to: [],
         reminders: [{ days_before: 1, enabled: true }]
       });
