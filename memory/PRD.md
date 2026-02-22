@@ -20,6 +20,26 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
 - Gestion contenu admin, Upload fichiers
 - Système réservation avec acompte 30%
 
+### V19 - Notifications E-mail Progression Client (22 Fév 2026)
+- ✅ **E-mail automatique au client lors de l'avancement du projet** :
+  - Envoyé quand une étape visible passe à "Terminé" ou "En cours"
+  - Contenu détaillé avec progression globale (pourcentage)
+  - Liste des étapes terminées (✓ vert)
+  - Liste des étapes en cours (⏳ orange)
+  - Liste des prochaines étapes (○ gris)
+  - Barre de progression visuelle avec dégradé doré
+  - Bouton CTA vers l'espace client
+  - Template e-mail professionnel avec branding CREATIVINDUSTRY
+- ✅ **Fonction `send_client_progress_email`** (server.py ligne ~102) :
+  - Calcule automatiquement le % de progression
+  - Récupère toutes les tâches visibles du client
+  - Gère les cas limites (client sans e-mail, division par zéro)
+- ✅ **Intégration dans les endpoints** :
+  - `PUT /api/tasks/{id}` - envoie l'e-mail si statut change vers completed/in_progress
+  - `POST /api/tasks/{id}/toggle-status` - envoie l'e-mail si toggle vers completed
+- ✅ **Tests** : 11 tests backend (100% passés)
+  - `/app/backend/tests/test_client_email_notifications.py`
+
 ### V18 - Gestion des Tâches et Collaborateurs (21 Fév 2026)
 - ✅ **Système de gestion des tâches complet** :
   - Créer des tâches avec titre, description, date d'échéance, priorité (Haute/Moyenne/Basse)
