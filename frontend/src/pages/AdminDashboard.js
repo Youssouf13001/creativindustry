@@ -1402,15 +1402,10 @@ const AdminDashboard = () => {
                           <Shield className="w-3 h-3" />
                           Admin complet
                         </span>
-                      ) : currentAdmin?.role === "editeur" ? (
+                      ) : (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
                           <User className="w-3 h-3" />
-                          Éditeur
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/30">
-                          <Eye className="w-3 h-3" />
-                          Lecteur
+                          Collaborateur
                         </span>
                       )}
                     </div>
