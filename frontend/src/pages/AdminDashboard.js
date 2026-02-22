@@ -5692,6 +5692,9 @@ const AdminDashboard = () => {
 
         {/* Admin Chat Modal */}
         <AdminChat isOpen={showChat} onClose={() => { setShowChat(false); fetchUnreadMessages(); }} />
+        
+        {/* Team Chat (floating button) */}
+        <TeamChat token={token} currentAdmin={currentAdmin} />
       </div>
     </div>
   );
