@@ -7039,15 +7039,6 @@ async def toggle_task_status(task_id: str, admin: dict = Depends(get_current_adm
     
     await db.tasks.update_one({"id": task_id}, {"$set": update_data})
     
-    # Send email notification to client if task is visible to them
-    if new_status == "completed" and task.get("client_visible") and task.get("client_id"):
-        try:
-            client = await db.clients.find_one({"id": task["client_id"]}, {"_id": 0})
-            if client and client.get("email"):
-                await send_client_progress_email(client, task, "completed")
-        except Exception as e:
-            logging.error(f"Failed to send progress email on toggle: {e}")
-    
     return {"success": True, "status": new_status}
 
 
