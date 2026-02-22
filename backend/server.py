@@ -7175,6 +7175,175 @@ async def get_client_project_status(client: dict = Depends(get_current_client)):
     return tasks
 
 
+# ==================== SIMPLIFIED PROJECT TRACKING ====================
+
+# Predefined project steps
+PROJECT_STEPS = [
+    {"step": 1, "label": "Commande reçue", "description": "Votre commande a été reçue et enregistrée"},
+    {"step": 2, "label": "Vidage des cartes mémoire", "description": "Transfert de vos fichiers en cours"},
+    {"step": 3, "label": "Sauvegarde sur nos serveurs", "description": "Vos fichiers sont sauvegardés en sécurité"},
+    {"step": 4, "label": "Tri et sélection", "description": "Sélection des meilleures prises"},
+    {"step": 5, "label": "Retouche / Montage", "description": "Édition et retouche en cours"},
+    {"step": 6, "label": "Vérification qualité", "description": "Contrôle qualité final"},
+    {"step": 7, "label": "Livraison", "description": "Votre projet est prêt !"},
+]
+
+@api_router.get("/project-steps")
+async def get_project_steps():
+    """Get predefined project steps"""
+    return PROJECT_STEPS
+
+
+@api_router.get("/admin/client-project/{client_id}")
+async def get_client_project(client_id: str, admin: dict = Depends(get_current_admin)):
+    """Get project status for a specific client"""
+    project = await db.client_projects.find_one({"client_id": client_id}, {"_id": 0})
+    if not project:
+        return {"client_id": client_id, "current_step": 0, "steps": PROJECT_STEPS}
+    return project
+
+
+@api_router.put("/admin/client-project/{client_id}")
+async def update_client_project(client_id: str, data: dict, admin: dict = Depends(get_current_admin)):
+    """Update project step for a client - sends email notification"""
+    new_step = data.get("current_step", 1)
+    
+    # Get current project status
+    current_project = await db.client_projects.find_one({"client_id": client_id}, {"_id": 0})
+    old_step = current_project.get("current_step", 0) if current_project else 0
+    
+    # Build steps with status
+    steps_with_status = []
+    for step_info in PROJECT_STEPS:
+        step_num = step_info["step"]
+        if step_num < new_step:
+            status = "completed"
+        elif step_num == new_step:
+            status = "in_progress"
+        else:
+            status = "pending"
+        steps_with_status.append({**step_info, "status": status})
+    
+    project_data = {
+        "client_id": client_id,
+        "current_step": new_step,
+        "steps": steps_with_status,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "updated_by": admin.get("email")
+    }
+    
+    await db.client_projects.update_one(
+        {"client_id": client_id},
+        {"$set": project_data},
+        upsert=True
+    )
+    
+    # Send email notification if step changed
+    if new_step != old_step and new_step > 0:
+        client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+        if client and client.get("email"):
+            try:
+                current_step_info = next((s for s in PROJECT_STEPS if s["step"] == new_step), None)
+                if current_step_info:
+                    await send_project_step_email(client, current_step_info, new_step, len(PROJECT_STEPS))
+            except Exception as e:
+                logging.error(f"Failed to send project step email: {e}")
+    
+    return {"success": True, "project": project_data}
+
+
+@api_router.get("/client/project-progress")
+async def get_client_project_progress(client: dict = Depends(get_current_client)):
+    """Get project progress for logged in client"""
+    project = await db.client_projects.find_one({"client_id": client["id"]}, {"_id": 0})
+    if not project:
+        # Return default with all steps pending
+        steps_with_status = [{**s, "status": "pending"} for s in PROJECT_STEPS]
+        return {"client_id": client["id"], "current_step": 0, "steps": steps_with_status}
+    return project
+
+
+async def send_project_step_email(client: dict, step_info: dict, current_step: int, total_steps: int):
+    """Send email to client when project step changes"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        return False
+    
+    client_email = client.get("email")
+    client_name = client.get("name", "Client")
+    
+    if not client_email:
+        return False
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    progress_percentage = int((current_step / total_steps) * 100)
+    
+    # Build progress bar HTML
+    steps_html = ""
+    for i, step in enumerate(PROJECT_STEPS, 1):
+        if i < current_step:
+            color = "#22c55e"  # green - completed
+            icon = "✓"
+        elif i == current_step:
+            color = "#D4AF37"  # gold - current
+            icon = "●"
+        else:
+            color = "#666"  # gray - pending
+            icon = "○"
+        steps_html += f'<div style="display: flex; align-items: center; gap: 10px; padding: 8px 0;"><span style="color: {color}; font-size: 16px;">{icon}</span><span style="color: {"#fff" if i <= current_step else "#666"};">{step["label"]}</span></div>'
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); padding: 30px; text-align: center;">
+                <h1 style="margin: 0; color: #000; font-size: 24px;">📦 Mise à jour de votre projet</h1>
+            </div>
+            <div style="padding: 30px;">
+                <p style="font-size: 18px; margin-bottom: 10px;">Bonjour {client_name},</p>
+                <p style="color: #ccc; margin-bottom: 20px;">
+                    Votre projet avance ! Nous sommes maintenant à l'étape :
+                </p>
+                
+                <div style="background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color: #000; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="margin: 0; font-size: 20px; font-weight: bold;">Étape {current_step}/{total_steps} : {step_info["label"]}</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px;">{step_info["description"]}</p>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div style="background-color: #333; border-radius: 10px; height: 20px; overflow: hidden; margin: 20px 0;">
+                    <div style="background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); height: 100%; width: {progress_percentage}%;"></div>
+                </div>
+                <p style="text-align: center; color: #D4AF37; font-size: 24px; font-weight: bold; margin: 10px 0;">{progress_percentage}%</p>
+                
+                <!-- Steps Timeline -->
+                <div style="background-color: #3a3a3a; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    {steps_html}
+                </div>
+                
+                <a href="{site_url}/client/login" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 10px;">
+                    Voir mon espace client →
+                </a>
+            </div>
+            <div style="padding: 20px; background-color: #222; text-align: center; border-top: 1px solid #333;">
+                <p style="margin: 0; font-size: 12px; color: #666;">CREATIVINDUSTRY France</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"📦 Étape {current_step}/{total_steps} : {step_info['label']} - CREATIVINDUSTRY"
+    
+    try:
+        result = send_email(client_email, subject, html_content)
+        if result:
+            logging.info(f"Project step email sent to {client_email} - Step {current_step}")
+        return result
+    except Exception as e:
+        logging.error(f"Failed to send project step email: {e}")
+        return False
+
+
 # Task reminder check endpoint (to be called by cron)
 
 @api_router.post("/tasks/check-reminders")
