@@ -581,128 +581,298 @@ const TaskManager = ({ token, currentAdmin }) => {
         </div>
       )}
       
-      {/* Edit Task Modal */}
+      {/* Edit Task Modal - Different view for Admin vs Collaborateur */}
       {editingTask && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-[#1a1a1a] rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="edit-task-modal">
             <div className="sticky top-0 bg-[#1a1a1a] border-b border-white/10 p-4 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-white">Modifier la tâche</h2>
+              <h2 className="text-xl font-semibold text-white">
+                {canManageTasks ? "Modifier la tâche" : "Répondre à la tâche"}
+              </h2>
               <button onClick={() => setEditingTask(null)} className="text-white/60 hover:text-white">
                 <X className="w-6 h-6" />
               </button>
             </div>
             
-            <form onSubmit={handleUpdateTask} className="p-6 space-y-4">
-              <div>
-                <label className="block text-white/60 text-sm mb-1">Titre *</label>
-                <input
-                  type="text"
-                  value={editingTask.title}
-                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-white/60 text-sm mb-1">Description</label>
-                <textarea
-                  value={editingTask.description || ""}
-                  onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-24 resize-none"
-                />
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4">
+            {/* COLLABORATEUR VIEW - Simplified with response buttons */}
+            {!canManageTasks ? (
+              <div className="p-6 space-y-6">
+                {/* Task Info (Read-only) */}
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                  <h3 className="text-white font-semibold text-lg mb-2">{editingTask.title}</h3>
+                  {editingTask.description && (
+                    <p className="text-white/60 text-sm mb-3">{editingTask.description}</p>
+                  )}
+                  <div className="flex items-center gap-4 text-sm">
+                    <span className="flex items-center gap-1 text-white/50">
+                      <Clock className="w-4 h-4" />
+                      Échéance: {new Date(editingTask.due_date).toLocaleDateString("fr-FR")}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-xs ${
+                      editingTask.priority === "high" ? "bg-red-500/20 text-red-400" :
+                      editingTask.priority === "medium" ? "bg-yellow-500/20 text-yellow-400" :
+                      "bg-green-500/20 text-green-400"
+                    }`}>
+                      {editingTask.priority === "high" ? "Haute" : editingTask.priority === "medium" ? "Moyenne" : "Basse"}
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Quick Response Buttons */}
                 <div>
-                  <label className="block text-white/60 text-sm mb-1">Date d'échéance</label>
+                  <label className="block text-white font-medium mb-3">Quel est l'état de cette tâche ?</label>
+                  <div className="grid grid-cols-1 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingTask({ 
+                          ...editingTask, 
+                          status: "completed", 
+                          progress_comment: "✅ Fait avec succès" 
+                        });
+                      }}
+                      className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                        editingTask.status === "completed" 
+                          ? "border-green-500 bg-green-500/20 text-green-400" 
+                          : "border-white/10 bg-white/5 text-white hover:border-green-500/50"
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <Check className="w-6 h-6 text-green-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold">Fait avec succès</p>
+                        <p className="text-sm opacity-70">La tâche est terminée</p>
+                      </div>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingTask({ 
+                          ...editingTask, 
+                          status: "in_progress", 
+                          progress_comment: "⏳ En cours de réalisation" 
+                        });
+                      }}
+                      className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                        editingTask.status === "in_progress" 
+                          ? "border-blue-500 bg-blue-500/20 text-blue-400" 
+                          : "border-white/10 bg-white/5 text-white hover:border-blue-500/50"
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <Clock className="w-6 h-6 text-blue-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold">En cours</p>
+                        <p className="text-sm opacity-70">Je travaille dessus</p>
+                      </div>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingTask({ 
+                          ...editingTask, 
+                          status: "pending", 
+                          progress_comment: "" 
+                        });
+                      }}
+                      className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                        editingTask.status === "pending" && !editingTask.progress_comment?.includes("❌")
+                          ? "border-gray-500 bg-gray-500/20 text-gray-400" 
+                          : "border-white/10 bg-white/5 text-white hover:border-gray-500/50"
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-gray-500/20 flex items-center justify-center">
+                        <Circle className="w-6 h-6 text-gray-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold">Pas encore commencé</p>
+                        <p className="text-sm opacity-70">Je n'ai pas encore démarré</p>
+                      </div>
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingTask({ 
+                          ...editingTask, 
+                          status: "pending", 
+                          progress_comment: "❌ J'ai un problème: " 
+                        });
+                      }}
+                      className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-all ${
+                        editingTask.progress_comment?.includes("❌")
+                          ? "border-red-500 bg-red-500/20 text-red-400" 
+                          : "border-white/10 bg-white/5 text-white hover:border-red-500/50"
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
+                        <AlertTriangle className="w-6 h-6 text-red-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold">J'ai un problème</p>
+                        <p className="text-sm opacity-70">Je suis bloqué, j'ai besoin d'aide</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Comment field - shows when "problem" is selected */}
+                {editingTask.progress_comment?.includes("❌") && (
+                  <div>
+                    <label className="block text-white/60 text-sm mb-1">Décrivez le problème</label>
+                    <textarea
+                      value={editingTask.progress_comment.replace("❌ J'ai un problème: ", "")}
+                      onChange={(e) => setEditingTask({ 
+                        ...editingTask, 
+                        progress_comment: "❌ J'ai un problème: " + e.target.value 
+                      })}
+                      className="w-full bg-white/5 border border-red-500/30 rounded-lg px-4 py-2 text-white h-24 resize-none"
+                      placeholder="Expliquez le problème rencontré..."
+                    />
+                  </div>
+                )}
+                
+                {/* Submit Button */}
+                <div className="flex gap-3 pt-4 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask(null)}
+                    className="flex-1 px-4 py-3 border border-white/20 rounded-lg text-white hover:bg-white/5"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUpdateTask}
+                    disabled={saving}
+                    className={`flex-1 px-4 py-3 bg-primary text-black rounded-lg font-medium hover:bg-primary/80 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    {saving ? "Envoi..." : "Envoyer ma réponse"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* ADMIN VIEW - Full edit form */
+              <form onSubmit={handleUpdateTask} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-white/60 text-sm mb-1">Titre *</label>
                   <input
-                    type="date"
-                    value={editingTask.due_date}
-                    onChange={(e) => setEditingTask({ ...editingTask, due_date: e.target.value })}
-                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white"
+                    type="text"
+                    value={editingTask.title}
+                    onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                    required
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-white/60 text-sm mb-1">Priorité</label>
-                  <select
-                    value={editingTask.priority}
-                    onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value })}
-                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
-                  >
-                    <option value="low">Basse</option>
-                    <option value="medium">Moyenne</option>
-                    <option value="high">Haute</option>
-                  </select>
+                  <label className="block text-white/60 text-sm mb-1">Description</label>
+                  <textarea
+                    value={editingTask.description || ""}
+                    onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-24 resize-none"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-white/60 text-sm mb-1">Date d'échéance</label>
+                    <input
+                      type="date"
+                      value={editingTask.due_date}
+                      onChange={(e) => setEditingTask({ ...editingTask, due_date: e.target.value })}
+                      className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-white/60 text-sm mb-1">Priorité</label>
+                    <select
+                      value={editingTask.priority}
+                      onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value })}
+                      className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
+                    >
+                      <option value="low">Basse</option>
+                      <option value="medium">Moyenne</option>
+                      <option value="high">Haute</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-white/60 text-sm mb-1">Statut</label>
+                    <select
+                      value={editingTask.status}
+                      onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value })}
+                      className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
+                    >
+                      <option value="pending">En attente</option>
+                      <option value="in_progress">En cours</option>
+                      <option value="completed">Terminée</option>
+                    </select>
+                  </div>
                 </div>
                 
                 <div>
-                  <label className="block text-white/60 text-sm mb-1">Statut</label>
-                  <select
-                    value={editingTask.status}
-                    onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value })}
-                    className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-[#1a1a1a] [&>option]:text-white"
+                  <label className="block text-white/60 text-sm mb-1">Assigner à</label>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {teamUsers.map(user => (
+                      <label key={user.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={editingTask.assigned_to?.includes(user.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEditingTask({ ...editingTask, assigned_to: [...(editingTask.assigned_to || []), user.id] });
+                            } else {
+                              setEditingTask({ ...editingTask, assigned_to: (editingTask.assigned_to || []).filter(id => id !== user.id) });
+                            }
+                          }}
+                          className="rounded border-white/20"
+                        />
+                        <span className="text-white">{user.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Show collaborator's response if any */}
+                {editingTask.progress_comment && (
+                  <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                    <label className="block text-white/60 text-sm mb-2">Réponse du collaborateur</label>
+                    <p className={`text-sm ${
+                      editingTask.progress_comment.includes("✅") ? "text-green-400" :
+                      editingTask.progress_comment.includes("❌") ? "text-red-400" :
+                      editingTask.progress_comment.includes("⏳") ? "text-blue-400" :
+                      "text-white"
+                    }`}>
+                      {editingTask.progress_comment}
+                    </p>
+                  </div>
+                )}
+                
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask(null)}
+                    className="flex-1 px-4 py-2 border border-white/20 rounded-lg text-white hover:bg-white/5"
                   >
-                    <option value="pending">En attente</option>
-                    <option value="in_progress">En cours</option>
-                    <option value="completed">Terminée</option>
-                  </select>
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className={`flex-1 px-4 py-2 bg-primary text-black rounded-lg font-medium hover:bg-primary/80 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    data-testid="update-task-btn"
+                  >
+                    {saving ? "Enregistrement..." : "Enregistrer"}
+                  </button>
                 </div>
-              </div>
-              
-              <div>
-                <label className="block text-white/60 text-sm mb-1">Assigner à</label>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {teamUsers.map(user => (
-                    <label key={user.id} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={editingTask.assigned_to?.includes(user.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setEditingTask({ ...editingTask, assigned_to: [...(editingTask.assigned_to || []), user.id] });
-                          } else {
-                            setEditingTask({ ...editingTask, assigned_to: (editingTask.assigned_to || []).filter(id => id !== user.id) });
-                          }
-                        }}
-                        className="rounded border-white/20"
-                      />
-                      <span className="text-white">{user.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Progress comment for assigned user */}
-              <div className="border-t border-white/10 pt-4">
-                <label className="block text-white/60 text-sm mb-1">Commentaire de progression</label>
-                <textarea
-                  value={editingTask.progress_comment || ""}
-                  onChange={(e) => setEditingTask({ ...editingTask, progress_comment: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white h-20 resize-none"
-                  placeholder="Ex: En cours à 80%, bloqué sur le rendu vidéo..."
-                />
-              </div>
-              
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setEditingTask(null)}
-                  className="flex-1 px-4 py-2 border border-white/20 rounded-lg text-white hover:bg-white/5"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className={`flex-1 px-4 py-2 bg-primary text-black rounded-lg font-medium hover:bg-primary/80 ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  data-testid="update-task-btn"
-                >
-                  {saving ? "Enregistrement..." : "Enregistrer"}
-                </button>
-              </div>
-            </form>
+              </form>
+            )}
           </div>
         </div>
       )}
