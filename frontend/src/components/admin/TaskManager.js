@@ -48,6 +48,7 @@ const TaskManager = ({ token, clients = [] }) => {
   // Modals
   const [showAddTask, setShowAddTask] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [saving, setSaving] = useState(false);
   
   // Form data
   const [newTask, setNewTask] = useState({
