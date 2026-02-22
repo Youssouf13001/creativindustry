@@ -7896,6 +7896,252 @@ async def check_task_reminders(request: Request):
     return {"success": True, "reminders_sent": reminders_sent}
 
 
+# ==================== TESTIMONIAL ROUTES ====================
+
+@api_router.post("/testimonials", response_model=dict)
+async def create_testimonial(testimonial: TestimonialCreate):
+    """Submit a new testimonial (public endpoint)"""
+    testimonial_data = {
+        "id": str(uuid.uuid4()),
+        "client_name": testimonial.client_name,
+        "client_email": testimonial.client_email,
+        "client_role": testimonial.client_role,
+        "message": testimonial.message,
+        "rating": testimonial.rating,
+        "service_type": testimonial.service_type,
+        "status": "pending",
+        "featured": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "approved_at": None
+    }
+    
+    await db.testimonials.insert_one(testimonial_data)
+    
+    # Send notification email to admin
+    if SMTP_EMAIL and SMTP_PASSWORD:
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+                <div style="background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); padding: 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #000; font-size: 24px;">⭐ Nouveau témoignage reçu</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <p style="font-size: 18px; margin-bottom: 10px;"><strong>{testimonial.client_name}</strong></p>
+                    <p style="color: #888; margin-bottom: 5px;">{testimonial.client_email}</p>
+                    <p style="color: #D4AF37; margin-bottom: 20px;">{"⭐" * testimonial.rating}</p>
+                    <div style="background-color: #3a3a3a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <p style="color: #ccc; font-style: italic;">"{testimonial.message}"</p>
+                    </div>
+                    <p style="color: #888;">Service: {testimonial.service_type or 'Non précisé'}</p>
+                    <p style="color: #f59e0b; margin-top: 20px;">⏳ En attente de validation</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        try:
+            send_email(SMTP_EMAIL, "⭐ Nouveau témoignage à valider", html_content)
+        except Exception as e:
+            logging.error(f"Failed to send testimonial notification: {e}")
+    
+    return {"success": True, "message": "Témoignage soumis avec succès. Il sera publié après validation."}
+
+
+@api_router.get("/testimonials", response_model=List[dict])
+async def get_approved_testimonials():
+    """Get all approved testimonials (public endpoint)"""
+    testimonials = await db.testimonials.find(
+        {"status": "approved"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return testimonials
+
+
+@api_router.get("/testimonials/featured", response_model=List[dict])
+async def get_featured_testimonials():
+    """Get featured testimonials for homepage display"""
+    testimonials = await db.testimonials.find(
+        {"status": "approved", "featured": True},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(6)
+    return testimonials
+
+
+@api_router.get("/admin/testimonials", response_model=List[dict])
+async def get_all_testimonials(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get all testimonials (admin only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    testimonials = await db.testimonials.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return testimonials
+
+
+@api_router.put("/admin/testimonials/{testimonial_id}")
+async def update_testimonial(
+    testimonial_id: str,
+    update: TestimonialUpdate,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Update testimonial status or featured flag (admin only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    update_data = {}
+    if update.status is not None:
+        update_data["status"] = update.status
+        if update.status == "approved":
+            update_data["approved_at"] = datetime.now(timezone.utc).isoformat()
+    if update.featured is not None:
+        update_data["featured"] = update.featured
+    
+    if update_data:
+        result = await db.testimonials.update_one(
+            {"id": testimonial_id},
+            {"$set": update_data}
+        )
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Testimonial not found")
+    
+    return {"success": True, "message": "Témoignage mis à jour"}
+
+
+@api_router.delete("/admin/testimonials/{testimonial_id}")
+async def delete_testimonial(
+    testimonial_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Delete a testimonial (admin only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    result = await db.testimonials.delete_one({"id": testimonial_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Testimonial not found")
+    
+    return {"success": True, "message": "Témoignage supprimé"}
+
+
+# ==================== WELCOME POPUP ROUTES ====================
+
+@api_router.get("/welcome-popup")
+async def get_welcome_popup():
+    """Get welcome popup configuration (public)"""
+    popup = await db.welcome_popup.find_one({"id": "main"}, {"_id": 0})
+    if not popup:
+        # Return default config
+        return WelcomePopupContent().model_dump()
+    return popup
+
+
+@api_router.put("/admin/welcome-popup")
+async def update_welcome_popup(
+    update: WelcomePopupUpdate,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Update welcome popup configuration (admin only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.welcome_popup.update_one(
+        {"id": "main"},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    return {"success": True, "message": "Popup d'accueil mis à jour"}
+
+
+@api_router.post("/admin/welcome-popup/video")
+async def upload_welcome_video(
+    video: UploadFile = File(...),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Upload video for welcome popup (admin only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # Validate file type
+    allowed_types = ["video/mp4", "video/webm", "video/quicktime", "video/x-msvideo"]
+    if video.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Format vidéo non supporté. Utilisez MP4, WebM, MOV ou AVI.")
+    
+    # Create welcome directory if not exists
+    welcome_dir = UPLOADS_DIR / "welcome"
+    welcome_dir.mkdir(exist_ok=True)
+    
+    # Generate unique filename
+    file_ext = video.filename.split(".")[-1] if "." in video.filename else "mp4"
+    filename = f"welcome_video_{uuid.uuid4().hex[:8]}.{file_ext}"
+    file_path = welcome_dir / filename
+    
+    # Save file
+    with open(file_path, "wb") as buffer:
+        content = await video.read()
+        buffer.write(content)
+    
+    # Update popup config with video URL
+    video_url = f"/uploads/welcome/{filename}"
+    await db.welcome_popup.update_one(
+        {"id": "main"},
+        {
+            "$set": {
+                "video_url": video_url,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        },
+        upsert=True
+    )
+    
+    return {"success": True, "video_url": video_url, "message": "Vidéo uploadée avec succès"}
+
+
+@api_router.delete("/admin/welcome-popup/video")
+async def delete_welcome_video(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Delete welcome popup video (admin only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # Get current video path
+    popup = await db.welcome_popup.find_one({"id": "main"}, {"_id": 0})
+    if popup and popup.get("video_url"):
+        # Delete file
+        video_path = UPLOADS_DIR / popup["video_url"].replace("/uploads/", "")
+        if video_path.exists():
+            video_path.unlink()
+    
+    # Update DB
+    await db.welcome_popup.update_one(
+        {"id": "main"},
+        {
+            "$set": {
+                "video_url": None,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    return {"success": True, "message": "Vidéo supprimée"}
+
+
 app.include_router(api_router)
 
 # Mount static files for uploads
