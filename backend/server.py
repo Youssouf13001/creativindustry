@@ -1289,6 +1289,23 @@ def verify_token(token: str):
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+
+# ==================== ADMIN ME ENDPOINT ====================
+
+@api_router.get("/admin/me")
+async def get_admin_me(admin: dict = Depends(get_current_admin)):
+    """Get current logged in admin info"""
+    # Return admin info without sensitive data
+    return {
+        "id": admin.get("id"),
+        "email": admin.get("email"),
+        "name": admin.get("name"),
+        "role": admin.get("role", "complet"),
+        "allowed_tabs": admin.get("allowed_tabs", []),
+        "mfa_enabled": admin.get("mfa_enabled", False)
+    }
+
+
 def verify_client_token(token: str):
     """Verify client JWT token and return payload"""
     try:
