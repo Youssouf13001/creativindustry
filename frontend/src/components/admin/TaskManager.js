@@ -159,8 +159,18 @@ const TaskManager = ({ token, currentAdmin }) => {
     }
   };
   
-  // Filter tasks
+  // Check if current admin can manage tasks (create, delete)
+  const canManageTasks = !currentAdmin || currentAdmin.role === "complet";
+  
+  // Filter tasks - non-complet admins only see their assigned tasks
   const filteredTasks = tasks.filter(task => {
+    // First filter by role - if not "complet", only show assigned tasks
+    if (currentAdmin && currentAdmin.role !== "complet") {
+      if (!task.assigned_to?.includes(currentAdmin.id)) {
+        return false;
+      }
+    }
+    // Then apply user filters
     if (filterStatus && task.status !== filterStatus) return false;
     if (filterPriority && task.priority !== filterPriority) return false;
     if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
