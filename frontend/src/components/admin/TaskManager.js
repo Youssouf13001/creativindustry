@@ -32,7 +32,7 @@ const STATUS_LABELS = {
   completed: "Terminée"
 };
 
-const TaskManager = ({ token }) => {
+const TaskManager = ({ token, currentAdmin }) => {
   const [tasks, setTasks] = useState([]);
   const [teamUsers, setTeamUsers] = useState([]);
   const [stats, setStats] = useState(null);
