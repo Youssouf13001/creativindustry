@@ -7225,8 +7225,6 @@ async def update_client_project(client_id: str, data: dict, admin: dict = Depend
     except Exception as e:
         logging.error(f"Error updating client project: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    
-    return {"success": True, "project": project_data}
 
 
 @api_router.get("/client/project-progress")
