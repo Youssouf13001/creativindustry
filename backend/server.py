@@ -7176,48 +7176,55 @@ async def get_client_project(client_id: str, admin: dict = Depends(get_current_a
 @api_router.put("/admin/client-project/{client_id}")
 async def update_client_project(client_id: str, data: dict, admin: dict = Depends(get_current_admin)):
     """Update project step for a client - sends email notification"""
-    new_step = data.get("current_step", 1)
-    
-    # Get current project status
-    current_project = await db.client_projects.find_one({"client_id": client_id}, {"_id": 0})
-    old_step = current_project.get("current_step", 0) if current_project else 0
-    
-    # Build steps with status
-    steps_with_status = []
-    for step_info in PROJECT_STEPS:
-        step_num = step_info["step"]
-        if step_num < new_step:
-            status = "completed"
-        elif step_num == new_step:
-            status = "in_progress"
-        else:
-            status = "pending"
-        steps_with_status.append({**step_info, "status": status})
-    
-    project_data = {
-        "client_id": client_id,
-        "current_step": new_step,
-        "steps": steps_with_status,
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-        "updated_by": admin.get("email")
-    }
-    
-    await db.client_projects.update_one(
-        {"client_id": client_id},
-        {"$set": project_data},
-        upsert=True
-    )
-    
-    # Send email notification if step changed
-    if new_step != old_step and new_step > 0:
-        client = await db.clients.find_one({"id": client_id}, {"_id": 0})
-        if client and client.get("email"):
-            try:
-                current_step_info = next((s for s in PROJECT_STEPS if s["step"] == new_step), None)
-                if current_step_info:
-                    await send_project_step_email(client, current_step_info, new_step, len(PROJECT_STEPS))
-            except Exception as e:
-                logging.error(f"Failed to send project step email: {e}")
+    try:
+        new_step = data.get("current_step", 1)
+        
+        # Get current project status
+        current_project = await db.client_projects.find_one({"client_id": client_id}, {"_id": 0})
+        old_step = current_project.get("current_step", 0) if current_project else 0
+        
+        # Build steps with status
+        steps_with_status = []
+        for step_info in PROJECT_STEPS:
+            step_num = step_info["step"]
+            if step_num < new_step:
+                status = "completed"
+            elif step_num == new_step:
+                status = "in_progress"
+            else:
+                status = "pending"
+            steps_with_status.append({**step_info, "status": status})
+        
+        project_data = {
+            "client_id": client_id,
+            "current_step": new_step,
+            "steps": steps_with_status,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_by": admin.get("email")
+        }
+        
+        await db.client_projects.update_one(
+            {"client_id": client_id},
+            {"$set": project_data},
+            upsert=True
+        )
+        
+        # Send email notification if step changed (non-blocking)
+        email_sent = False
+        if new_step != old_step and new_step > 0:
+            client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+            if client and client.get("email"):
+                try:
+                    current_step_info = next((s for s in PROJECT_STEPS if s["step"] == new_step), None)
+                    if current_step_info:
+                        email_sent = await send_project_step_email(client, current_step_info, new_step, len(PROJECT_STEPS))
+                except Exception as e:
+                    logging.error(f"Failed to send project step email: {e}")
+        
+        return {"success": True, "project": project_data, "email_sent": email_sent}
+    except Exception as e:
+        logging.error(f"Error updating client project: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
     
     return {"success": True, "project": project_data}
 
