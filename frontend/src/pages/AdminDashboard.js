@@ -117,6 +117,13 @@ const AdminDashboard = () => {
   // Extension orders state
   const [extensionOrders, setExtensionOrders] = useState([]);
   const [archivedClients, setArchivedClients] = useState([]);
+  // Testimonials state
+  const [testimonials, setTestimonials] = useState([]);
+  const [loadingTestimonials, setLoadingTestimonials] = useState(false);
+  // Welcome popup state
+  const [welcomePopup, setWelcomePopup] = useState(null);
+  const [uploadingPopupVideo, setUploadingPopupVideo] = useState(false);
+  const welcomeVideoRef = useRef(null);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
