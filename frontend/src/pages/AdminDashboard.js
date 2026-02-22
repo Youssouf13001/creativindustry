@@ -1640,6 +1640,8 @@ const AdminDashboard = () => {
             { id: "galleries", label: "📸 Galeries" },
             { id: "content", label: "Contenu Site" },
             { id: "portfolio", label: "Portfolio" },
+            { id: "testimonials", label: "⭐ Témoignages" },
+            { id: "welcome-popup", label: "🎬 Popup Accueil" },
             { id: "quotes", label: "Devis Mariage" },
             { id: "bookings", label: "Réservations" },
             { id: "clients", label: "Clients" },
