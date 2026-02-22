@@ -365,13 +365,6 @@ const TaskManager = ({ token, clients = [] }) => {
                           {isDueToday(task) && " (Aujourd'hui)"}
                         </span>
                         
-                        {task.client_name && (
-                          <span className="flex items-center gap-1">
-                            <User className="w-4 h-4" />
-                            Pour: {task.client_name}
-                          </span>
-                        )}
-                        
                         {task.assigned_names?.length > 0 && (
                           <span className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
