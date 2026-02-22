@@ -7411,6 +7411,95 @@ async def send_project_completed_email(client: dict):
         return False
 
 
+# ==================== INTERNAL TEAM CHAT ====================
+
+@api_router.post("/team-chat/send")
+async def send_team_message(data: dict, admin: dict = Depends(get_current_admin)):
+    """Send a message in team chat"""
+    message = {
+        "id": str(uuid.uuid4()),
+        "sender_id": admin.get("id"),
+        "sender_name": admin.get("name"),
+        "sender_role": admin.get("role", "complet"),
+        "recipient_id": data.get("recipient_id"),  # None = broadcast to all
+        "content": data.get("content"),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "read_by": [admin.get("id")]  # Sender has read it
+    }
+    
+    await db.team_chat.insert_one(message)
+    
+    # Return without _id
+    message.pop("_id", None)
+    return {"success": True, "message": message}
+
+
+@api_router.get("/team-chat/messages")
+async def get_team_messages(admin: dict = Depends(get_current_admin), limit: int = 50):
+    """Get recent team chat messages"""
+    admin_id = admin.get("id")
+    
+    # Get messages that are broadcast OR where admin is sender/recipient
+    messages = await db.team_chat.find(
+        {
+            "$or": [
+                {"recipient_id": None},  # Broadcast messages
+                {"sender_id": admin_id},  # Sent by this admin
+                {"recipient_id": admin_id}  # Sent to this admin
+            ]
+        },
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    return list(reversed(messages))
+
+
+@api_router.get("/team-chat/unread-count")
+async def get_unread_count(admin: dict = Depends(get_current_admin)):
+    """Get count of unread messages for this admin"""
+    admin_id = admin.get("id")
+    
+    count = await db.team_chat.count_documents({
+        "$or": [
+            {"recipient_id": None},
+            {"recipient_id": admin_id}
+        ],
+        "read_by": {"$ne": admin_id}
+    })
+    
+    return {"unread_count": count}
+
+
+@api_router.post("/team-chat/mark-read")
+async def mark_messages_read(admin: dict = Depends(get_current_admin)):
+    """Mark all messages as read for this admin"""
+    admin_id = admin.get("id")
+    
+    await db.team_chat.update_many(
+        {
+            "$or": [
+                {"recipient_id": None},
+                {"recipient_id": admin_id}
+            ],
+            "read_by": {"$ne": admin_id}
+        },
+        {"$push": {"read_by": admin_id}}
+    )
+    
+    return {"success": True}
+
+
+@api_router.get("/team-chat/online-users")
+async def get_online_users(admin: dict = Depends(get_current_admin)):
+    """Get list of all admins for chat"""
+    admins = await db.admins.find(
+        {},
+        {"_id": 0, "id": 1, "name": 1, "email": 1, "role": 1}
+    ).to_list(100)
+    
+    return admins
+
+
 # Task reminder check endpoint (to be called by cron)
 
 @api_router.post("/tasks/check-reminders")
