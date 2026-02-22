@@ -6994,28 +6994,8 @@ async def update_task(task_id: str, data: TaskUpdate, admin: dict = Depends(get_
     was_not_completed = task.get("status") != "completed"
     if update_data.get("status") == "completed" and was_not_completed:
         update_data["completed_at"] = datetime.now(timezone.utc).isoformat()
-        
-        # Send email to client if task is visible to them
-        if task.get("client_visible") and task.get("client_id"):
-            try:
-                client = await db.clients.find_one({"id": task["client_id"]}, {"_id": 0})
-                if client and client.get("email"):
-                    await send_client_progress_email(client, task, "completed")
-            except Exception as e:
-                logging.error(f"Failed to send progress email to client: {e}")
-                
     elif update_data.get("status") != "completed":
         update_data["completed_at"] = None
-    
-    # If status changed to in_progress and task is visible, notify client
-    if update_data.get("status") == "in_progress" and task.get("status") != "in_progress":
-        if task.get("client_visible") and task.get("client_id"):
-            try:
-                client = await db.clients.find_one({"id": task["client_id"]}, {"_id": 0})
-                if client and client.get("email"):
-                    await send_client_progress_email(client, task, "in_progress")
-            except Exception as e:
-                logging.error(f"Failed to send progress email to client: {e}")
     
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
