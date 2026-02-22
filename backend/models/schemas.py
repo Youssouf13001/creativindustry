@@ -600,7 +600,7 @@ class TaskReminder(BaseModel):
     last_sent_at: Optional[datetime] = None
 
 class Task(BaseModel):
-    """Task model for team management"""
+    """Task model for internal team management"""
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     title: str
@@ -610,16 +610,14 @@ class Task(BaseModel):
     status: str = "pending"  # pending, in_progress, completed
     client_id: Optional[str] = None  # Link to a client if relevant
     client_name: Optional[str] = None
-    assigned_to: List[str] = []  # List of team user IDs
+    assigned_to: List[str] = []  # List of admin IDs
     assigned_names: List[str] = []  # List of assigned names for display
-    created_by: str  # admin or team user ID
+    created_by: str  # admin ID
     created_by_name: str = ""
     # Reminder settings
     reminders: List[dict] = []  # [{"days_before": 1, "enabled": True, "sent": False}]
-    # For client visibility - project status
-    client_visible: bool = False  # If true, client sees this as project status
-    client_status_label: Optional[str] = None  # e.g., "Montage en cours", "Tri des photos"
-    step_number: int = 1  # Order for client display
+    # Progress comment from assignee
+    progress_comment: Optional[str] = None  # e.g., "80% done", "Blocked on X"
     # Timestamps
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: Optional[datetime] = None
@@ -633,9 +631,6 @@ class TaskCreate(BaseModel):
     client_id: Optional[str] = None
     assigned_to: List[str] = []
     reminders: List[dict] = []  # [{"days_before": 1, "enabled": True}]
-    client_visible: bool = False
-    client_status_label: Optional[str] = None
-    step_number: int = 1
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -646,6 +641,4 @@ class TaskUpdate(BaseModel):
     client_id: Optional[str] = None
     assigned_to: Optional[List[str]] = None
     reminders: Optional[List[dict]] = None
-    client_visible: Optional[bool] = None
-    client_status_label: Optional[str] = None
-    step_number: Optional[int] = None
+    progress_comment: Optional[str] = None
