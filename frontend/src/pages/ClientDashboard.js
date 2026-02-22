@@ -650,7 +650,7 @@ const ClientDashboard = () => {
                     <div className="absolute top-0 left-0 right-0 h-4 flex items-center justify-between px-1">
                       {projectStatus.map((step, idx) => (
                         <div 
-                          key={step.id}
+                          key={step.id || step.step || idx}
                           className={`w-3 h-3 rounded-full border-2 ${
                             step.status === "completed" 
                               ? "bg-green-500 border-green-400" 
@@ -658,31 +658,10 @@ const ClientDashboard = () => {
                               ? "bg-primary border-primary animate-pulse"
                               : "bg-white/20 border-white/30"
                           }`}
-                          title={step.client_status_label || `Étape ${step.step_number || idx + 1}`}
+                          title={step.label || step.client_status_label || `Étape ${step.step || step.step_number || idx + 1}`}
                         />
                       ))}
                     </div>
-                  </div>
-                  
-                  {/* Completed steps summary */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {projectStatus.map((step, idx) => (
-                      <div 
-                        key={step.id}
-                        className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
-                          step.status === "completed" 
-                            ? "bg-green-500/20 text-green-400 border border-green-500/30" 
-                            : step.status === "in_progress"
-                            ? "bg-primary/20 text-primary border border-primary/50 animate-pulse"
-                            : "bg-white/5 text-white/40 border border-white/10"
-                        }`}
-                      >
-                        {step.status === "completed" && <Check size={12} />}
-                        {step.status === "in_progress" && <Clock size={12} />}
-                        Étape {step.step_number || idx + 1}
-                        {step.status === "completed" && " ✓"}
-                      </div>
-                    ))}
                   </div>
                   
                   {/* Stats */}
@@ -712,9 +691,9 @@ const ClientDashboard = () => {
                     <div className="space-y-0">
                       {projectStatus.map((item, index) => (
                         <div 
-                          key={item.id} 
+                          key={item.id || item.step || index} 
                           className="relative pl-14 pb-8 last:pb-0"
-                          data-testid={`project-status-item-${item.id}`}
+                          data-testid={`project-status-item-${item.step || index}`}
                         >
                           {/* Circle indicator */}
                           <div className={`absolute left-0 w-10 h-10 rounded-full flex items-center justify-center border-2 ${
@@ -727,7 +706,7 @@ const ClientDashboard = () => {
                             {item.status === "completed" ? (
                               <Check size={18} />
                             ) : (
-                              <span className="font-bold text-sm">{item.step_number || index + 1}</span>
+                              <span className="font-bold text-sm">{item.step || item.step_number || index + 1}</span>
                             )}
                           </div>
                           
@@ -741,7 +720,7 @@ const ClientDashboard = () => {
                                   ? "text-primary"
                                   : "text-white"
                               }`}>
-                                {item.client_status_label || item.title}
+                                {item.label || item.client_status_label || item.title}
                               </h3>
                               <span className={`px-2 py-0.5 text-xs rounded-full ${
                                 item.status === "completed" 
@@ -754,24 +733,8 @@ const ClientDashboard = () => {
                               </span>
                             </div>
                             
-                            {/* Assigned team members */}
-                            {item.assigned_names && item.assigned_names.length > 0 && item.status === "in_progress" && (
-                              <p className="text-primary/80 text-sm mb-1">
-                                Par {item.assigned_names.join(", ")}
-                              </p>
-                            )}
-                            
-                            {item.completed_at && item.status === "completed" && (
-                              <p className="text-green-400/60 text-sm">
-                                Terminé le {new Date(item.completed_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                              </p>
-                            )}
-                            
-                            {item.due_date && item.status !== "completed" && (
-                              <p className="text-white/40 text-sm flex items-center gap-1">
-                                <Clock size={12} />
-                                Prévu le {new Date(item.due_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
-                              </p>
+                            {item.description && (
+                              <p className="text-white/60 text-sm">{item.description}</p>
                             )}
                           </div>
                         </div>
