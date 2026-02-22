@@ -1393,6 +1393,7 @@ const AdminDashboard = () => {
         <div className="flex gap-4 mb-8 border-b border-white/10 pb-4 overflow-x-auto">
           {[
             { id: "overview", label: "Aperçu" },
+            { id: "project-tracker", label: "📦 Suivi Projet" },
             { id: "tasks", label: "📋 Tâches" },
             { id: "calendar", label: "📅 Calendrier" },
             { id: "galleries", label: "📸 Galeries" },
