@@ -3311,6 +3311,320 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Testimonials Tab */}
+        {activeTab === "testimonials" && (
+          <div data-testid="admin-testimonials-tab">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">Gérer les Témoignages</h2>
+              <div className="flex gap-4 text-sm">
+                <span className="text-white/60">
+                  En attente: <span className="text-yellow-500 font-bold">{testimonials.filter(t => t.status === "pending").length}</span>
+                </span>
+                <span className="text-white/60">
+                  Approuvés: <span className="text-green-500 font-bold">{testimonials.filter(t => t.status === "approved").length}</span>
+                </span>
+              </div>
+            </div>
+
+            {loadingTestimonials ? (
+              <div className="text-center py-12">
+                <Loader className="animate-spin mx-auto text-primary" size={32} />
+                <p className="text-white/60 mt-4">Chargement...</p>
+              </div>
+            ) : testimonials.length === 0 ? (
+              <div className="text-center py-12 bg-card border border-white/10 p-8">
+                <p className="text-white/60">Aucun témoignage reçu pour le moment</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {testimonials.map((testimonial) => (
+                  <div
+                    key={testimonial.id}
+                    className={`bg-card border p-6 ${
+                      testimonial.status === "pending" ? "border-yellow-500/50" :
+                      testimonial.status === "approved" ? "border-green-500/30" : "border-red-500/30"
+                    }`}
+                    data-testid={`testimonial-item-${testimonial.id}`}
+                  >
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1">
+                        {/* Header */}
+                        <div className="flex items-center gap-4 mb-3">
+                          <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
+                            <User className="text-primary" size={24} />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-white">{testimonial.client_name}</h3>
+                            <p className="text-sm text-white/50">{testimonial.client_email}</p>
+                            {testimonial.client_role && (
+                              <p className="text-xs text-primary">{testimonial.client_role}</p>
+                            )}
+                          </div>
+                          {/* Rating */}
+                          <div className="flex gap-0.5 ml-auto">
+                            {[...Array(5)].map((_, i) => (
+                              <span key={i} className={i < testimonial.rating ? "text-primary" : "text-white/20"}>★</span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Message */}
+                        <p className="text-white/80 bg-background/50 p-4 border border-white/10 italic">
+                          "{testimonial.message}"
+                        </p>
+
+                        {/* Meta */}
+                        <div className="flex items-center gap-4 mt-3 text-xs text-white/50">
+                          <span>Service: {testimonial.service_type || "Non précisé"}</span>
+                          <span>•</span>
+                          <span>Reçu le: {new Date(testimonial.created_at).toLocaleDateString("fr-FR")}</span>
+                          {testimonial.featured && (
+                            <>
+                              <span>•</span>
+                              <span className="text-primary font-bold">★ Mis en avant</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex flex-col gap-2">
+                        {/* Status badge */}
+                        <span className={`px-3 py-1 text-xs font-bold text-center ${
+                          testimonial.status === "pending" ? "bg-yellow-500/20 text-yellow-500" :
+                          testimonial.status === "approved" ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
+                        }`}>
+                          {testimonial.status === "pending" ? "EN ATTENTE" :
+                           testimonial.status === "approved" ? "APPROUVÉ" : "REJETÉ"}
+                        </span>
+
+                        {testimonial.status === "pending" && (
+                          <>
+                            <button
+                              onClick={() => updateTestimonial(testimonial.id, { status: "approved" })}
+                              className="px-4 py-2 bg-green-500 text-white text-sm hover:bg-green-600 flex items-center justify-center gap-2"
+                            >
+                              <Check size={16} /> Approuver
+                            </button>
+                            <button
+                              onClick={() => updateTestimonial(testimonial.id, { status: "rejected" })}
+                              className="px-4 py-2 bg-red-500/20 text-red-500 text-sm hover:bg-red-500/30"
+                            >
+                              Rejeter
+                            </button>
+                          </>
+                        )}
+
+                        {testimonial.status === "approved" && (
+                          <button
+                            onClick={() => updateTestimonial(testimonial.id, { featured: !testimonial.featured })}
+                            className={`px-4 py-2 text-sm ${
+                              testimonial.featured 
+                                ? "bg-primary/20 text-primary" 
+                                : "bg-white/10 text-white/60 hover:bg-white/20"
+                            }`}
+                          >
+                            {testimonial.featured ? "★ Retirer" : "☆ Mettre en avant"}
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => deleteTestimonial(testimonial.id)}
+                          className="px-4 py-2 bg-white/5 text-white/50 text-sm hover:bg-red-500/20 hover:text-red-400 flex items-center justify-center gap-2"
+                        >
+                          <Trash2 size={14} /> Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Welcome Popup Tab */}
+        {activeTab === "welcome-popup" && (
+          <div data-testid="admin-welcome-popup-tab">
+            <h2 className="font-primary font-bold text-xl mb-6">Popup d'Accueil</h2>
+            
+            {welcomePopup ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Video Upload Section */}
+                <div className="bg-card border border-white/10 p-6">
+                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <Video className="text-primary" size={20} />
+                    Vidéo du Popup
+                  </h3>
+                  
+                  {welcomePopup.video_url ? (
+                    <div className="space-y-4">
+                      <div className="aspect-video bg-black border border-white/10 overflow-hidden">
+                        <video
+                          src={`${BACKEND_URL}${welcomePopup.video_url}`}
+                          className="w-full h-full object-contain"
+                          controls
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => welcomeVideoRef.current?.click()}
+                          className="flex-1 btn-outline px-4 py-2 text-sm flex items-center justify-center gap-2"
+                          disabled={uploadingPopupVideo}
+                        >
+                          <Upload size={16} /> Remplacer
+                        </button>
+                        <button
+                          onClick={deleteWelcomeVideo}
+                          className="px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 text-sm"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => welcomeVideoRef.current?.click()}
+                      className="aspect-video bg-background/50 border-2 border-dashed border-white/20 hover:border-primary/50 cursor-pointer flex flex-col items-center justify-center transition-colors"
+                    >
+                      {uploadingPopupVideo ? (
+                        <>
+                          <Loader className="animate-spin text-primary" size={48} />
+                          <p className="text-white/60 mt-4">Upload en cours...</p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload size={48} className="text-white/30" />
+                          <p className="text-white/60 mt-4">Cliquez pour uploader une vidéo</p>
+                          <p className="text-white/40 text-sm mt-2">MP4, WebM, MOV • Max 100MB</p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  
+                  <input
+                    ref={welcomeVideoRef}
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime,video/x-msvideo"
+                    onChange={uploadWelcomeVideo}
+                    className="hidden"
+                  />
+                </div>
+
+                {/* Settings Section */}
+                <div className="bg-card border border-white/10 p-6">
+                  <h3 className="font-bold text-lg mb-4">Paramètres du Popup</h3>
+                  
+                  <div className="space-y-4">
+                    {/* Enable/Disable */}
+                    <div className="flex items-center justify-between p-4 bg-background/50 border border-white/10">
+                      <div>
+                        <p className="font-bold">Activer le popup</p>
+                        <p className="text-sm text-white/50">Afficher à l'arrivée sur le site</p>
+                      </div>
+                      <button
+                        onClick={() => updateWelcomePopup({ enabled: !welcomePopup.enabled })}
+                        className={`w-14 h-7 rounded-full transition-colors ${
+                          welcomePopup.enabled ? "bg-green-500" : "bg-white/20"
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                          welcomePopup.enabled ? "translate-x-8" : "translate-x-1"
+                        }`}></div>
+                      </button>
+                    </div>
+
+                    {/* Title */}
+                    <div>
+                      <label className="text-sm text-white/60 block mb-2">Titre</label>
+                      <input
+                        type="text"
+                        value={welcomePopup.title}
+                        onChange={(e) => setWelcomePopup({...welcomePopup, title: e.target.value})}
+                        onBlur={() => updateWelcomePopup({ title: welcomePopup.title })}
+                        className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary"
+                      />
+                    </div>
+
+                    {/* Subtitle */}
+                    <div>
+                      <label className="text-sm text-white/60 block mb-2">Sous-titre</label>
+                      <input
+                        type="text"
+                        value={welcomePopup.subtitle}
+                        onChange={(e) => setWelcomePopup({...welcomePopup, subtitle: e.target.value})}
+                        onBlur={() => updateWelcomePopup({ subtitle: welcomePopup.subtitle })}
+                        className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary"
+                      />
+                    </div>
+
+                    {/* Button Text */}
+                    <div>
+                      <label className="text-sm text-white/60 block mb-2">Texte du bouton</label>
+                      <input
+                        type="text"
+                        value={welcomePopup.button_text}
+                        onChange={(e) => setWelcomePopup({...welcomePopup, button_text: e.target.value})}
+                        onBlur={() => updateWelcomePopup({ button_text: welcomePopup.button_text })}
+                        className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary"
+                      />
+                    </div>
+
+                    {/* Button Link */}
+                    <div>
+                      <label className="text-sm text-white/60 block mb-2">Lien du bouton</label>
+                      <select
+                        value={welcomePopup.button_link}
+                        onChange={(e) => {
+                          setWelcomePopup({...welcomePopup, button_link: e.target.value});
+                          updateWelcomePopup({ button_link: e.target.value });
+                        }}
+                        className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary"
+                      >
+                        <option value="/portfolio">Portfolio</option>
+                        <option value="/devis-mariage">Devis Mariage</option>
+                        <option value="/temoignages">Témoignages</option>
+                        <option value="/contact">Contact</option>
+                        <option value="/services/wedding">Mariages</option>
+                        <option value="/services/podcast">Podcast</option>
+                        <option value="/services/tv_set">Plateau TV</option>
+                      </select>
+                    </div>
+
+                    {/* Show once per session */}
+                    <div className="flex items-center justify-between p-4 bg-background/50 border border-white/10">
+                      <div>
+                        <p className="font-bold text-sm">Une fois par session</p>
+                        <p className="text-xs text-white/50">Ne pas réafficher après fermeture</p>
+                      </div>
+                      <button
+                        onClick={() => updateWelcomePopup({ show_once_per_session: !welcomePopup.show_once_per_session })}
+                        className={`w-14 h-7 rounded-full transition-colors ${
+                          welcomePopup.show_once_per_session ? "bg-green-500" : "bg-white/20"
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                          welcomePopup.show_once_per_session ? "translate-x-8" : "translate-x-1"
+                        }`}></div>
+                      </button>
+                    </div>
+
+                    {welcomePopup.updated_at && (
+                      <p className="text-xs text-white/40 text-right">
+                        Dernière modification: {new Date(welcomePopup.updated_at).toLocaleString("fr-FR")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Loader className="animate-spin mx-auto text-primary" size={32} />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Wedding Quotes Tab */}
         {(activeTab === "overview" || activeTab === "quotes") && (
           <div className="mb-12">
