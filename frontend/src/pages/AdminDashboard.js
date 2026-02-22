@@ -367,9 +367,9 @@ const AdminDashboard = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Check file size (max 100MB)
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("La vidéo est trop volumineuse (max 100MB)");
+    // Check file size (max 500MB)
+    if (file.size > 500 * 1024 * 1024) {
+      toast.error("La vidéo est trop volumineuse (max 500MB)");
       return;
     }
     
