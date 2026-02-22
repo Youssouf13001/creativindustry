@@ -1167,6 +1167,62 @@ class StoryViewStats(BaseModel):
     client_views: List[dict]  # List of {name, viewed_at}
     anonymous_views: int
 
+# ==================== TESTIMONIAL MODELS ====================
+
+class TestimonialCreate(BaseModel):
+    """Model for creating a new testimonial"""
+    model_config = ConfigDict(extra="ignore")
+    client_name: str
+    client_email: str
+    client_role: Optional[str] = None  # ex: "Mariés 2024", "Podcasteur"
+    message: str
+    rating: int = Field(default=5, ge=1, le=5)
+    service_type: Optional[str] = None  # wedding, podcast, tv_set
+
+class TestimonialResponse(BaseModel):
+    """Model for testimonial response"""
+    id: str
+    client_name: str
+    client_email: str
+    client_role: Optional[str] = None
+    message: str
+    rating: int
+    service_type: Optional[str] = None
+    status: str  # pending, approved, rejected
+    created_at: str
+    approved_at: Optional[str] = None
+
+class TestimonialUpdate(BaseModel):
+    """Model for updating a testimonial"""
+    status: Optional[str] = None  # pending, approved, rejected
+    featured: Optional[bool] = None
+
+
+# ==================== WELCOME POPUP MODELS ====================
+
+class WelcomePopupContent(BaseModel):
+    """Model for welcome popup configuration"""
+    model_config = ConfigDict(extra="ignore")
+    id: str = "main"
+    enabled: bool = True
+    title: str = "Bienvenue chez CREATIVINDUSTRY"
+    subtitle: str = "Découvrez notre dernière réalisation"
+    video_url: Optional[str] = None  # Path to uploaded video
+    button_text: str = "Découvrir"
+    button_link: str = "/portfolio"
+    show_once_per_session: bool = True
+    updated_at: Optional[str] = None
+
+class WelcomePopupUpdate(BaseModel):
+    """Model for updating welcome popup"""
+    enabled: Optional[bool] = None
+    title: Optional[str] = None
+    subtitle: Optional[str] = None
+    button_text: Optional[str] = None
+    button_link: Optional[str] = None
+    show_once_per_session: Optional[bool] = None
+
+
 # ==================== SITE CONTENT MODELS ====================
 
 class SiteContent(BaseModel):
