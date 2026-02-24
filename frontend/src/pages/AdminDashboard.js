@@ -1670,6 +1670,48 @@ const AdminDashboard = () => {
     }
   };
 
+  // Gallery Music Functions
+  const handleGalleryMusicUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedGallery) return;
+    
+    setUploadingGalleryMusic(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      
+      await axios.post(`${API}/admin/galleries/${selectedGallery.id}/music`, formData, {
+        headers: { ...headers, "Content-Type": "multipart/form-data" }
+      });
+      
+      toast.success("Musique uploadée !");
+      // Refresh gallery
+      const res = await axios.get(`${API}/admin/galleries`, { headers });
+      setGalleries(res.data);
+      const updated = res.data.find(g => g.id === selectedGallery.id);
+      if (updated) setSelectedGallery(updated);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Erreur lors de l'upload");
+    }
+    setUploadingGalleryMusic(false);
+    e.target.value = "";
+  };
+
+  const deleteGalleryMusic = async () => {
+    if (!selectedGallery) return;
+    try {
+      await axios.delete(`${API}/admin/galleries/${selectedGallery.id}/music`, { headers });
+      toast.success("Musique supprimée");
+      // Refresh gallery
+      const res = await axios.get(`${API}/admin/galleries`, { headers });
+      setGalleries(res.data);
+      const updated = res.data.find(g => g.id === selectedGallery.id);
+      if (updated) setSelectedGallery(updated);
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
   const viewGallerySelection = async (gallery) => {
     try {
       const res = await axios.get(`${API}/admin/galleries/${gallery.id}/selection`, { headers });
