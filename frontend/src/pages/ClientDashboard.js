@@ -901,6 +901,161 @@ const ClientDashboard = () => {
           </div>
         )}
 
+        {/* Guestbooks Tab */}
+        {activeTab === "guestbooks" && (
+          <div>
+            {!selectedClientGuestbook ? (
+              <div>
+                <h2 className="font-primary font-bold text-xl mb-6 flex items-center gap-2">
+                  <BookOpen size={20} className="text-primary" /> Mes Livres d'or
+                </h2>
+                
+                {myGuestbooks.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {myGuestbooks.map((gb) => (
+                      <div 
+                        key={gb.id} 
+                        className="bg-card border border-white/10 p-4 hover:border-primary transition-colors cursor-pointer"
+                        onClick={() => fetchGuestbookDetail(gb.id)}
+                        data-testid={`guestbook-card-${gb.id}`}
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h3 className="font-primary font-bold">{gb.name}</h3>
+                            {gb.event_date && <p className="text-white/60 text-sm">{gb.event_date}</p>}
+                          </div>
+                          <BookOpen className="text-primary" size={20} />
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-400">{gb.approved_count || 0} approuvés</span>
+                          {gb.pending_count > 0 && (
+                            <span className="bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded text-xs">
+                              {gb.pending_count} en attente
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-card border border-white/10">
+                    <BookOpen size={48} className="mx-auto mb-4 text-white/30" />
+                    <p className="text-white/60 mb-2">Aucun livre d'or disponible</p>
+                    <p className="text-white/40 text-sm">Contactez votre photographe pour en créer un</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                {/* Guestbook Detail View */}
+                <div className="flex items-center gap-4 mb-6">
+                  <button 
+                    onClick={() => setSelectedClientGuestbook(null)}
+                    className="text-white/60 hover:text-white"
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <div className="flex-1">
+                    <h2 className="font-primary font-bold text-xl">{selectedClientGuestbook.name}</h2>
+                    {selectedClientGuestbook.event_date && (
+                      <p className="text-white/60 text-sm">{selectedClientGuestbook.event_date}</p>
+                    )}
+                  </div>
+                  <button 
+                    onClick={() => copyGuestbookLink(selectedClientGuestbook.id)}
+                    className="btn-outline px-4 py-2 text-sm flex items-center gap-2"
+                  >
+                    <Copy size={16} /> Partager
+                  </button>
+                </div>
+
+                {/* QR Code */}
+                <div className="bg-card border border-white/10 p-4 mb-6 flex flex-col sm:flex-row items-center gap-4">
+                  <div className="bg-white p-2 rounded">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`${window.location.origin}/livre-dor/${selectedClientGuestbook.id}`)}`}
+                      alt="QR Code"
+                      className="w-20 h-20"
+                    />
+                  </div>
+                  <div className="text-center sm:text-left">
+                    <p className="font-medium mb-1">QR Code de partage</p>
+                    <p className="text-white/60 text-sm">Partagez ce QR code avec vos invités pour qu'ils puissent laisser des messages</p>
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <h3 className="font-bold mb-4">Messages ({selectedClientGuestbook.messages?.length || 0})</h3>
+                
+                {selectedClientGuestbook.messages?.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedClientGuestbook.messages.map((msg) => (
+                      <div 
+                        key={msg.id} 
+                        className={`bg-card border p-4 ${msg.is_approved ? 'border-green-500/30' : 'border-yellow-500/30'}`}
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                              <span className="text-primary font-bold">{msg.author_name.charAt(0).toUpperCase()}</span>
+                            </div>
+                            <div>
+                              <p className="font-medium">{msg.author_name}</p>
+                              <p className="text-white/40 text-xs">
+                                {msg.message_type === "text" ? "Texte" : msg.message_type === "audio" ? "Audio" : "Vidéo"}
+                                {" • "}
+                                {new Date(msg.created_at).toLocaleDateString('fr-FR')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {!msg.is_approved && (
+                              <button
+                                onClick={() => approveClientGuestbookMessage(msg.id)}
+                                className="bg-green-500/20 text-green-500 px-3 py-1 text-sm hover:bg-green-500/30 flex items-center gap-1"
+                              >
+                                <Check size={14} /> Approuver
+                              </button>
+                            )}
+                            <button
+                              onClick={() => deleteClientGuestbookMessage(msg.id)}
+                              className="bg-red-500/20 text-red-500 p-1 hover:bg-red-500/30"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {msg.message_type === "text" && (
+                          <p className="text-white/80">{msg.text_content}</p>
+                        )}
+                        {msg.message_type === "audio" && (
+                          <audio src={`${BACKEND_URL}${msg.media_url}`} controls className="w-full mt-2" />
+                        )}
+                        {msg.message_type === "video" && (
+                          <video src={`${BACKEND_URL}${msg.media_url}`} controls className="w-full mt-2 rounded max-h-64" />
+                        )}
+                        
+                        {!msg.is_approved && (
+                          <span className="inline-block mt-2 bg-yellow-500/20 text-yellow-500 text-xs px-2 py-0.5 rounded">
+                            En attente d'approbation
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-card border border-white/10">
+                    <MessageCircle size={48} className="mx-auto mb-4 text-white/30" />
+                    <p className="text-white/60">Aucun message pour le moment</p>
+                    <p className="text-white/40 text-sm mt-2">Partagez le QR code avec vos invités</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Settings Tab */}
         {activeTab === "settings" && (
           <div className="max-w-2xl mx-auto space-y-8">
