@@ -5029,9 +5029,67 @@ const AdminDashboard = () => {
             {/* Info Banner */}
             <div className="bg-blue-500/10 border border-blue-500/30 p-4">
               <p className="text-sm text-blue-300">
-                <strong>Système d'expiration :</strong> Chaque compte client expire automatiquement 6 mois après sa création. 
-                Les clients peuvent demander une extension de 2 mois pour 24€ TTC (20€ HT + 4€ TVA). 
-                Les fichiers des comptes expirés sont archivés dans le dossier <code className="bg-black/30 px-1">uploads/archives</code>.
+                <strong>Système d'expiration :</strong> Chaque compte client expire automatiquement selon le délai défini (6 mois par défaut). 
+                Les clients avec un compte expiré peuvent renouveler directement via PayPal (20€/semaine ou 90€/6 mois).
+              </p>
+            </div>
+
+            {/* Renewal Requests */}
+            <div className="bg-card border border-green-500/30 p-6">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <CreditCard size={20} className="text-green-400" /> 
+                Demandes de renouvellement PayPal
+                {renewalRequests.length > 0 && (
+                  <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full ml-2">
+                    {renewalRequests.length}
+                  </span>
+                )}
+              </h3>
+              
+              {loadingRenewals ? (
+                <div className="text-center py-8">
+                  <Loader className="animate-spin mx-auto text-green-400" size={32} />
+                </div>
+              ) : renewalRequests.length === 0 ? (
+                <p className="text-white/50 text-center py-8">Aucune demande de renouvellement en attente</p>
+              ) : (
+                <div className="space-y-4">
+                  {renewalRequests.map((request) => (
+                    <div key={request.id} className="bg-background border border-green-500/30 p-4 flex items-center justify-between">
+                      <div>
+                        <p className="font-bold">{request.client_name}</p>
+                        <p className="text-white/60 text-sm">{request.client_email}</p>
+                        <p className="text-xs text-white/40 mt-1">
+                          Demandé le {new Date(request.created_at).toLocaleDateString('fr-FR')} à {new Date(request.created_at).toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'})}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-green-400">{request.amount}€</p>
+                          <p className="text-xs text-white/40">{request.plan_label} (+{request.days} jours)</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => approveRenewal(request.id)}
+                            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 text-sm flex items-center gap-1"
+                          >
+                            <Check size={16} /> Valider
+                          </button>
+                          <button
+                            onClick={() => rejectRenewal(request.id)}
+                            className="bg-red-500/20 text-red-400 border border-red-500/50 px-3 py-2 text-sm hover:bg-red-500/30"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <p className="text-xs text-white/40 mt-4">
+                💡 Vérifiez le paiement sur PayPal avant de valider. Le client recevra un email de confirmation.
               </p>
             </div>
 
