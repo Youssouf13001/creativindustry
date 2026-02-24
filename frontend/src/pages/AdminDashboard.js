@@ -2253,11 +2253,18 @@ const AdminDashboard = () => {
                           <h3 className="font-primary font-bold">{gallery.name}</h3>
                           <p className="text-white/60 text-sm">{gallery.client_name}</p>
                         </div>
-                        {gallery.is_validated && (
-                          <span className="bg-green-500/20 text-green-500 text-xs px-2 py-1 flex items-center gap-1">
-                            <Check size={12} /> Validé
-                          </span>
-                        )}
+                        <div className="flex gap-2">
+                          {gallery.music_url && (
+                            <span className="bg-purple-500/20 text-purple-400 text-xs px-2 py-1 flex items-center gap-1" title="Musique ajoutée">
+                              <Music size={12} />
+                            </span>
+                          )}
+                          {gallery.is_validated && (
+                            <span className="bg-green-500/20 text-green-500 text-xs px-2 py-1 flex items-center gap-1">
+                              <Check size={12} /> Validé
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex justify-between text-sm text-white/50">
                         <span>{gallery.photos?.length || 0} photos</span>
