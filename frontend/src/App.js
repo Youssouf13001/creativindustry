@@ -18,6 +18,7 @@ import AppointmentPage from "./pages/AppointmentPage";
 import AppointmentConfirmPage from "./pages/AppointmentConfirmPage";
 import ContactPage from "./pages/ContactPage";
 import TestimonialsPage from "./pages/TestimonialsPage";
+import NewsPage from "./pages/NewsPage";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import ClientLogin from "./pages/ClientLogin";
@@ -42,6 +43,7 @@ function App() {
             <Route path="/rendez-vous/confirmer/:appointmentId/:token" element={<AppointmentConfirmPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/temoignages" element={<TestimonialsPage />} />
+            <Route path="/actualites" element={<NewsPage />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/client" element={<ClientLogin />} />
