@@ -771,7 +771,8 @@ const AdminDashboard = () => {
         axios.get(`${API}/appointments`, { headers }),
         axios.get(`${API}/admin/galleries`, { headers }),
         axios.get(`${API}/admin/users/online`, { headers }).catch(() => ({ data: [] })),
-        axios.get(`${API}/admin/downloads`, { headers }).catch(() => ({ data: [] }))
+        axios.get(`${API}/admin/downloads`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API}/admin/guestbooks`, { headers }).catch(() => ({ data: [] }))
       ]);
       setStats(statsRes.data);
       setBookings(bookingsRes.data);
@@ -787,6 +788,7 @@ const AdminDashboard = () => {
       setGalleries(galleriesRes.data);
       setOnlineUsers(onlineRes.data);
       setRecentDownloads(downloadsRes.data);
+      setGuestbooks(guestbooksRes.data);
     } catch (e) {
       if (e.response?.status === 401) {
         localStorage.removeItem("admin_token");
