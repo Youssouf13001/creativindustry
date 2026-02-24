@@ -147,6 +147,16 @@ const ClientDashboard = () => {
       const res = await axios.get(`${API}/client/account-status`, { headers });
       setAccountStatus(res.data);
     } catch (e) {
+      // Check if account is expired - redirect to renewal page
+      if (e.response?.status === 403 && e.response?.data?.detail?.expired) {
+        // Clear local storage and redirect to renewal page
+        localStorage.removeItem("client_token");
+        localStorage.removeItem("client_user");
+        localStorage.removeItem("client_info");
+        toast.error("Votre compte a expiré. Veuillez renouveler votre abonnement.");
+        navigate("/renouvellement");
+        return;
+      }
       console.error("Error fetching account status");
     }
   };
