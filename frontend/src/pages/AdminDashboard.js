@@ -1992,6 +1992,7 @@ const AdminDashboard = () => {
             { id: "tasks", label: "📋 Tâches" },
             { id: "calendar", label: "📅 Calendrier" },
             { id: "galleries", label: "📸 Galeries" },
+            { id: "guestbooks", label: "📖 Livres d'or" },
             { id: "content", label: "Contenu Site" },
             { id: "portfolio", label: "Portfolio" },
             { id: "news", label: "📰 Actualités" },
