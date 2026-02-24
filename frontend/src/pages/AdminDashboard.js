@@ -410,6 +410,103 @@ const AdminDashboard = () => {
     }
   };
 
+  // Load news when switching to news tab
+  useEffect(() => {
+    if (activeTab === "news") {
+      fetchNewsPosts();
+      fetchPendingComments();
+    }
+  }, [activeTab]);
+
+  // Fetch news posts
+  const fetchNewsPosts = async () => {
+    setLoadingNews(true);
+    try {
+      const res = await axios.get(`${API}/news`);
+      setNewsPosts(res.data);
+    } catch (e) {
+      console.error("Error fetching news:", e);
+    } finally {
+      setLoadingNews(false);
+    }
+  };
+
+  // Fetch pending comments
+  const fetchPendingComments = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/news/comments/pending`, { headers });
+      setPendingComments(res.data);
+    } catch (e) {
+      console.error("Error fetching pending comments:", e);
+    }
+  };
+
+  // Create news post
+  const createNewsPost = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (!newPostCaption.trim()) {
+      toast.error("Veuillez ajouter une légende");
+      return;
+    }
+    
+    setUploadingNewsMedia(true);
+    const formData = new FormData();
+    formData.append("media", file);
+    formData.append("caption", newPostCaption);
+    if (newPostLocation) formData.append("location", newPostLocation);
+    
+    try {
+      await axios.post(`${API}/admin/news`, formData, {
+        headers: { ...headers, "Content-Type": "multipart/form-data" }
+      });
+      toast.success("Publication créée");
+      setNewPostCaption("");
+      setNewPostLocation("");
+      fetchNewsPosts();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la création");
+    } finally {
+      setUploadingNewsMedia(false);
+    }
+  };
+
+  // Delete news post
+  const deleteNewsPost = async (postId) => {
+    if (!window.confirm("Supprimer cette publication ?")) return;
+    try {
+      await axios.delete(`${API}/admin/news/${postId}`, { headers });
+      toast.success("Publication supprimée");
+      fetchNewsPosts();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  // Approve/Reject comment
+  const updateCommentStatus = async (commentId, status) => {
+    try {
+      await axios.put(`${API}/admin/news/comments/${commentId}?status=${status}`, {}, { headers });
+      toast.success(`Commentaire ${status === "approved" ? "approuvé" : "rejeté"}`);
+      fetchPendingComments();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  // Delete comment
+  const deleteComment = async (commentId) => {
+    if (!window.confirm("Supprimer ce commentaire ?")) return;
+    try {
+      await axios.delete(`${API}/admin/news/comments/${commentId}`, { headers });
+      toast.success("Commentaire supprimé");
+      fetchPendingComments();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
   // Fetch backup status for reminder
   const fetchBackupStatus = async () => {
     try {
