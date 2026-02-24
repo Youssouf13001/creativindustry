@@ -2148,6 +2148,19 @@ async def login_client(data: ClientLogin):
     if not client or not verify_password(data.password, client["password"]):
         raise HTTPException(status_code=401, detail="Email ou mot de passe incorrect")
     
+    # Check if account is expired
+    expires_at = client.get("expires_at")
+    if expires_at:
+        try:
+            expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            if datetime.now(timezone.utc) > expiry_date:
+                raise HTTPException(
+                    status_code=403, 
+                    detail="Votre compte a expiré. Veuillez contacter CREATIVINDUSTRY pour le réactiver."
+                )
+        except ValueError:
+            pass  # Invalid date format, allow login
+    
     # Update last_login
     await db.clients.update_one(
         {"id": client["id"]},
