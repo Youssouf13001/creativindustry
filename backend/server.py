@@ -1363,6 +1363,21 @@ async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+async def get_current_admin_optional(credentials: HTTPAuthorizationCredentials = Depends(security_optional)):
+    """Optional admin auth - returns None if not authenticated"""
+    if not credentials:
+        return None
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        admin_id = payload.get("sub")
+        user_type = payload.get("type", "admin")
+        if user_type != "admin":
+            return None
+        admin = await db.admins.find_one({"id": admin_id}, {"_id": 0})
+        return admin
+    except:
+        return None
+
 async def get_current_client(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
