@@ -15,7 +15,7 @@ const RenewalPage = () => {
     {
       id: "weekly",
       label: "1 semaine",
-      price: 2,
+      price: 20,
       description: "Accès pendant 7 jours",
       popular: false
     },
