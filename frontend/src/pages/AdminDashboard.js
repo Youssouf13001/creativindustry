@@ -557,6 +557,52 @@ const AdminDashboard = () => {
     }
   };
 
+  // Load renewal requests when switching to extensions tab
+  useEffect(() => {
+    if (activeTab === "extensions") {
+      fetchRenewalRequests();
+    }
+  }, [activeTab]);
+
+  // Fetch renewal requests
+  const fetchRenewalRequests = async () => {
+    setLoadingRenewals(true);
+    try {
+      const res = await axios.get(`${API}/admin/renewal-requests`, { headers });
+      setRenewalRequests(res.data);
+    } catch (e) {
+      console.error("Error fetching renewal requests:", e);
+    } finally {
+      setLoadingRenewals(false);
+    }
+  };
+
+  // Approve renewal request
+  const approveRenewal = async (requestId) => {
+    try {
+      const res = await axios.put(`${API}/admin/renewal-requests/${requestId}/approve`, {}, { headers });
+      toast.success(res.data.message);
+      fetchRenewalRequests();
+      // Refresh clients list
+      const clientsRes = await axios.get(`${API}/admin/clients`, { headers });
+      setClients(clientsRes.data);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur");
+    }
+  };
+
+  // Reject renewal request
+  const rejectRenewal = async (requestId) => {
+    if (!window.confirm("Rejeter cette demande de renouvellement ?")) return;
+    try {
+      await axios.put(`${API}/admin/renewal-requests/${requestId}/reject`, {}, { headers });
+      toast.success("Demande rejetée");
+      fetchRenewalRequests();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
   // Fetch backup status for reminder
   const fetchBackupStatus = async () => {
     try {
