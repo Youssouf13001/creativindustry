@@ -516,6 +516,7 @@ class Gallery(BaseModel):
     name: str
     description: Optional[str] = None
     photos: List[dict] = []
+    music_url: Optional[str] = None  # URL de musique pour le diaporama
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = True
 
@@ -523,6 +524,7 @@ class GalleryCreate(BaseModel):
     client_id: str
     name: str
     description: Optional[str] = None
+    music_url: Optional[str] = None
 
 class PhotoSelection(BaseModel):
     model_config = ConfigDict(extra="ignore")
