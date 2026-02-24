@@ -8371,7 +8371,8 @@ async def check_if_liked(
     """Check if current client has liked a post"""
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        client_id = payload.get("client_id")
+        # Client tokens use 'sub' for client_id
+        client_id = payload.get("client_id") or payload.get("sub")
     except:
         return {"liked": False}
     
