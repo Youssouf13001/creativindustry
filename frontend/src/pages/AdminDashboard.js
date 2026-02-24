@@ -5311,6 +5311,7 @@ const AdminDashboard = () => {
                         <th className="text-right py-3 px-2 text-white/60 text-sm">TTC</th>
                         <th className="text-left py-3 px-2 text-white/60 text-sm">Date</th>
                         <th className="text-left py-3 px-2 text-white/60 text-sm">Statut</th>
+                        <th className="text-left py-3 px-2 text-white/60 text-sm">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
