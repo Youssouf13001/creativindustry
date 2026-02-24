@@ -372,13 +372,26 @@ const ClientLogin = () => {
                   </div>
 
                   <button
-                    onClick={() => selectedPlan && setRenewalStep("payment")}
-                    disabled={!selectedPlan}
-                    className="w-full btn-primary py-4 flex items-center justify-center gap-2 disabled:opacity-50"
+                    onClick={handlePayPalPayment}
+                    disabled={!selectedPlan || renewalLoading}
+                    className="w-full bg-[#0070ba] hover:bg-[#005ea6] disabled:bg-gray-600 text-white py-4 flex items-center justify-center gap-2 font-bold"
                   >
-                    <CreditCard size={20} />
-                    Continuer vers le paiement
+                    {renewalLoading ? (
+                      <>
+                        <Clock size={20} className="animate-spin" />
+                        Redirection vers PayPal...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard size={20} />
+                        Payer {selectedPlan?.price}€ avec PayPal
+                      </>
+                    )}
                   </button>
+
+                  <p className="text-center text-white/40 text-xs mt-3">
+                    Paiement sécurisé. Activation automatique après paiement.
+                  </p>
 
                   <button
                     onClick={() => {
@@ -393,93 +406,6 @@ const ClientLogin = () => {
                   </button>
                 </div>
               </>
-            )}
-
-            {renewalStep === "payment" && (
-              <div className="p-6">
-                <h2 className="font-bold text-xl mb-6 text-center">Paiement PayPal</h2>
-                
-                <div className="bg-background/50 border border-white/10 p-4 mb-6 text-center">
-                  <p className="text-white/60 mb-1">Montant à payer</p>
-                  <p className="text-3xl font-bold text-primary">{selectedPlan?.price}€</p>
-                  <p className="text-white/50 text-sm">{selectedPlan?.label}</p>
-                </div>
-
-                <div className="space-y-3 mb-6 text-sm">
-                  <div className="flex items-center gap-3 text-white/70">
-                    <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs">1</div>
-                    <p>Cliquez sur "Payer avec PayPal"</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-white/70">
-                    <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs">2</div>
-                    <p>Payez <strong className="text-primary">{selectedPlan?.price}€</strong></p>
-                  </div>
-                  <div className="flex items-center gap-3 text-white/70">
-                    <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs">3</div>
-                    <p>Cliquez sur "J'ai payé"</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <a
-                    href={`${expiredData.paypal_link}/${selectedPlan?.price}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full bg-[#0070ba] hover:bg-[#005ea6] text-white py-4 flex items-center justify-center gap-2 font-bold"
-                  >
-                    <CreditCard size={20} />
-                    Payer avec PayPal
-                  </a>
-                  
-                  <button
-                    onClick={handleRenewalRequest}
-                    disabled={renewalLoading}
-                    className="w-full btn-primary py-4 flex items-center justify-center gap-2"
-                  >
-                    {renewalLoading ? "Vérification..." : (
-                      <>
-                        <Check size={20} />
-                        J'ai payé
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => setRenewalStep("options")}
-                    className="w-full text-white/50 text-sm hover:text-white"
-                  >
-                    Retour
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {renewalStep === "success" && (
-              <div className="p-8 text-center">
-                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Check size={32} className="text-green-500" />
-                </div>
-                
-                <h2 className="font-bold text-xl mb-2 text-green-500">Demande enregistrée !</h2>
-                
-                <p className="text-white/70 mb-6">
-                  Votre compte sera débloqué dès validation du paiement
-                  <br />
-                  <span className="text-white/50 text-sm">(généralement sous quelques heures)</span>
-                </p>
-
-                <button
-                  onClick={() => {
-                    setShowExpiredModal(false);
-                    setExpiredData(null);
-                    setSelectedPlan(null);
-                    setRenewalStep("options");
-                  }}
-                  className="btn-outline px-8 py-3"
-                >
-                  Fermer
-                </button>
-              </div>
             )}
           </div>
         </div>
