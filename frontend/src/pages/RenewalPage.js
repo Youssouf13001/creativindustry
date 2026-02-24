@@ -257,8 +257,11 @@ const RenewalPage = () => {
               
               <div className="text-center">
                 <p className="text-white/60 text-sm mb-2">{plan.label}</p>
-                <p className="text-4xl font-bold text-primary mb-2">
+                <p className="text-4xl font-bold text-primary mb-1">
                   {plan.price}€
+                </p>
+                <p className="text-white/40 text-xs mb-2">
+                  {plan.price_ht}€ HT + {plan.tva}€ TVA
                 </p>
                 <p className="text-white/50 text-sm">{plan.description}</p>
                 {plan.savings && (
