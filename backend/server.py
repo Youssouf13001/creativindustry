@@ -3066,7 +3066,7 @@ async def create_renewal_request(data: RenewalRequest):
     
     # Get plan details
     plans = {
-        "weekly": {"label": "1 semaine", "price": 2, "days": 7},
+        "weekly": {"label": "1 semaine", "price": 20, "days": 7},
         "6months": {"label": "6 mois", "price": 90, "days": 180}
     }
     
