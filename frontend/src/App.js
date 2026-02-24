@@ -55,6 +55,11 @@ function App() {
             <Route path="/renouvellement/success" element={<RenewalPage />} />
             <Route path="/renouvellement/cancel" element={<RenewalPage />} />
             <Route path="/espace-client" element={<ClientLogin />} />
+            <Route path="/paiement-confirme" element={<PaymentConfirmPage />} />
+            {/* Aliases for different URLs */}
+            <Route path="/mariages" element={<ServicePage category="wedding" />} />
+            <Route path="/podcast" element={<ServicePage category="podcast" />} />
+            <Route path="/plateau-tv" element={<ServicePage category="tv_set" />} />
           </Routes>
         </main>
         <Footer />
