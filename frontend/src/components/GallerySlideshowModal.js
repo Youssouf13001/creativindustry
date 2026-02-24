@@ -40,6 +40,11 @@ const GallerySlideshowModal = ({
     }
   }, [shareUrl]);
 
+  // Check if music is available
+  useEffect(() => {
+    setHasMusic(!!musicUrl);
+  }, [musicUrl]);
+
   // Auto slideshow
   useEffect(() => {
     if (isPlaying && photos.length > 1) {
