@@ -439,6 +439,75 @@ const TestimonialsPage = () => {
           </motion.div>
         </div>
       </section>
+
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative w-full max-w-md bg-card border border-white/20 p-8"
+          >
+            <button
+              onClick={() => setShowLoginModal(false)}
+              className="absolute top-4 right-4 text-white/50 hover:text-white"
+            >
+              <X size={24} />
+            </button>
+            
+            <h2 className="font-primary font-bold text-2xl mb-2 text-center">
+              <span className="text-gold-gradient">Connexion</span>
+            </h2>
+            <p className="text-white/60 text-center mb-6">
+              Connectez-vous pour laisser un témoignage
+            </p>
+            
+            <form onSubmit={handleLogin} className="space-y-4">
+              {loginError && (
+                <div className="bg-red-500/20 border border-red-500/50 px-4 py-3 text-red-400 text-sm">
+                  {loginError}
+                </div>
+              )}
+              
+              <div>
+                <label className="text-sm text-white/60 block mb-2">Email</label>
+                <input
+                  type="email"
+                  required
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  placeholder="votre@email.com"
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm text-white/60 block mb-2">Mot de passe</label>
+                <input
+                  type="password"
+                  required
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary focus:outline-none"
+                  placeholder="••••••••"
+                />
+              </div>
+              
+              <button
+                type="submit"
+                disabled={loggingIn}
+                className="w-full btn-primary py-3 text-sm disabled:opacity-50"
+              >
+                {loggingIn ? "Connexion en cours..." : "Se connecter"}
+              </button>
+            </form>
+            
+            <p className="text-center text-white/40 text-sm mt-6">
+              Pas encore de compte ? Contactez-nous pour créer votre espace client.
+            </p>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 };
