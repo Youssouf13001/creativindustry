@@ -132,6 +132,12 @@ const AdminDashboard = () => {
   const [newPostLocation, setNewPostLocation] = useState("");
   const [uploadingNewsMedia, setUploadingNewsMedia] = useState(false);
   const newsMediaRef = useRef(null);
+  // Client expiration modal state
+  const [showExpirationModal, setShowExpirationModal] = useState(false);
+  const [expirationClient, setExpirationClient] = useState(null);
+  const [expirationOption, setExpirationOption] = useState("6_months");
+  const [customDays, setCustomDays] = useState(30);
+  const [updatingExpiration, setUpdatingExpiration] = useState(false);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
