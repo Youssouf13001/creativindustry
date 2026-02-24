@@ -2560,11 +2560,11 @@ const AdminDashboard = () => {
                         <select
                           value={newGuestbook.client_id}
                           onChange={(e) => setNewGuestbook({...newGuestbook, client_id: e.target.value})}
-                          className="input w-full"
+                          className="w-full bg-black/50 border border-white/20 rounded px-3 py-2 text-white"
                         >
-                          <option value="">Sélectionner un client</option>
+                          <option value="" className="bg-[#1a1a1a] text-white">Sélectionner un client</option>
                           {clients.map(c => (
-                            <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
+                            <option key={c.id} value={c.id} className="bg-[#1a1a1a] text-white">{c.name} ({c.email})</option>
                           ))}
                         </select>
                       </div>
@@ -2575,7 +2575,7 @@ const AdminDashboard = () => {
                           value={newGuestbook.name}
                           onChange={(e) => setNewGuestbook({...newGuestbook, name: e.target.value})}
                           placeholder="Ex: Mariage Julie & Marc"
-                          className="input w-full"
+                          className="w-full bg-black/50 border border-white/20 rounded px-3 py-2 text-white placeholder:text-white/40"
                         />
                       </div>
                       <div>
@@ -2585,7 +2585,7 @@ const AdminDashboard = () => {
                           value={newGuestbook.event_date}
                           onChange={(e) => setNewGuestbook({...newGuestbook, event_date: e.target.value})}
                           placeholder="Ex: 15 juin 2025"
-                          className="input w-full"
+                          className="w-full bg-black/50 border border-white/20 rounded px-3 py-2 text-white placeholder:text-white/40"
                         />
                       </div>
                       <div>
@@ -2595,7 +2595,7 @@ const AdminDashboard = () => {
                           value={newGuestbook.welcome_message}
                           onChange={(e) => setNewGuestbook({...newGuestbook, welcome_message: e.target.value})}
                           placeholder="Laissez un message pour les mariés !"
-                          className="input w-full"
+                          className="w-full bg-black/50 border border-white/20 rounded px-3 py-2 text-white placeholder:text-white/40"
                         />
                       </div>
                     </div>
