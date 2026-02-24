@@ -352,9 +352,19 @@ const ServicePage = ({ category }) => {
                         <span className="text-white/60">BIC</span>
                         <span className="font-mono">{bankDetails.bic}</span>
                       </div>
-                      <div className="flex justify-between text-primary font-bold mt-4 pt-4 border-t border-white/10">
-                        <span>Montant à virer</span>
-                        <span>{depositAmount.toFixed(0)}€</span>
+                      <div className="border-t border-white/10 mt-4 pt-4 space-y-1">
+                        <div className="flex justify-between text-white/50">
+                          <span>Acompte HT</span>
+                          <span>{depositHT.toFixed(2)}€</span>
+                        </div>
+                        <div className="flex justify-between text-white/50">
+                          <span>TVA (20%)</span>
+                          <span>{depositTVA.toFixed(2)}€</span>
+                        </div>
+                        <div className="flex justify-between text-primary font-bold text-lg">
+                          <span>Montant à virer (TTC)</span>
+                          <span>{depositAmount.toFixed(2)}€</span>
+                        </div>
                       </div>
                     </div>
                   </div>
