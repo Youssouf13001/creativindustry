@@ -2066,6 +2066,20 @@ const ClientDashboard = () => {
 
       {/* Client Chat Widget */}
       <ClientChat />
+
+      {/* Gallery Slideshow Modal */}
+      {selectedGallery && (
+        <GallerySlideshowModal
+          isOpen={showSlideshow}
+          onClose={() => setShowSlideshow(false)}
+          photos={(selectedGallery.photos || []).map(photo => ({
+            ...photo,
+            url: `${BACKEND_URL}${photo.url}`
+          }))}
+          galleryName={selectedGallery.name}
+          shareUrl={`${window.location.origin}/client/dashboard?gallery=${selectedGallery.id}`}
+        />
+      )}
     </div>
   );
 };
