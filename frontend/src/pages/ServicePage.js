@@ -128,11 +128,12 @@ const ServicePage = ({ category }) => {
     }
   };
 
-  const depositAmount = selectedPackage ? (selectedPackage.price * (bankDetails?.deposit_percentage || 30) / 100) : 0;
+  const depositAmount = selectedPackage ? ((selectedPackage.price * 1.20) * (bankDetails?.deposit_percentage || 30) / 100) : 0;
   
-  // Calculate HT and TVA (price is TTC, TVA 20%)
-  const priceHT = selectedPackage ? (selectedPackage.price / 1.20) : 0;
-  const priceTVA = selectedPackage ? (selectedPackage.price - priceHT) : 0;
+  // Price is HT, add TVA 20% to get TTC
+  const priceHT = selectedPackage ? selectedPackage.price : 0;
+  const priceTVA = selectedPackage ? (selectedPackage.price * 0.20) : 0;
+  const priceTTC = priceHT + priceTVA;
   const depositHT = depositAmount / 1.20;
   const depositTVA = depositAmount - depositHT;
 
