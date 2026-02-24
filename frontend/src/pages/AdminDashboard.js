@@ -1727,6 +1727,80 @@ const AdminDashboard = () => {
     }
   };
 
+  // ==================== GUESTBOOK FUNCTIONS ====================
+  
+  const fetchGuestbooks = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/guestbooks`, { headers });
+      setGuestbooks(res.data);
+    } catch (e) {
+      console.error("Error fetching guestbooks:", e);
+    }
+  };
+
+  const createGuestbook = async () => {
+    if (!newGuestbook.client_id || !newGuestbook.name) {
+      toast.error("Veuillez sélectionner un client et donner un nom");
+      return;
+    }
+    try {
+      await axios.post(`${API}/admin/guestbooks`, newGuestbook, { headers });
+      toast.success("Livre d'or créé !");
+      setShowAddGuestbook(false);
+      setNewGuestbook({ client_id: "", name: "", event_date: "", welcome_message: "" });
+      fetchGuestbooks();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la création");
+    }
+  };
+
+  const deleteGuestbook = async (guestbookId) => {
+    if (!window.confirm("Supprimer ce livre d'or et tous ses messages ?")) return;
+    try {
+      await axios.delete(`${API}/admin/guestbooks/${guestbookId}`, { headers });
+      toast.success("Livre d'or supprimé");
+      setSelectedGuestbook(null);
+      fetchGuestbooks();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  const fetchGuestbookDetail = async (guestbookId) => {
+    try {
+      const res = await axios.get(`${API}/admin/guestbooks/${guestbookId}`, { headers });
+      setSelectedGuestbook(res.data);
+    } catch (e) {
+      toast.error("Erreur lors du chargement");
+    }
+  };
+
+  const approveGuestbookMessage = async (messageId) => {
+    try {
+      await axios.put(`${API}/admin/guestbook-messages/${messageId}/approve`, {}, { headers });
+      toast.success("Message approuvé");
+      if (selectedGuestbook) fetchGuestbookDetail(selectedGuestbook.id);
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const deleteGuestbookMessage = async (messageId) => {
+    try {
+      await axios.delete(`${API}/admin/guestbook-messages/${messageId}`, { headers });
+      toast.success("Message supprimé");
+      if (selectedGuestbook) fetchGuestbookDetail(selectedGuestbook.id);
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const copyGuestbookLink = (guestbookId) => {
+    const url = `${window.location.origin}/livre-dor/${guestbookId}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Lien copié !");
+  };
+
   const statusColors = {
     pending: "bg-yellow-500/20 text-yellow-500",
     confirmed: "bg-green-500/20 text-green-500",
