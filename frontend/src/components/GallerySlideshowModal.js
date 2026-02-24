@@ -154,7 +154,9 @@ const GallerySlideshowModal = ({
         onClick={() => setShowControls(true)}
       >
         {/* Background Music */}
-        <audio ref={audioRef} src={musicUrl} loop />
+        {hasMusic && musicUrl && (
+          <audio ref={audioRef} src={musicUrl} loop />
+        )}
 
         {/* Main Image */}
         <div className="absolute inset-0 flex items-center justify-center">
