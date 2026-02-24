@@ -84,12 +84,43 @@ const ServicePage = ({ category }) => {
     
     setBuyLoading(true);
     try {
-      await axios.post(`${API}/bookings`, {
+      // First create the booking
+      const bookingRes = await axios.post(`${API}/bookings`, {
         ...buyFormData,
-        service_id: selectedPackage.id
+        service_id: selectedPackage.id,
+        payment_method: paymentMethod
       });
-      setBuySuccess(true);
-      toast.success("Réservation confirmée ! Vérifiez votre email.");
+      
+      if (paymentMethod === "paypal") {
+        // Create PayPal payment for the deposit
+        setPaypalRedirecting(true);
+        try {
+          const paypalRes = await axios.post(`${API}/paypal/create-service-payment`, {
+            booking_id: bookingRes.data.id,
+            client_email: buyFormData.client_email,
+            client_name: buyFormData.client_name,
+            service_name: selectedPackage.name,
+            amount: depositAmount,
+            total_price: selectedPackage.price
+          });
+          
+          if (paypalRes.data.approval_url) {
+            window.location.href = paypalRes.data.approval_url;
+          } else {
+            toast.error("Erreur PayPal: URL non reçue");
+            setPaypalRedirecting(false);
+          }
+        } catch (paypalError) {
+          toast.error(paypalError.response?.data?.detail || "Erreur lors du paiement PayPal");
+          setPaypalRedirecting(false);
+          // Still show success for bank transfer fallback
+          setBuySuccess(true);
+        }
+      } else {
+        // Bank transfer - show success with RIB
+        setBuySuccess(true);
+        toast.success("Réservation confirmée ! Vérifiez votre email.");
+      }
     } catch (e) {
       toast.error("Erreur lors de la réservation");
     } finally {
