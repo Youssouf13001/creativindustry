@@ -370,6 +370,67 @@ const ClientDashboard = () => {
     }
   };
 
+  // PayPal payment for devis/invoice/document
+  const handlePayPalPayment = async (docType, docRef, amount, title) => {
+    setPayingDocument({ docType, docRef, amount, title });
+    
+    try {
+      const payload = {
+        amount: amount,
+        description: title
+      };
+      
+      if (docType === "devis") payload.devis_id = docRef;
+      else if (docType === "invoice") payload.invoice_id = docRef;
+      else if (docType === "document") payload.document_id = docRef;
+      
+      const res = await axios.post(`${API}/client/paypal/create-devis-payment`, payload, { headers });
+      
+      if (res.data.approval_url) {
+        window.location.href = res.data.approval_url;
+      } else {
+        toast.error("Erreur: URL de paiement non reçue");
+        setPayingDocument(null);
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la création du paiement");
+      setPayingDocument(null);
+    }
+  };
+
+  // Handle PayPal return
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentId = urlParams.get("paymentId");
+    const payerId = urlParams.get("PayerID");
+    const paymentSuccess = urlParams.get("payment_success");
+    const paymentCancelled = urlParams.get("payment_cancelled");
+    
+    if (paymentId && payerId && paymentSuccess) {
+      // Execute the payment
+      const executePayment = async () => {
+        try {
+          const res = await axios.post(
+            `${API}/client/paypal/execute-devis-payment?payment_id=${paymentId}&payer_id=${payerId}`,
+            {},
+            { headers }
+          );
+          toast.success(res.data.message || "Paiement confirmé !");
+          // Clean URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+          // Refresh data
+          fetchDevisData();
+        } catch (e) {
+          toast.error(e.response?.data?.detail || "Erreur lors de la confirmation du paiement");
+        }
+      };
+      executePayment();
+    } else if (paymentCancelled) {
+      toast.info("Paiement annulé");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   // Upload file transfer (supports multiple files)
   const handleFileTransfer = async (fileType, files) => {
     if (!files || files.length === 0) return;
