@@ -540,7 +540,13 @@ const AdminDashboard = () => {
       
       toast.success(res.data.message);
       setShowExpirationModal(false);
-      fetchClients(); // Refresh client list
+      // Refresh clients list
+      try {
+        const clientsRes = await axios.get(`${API}/admin/clients`, { headers });
+        setClients(clientsRes.data);
+      } catch (err) {
+        console.error("Error refreshing clients");
+      }
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erreur lors de la mise à jour");
     } finally {
