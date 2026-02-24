@@ -7961,9 +7961,12 @@ async def create_testimonial(
     # Require authentication
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        client_id = payload.get("client_id")
-        if not client_id:
-            raise HTTPException(status_code=401, detail="Vous devez être connecté pour laisser un témoignage")
+        # Client tokens use 'sub' for client_id
+        client_id = payload.get("client_id") or payload.get("sub")
+        token_type = payload.get("type")
+        
+        if not client_id or token_type != "client":
+            raise HTTPException(status_code=401, detail="Vous devez être connecté en tant que client pour laisser un témoignage")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Vous devez être connecté pour laisser un témoignage")
     
