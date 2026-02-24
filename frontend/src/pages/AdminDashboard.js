@@ -1848,6 +1848,7 @@ const AdminDashboard = () => {
             { id: "bookings", label: "Réservations" },
             { id: "clients", label: "Clients" },
             { id: "extensions", label: "💳 Extensions" },
+            { id: "billing", label: "🧾 Facturation" },
             { id: "newsletter", label: "📧 Newsletter" },
             { id: "deployment", label: "🚀 Déploiement" },
             { id: "services", label: "Services" },
