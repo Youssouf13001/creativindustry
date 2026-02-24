@@ -2534,6 +2534,237 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Guestbooks Tab */}
+        {activeTab === "guestbooks" && (
+          <div>
+            {!selectedGuestbook ? (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="font-primary font-bold text-xl">Livres d'or ({guestbooks.length})</h2>
+                  <button 
+                    onClick={() => setShowAddGuestbook(true)}
+                    className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                    data-testid="add-guestbook-btn"
+                  >
+                    <Plus size={16} /> Nouveau livre d'or
+                  </button>
+                </div>
+
+                {/* Add Guestbook Modal */}
+                {showAddGuestbook && (
+                  <div className="bg-card border border-white/10 p-6 mb-6 rounded-lg">
+                    <h3 className="font-bold mb-4">Créer un livre d'or</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-white/60 mb-1">Client *</label>
+                        <select
+                          value={newGuestbook.client_id}
+                          onChange={(e) => setNewGuestbook({...newGuestbook, client_id: e.target.value})}
+                          className="input w-full"
+                        >
+                          <option value="">Sélectionner un client</option>
+                          {clients.map(c => (
+                            <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-1">Nom du livre d'or *</label>
+                        <input
+                          type="text"
+                          value={newGuestbook.name}
+                          onChange={(e) => setNewGuestbook({...newGuestbook, name: e.target.value})}
+                          placeholder="Ex: Mariage Julie & Marc"
+                          className="input w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-1">Date de l'événement</label>
+                        <input
+                          type="text"
+                          value={newGuestbook.event_date}
+                          onChange={(e) => setNewGuestbook({...newGuestbook, event_date: e.target.value})}
+                          placeholder="Ex: 15 juin 2025"
+                          className="input w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-1">Message d'accueil</label>
+                        <input
+                          type="text"
+                          value={newGuestbook.welcome_message}
+                          onChange={(e) => setNewGuestbook({...newGuestbook, welcome_message: e.target.value})}
+                          placeholder="Laissez un message pour les mariés !"
+                          className="input w-full"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button onClick={createGuestbook} className="btn-primary px-4 py-2 text-sm">Créer</button>
+                      <button onClick={() => setShowAddGuestbook(false)} className="btn-outline px-4 py-2 text-sm">Annuler</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Guestbooks List */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {guestbooks.map((gb) => (
+                    <div 
+                      key={gb.id} 
+                      className="bg-card border border-white/10 p-4 hover:border-primary transition-colors cursor-pointer"
+                      onClick={() => fetchGuestbookDetail(gb.id)}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-primary font-bold">{gb.name}</h3>
+                          <p className="text-white/60 text-sm">{gb.client_name}</p>
+                          {gb.event_date && <p className="text-white/40 text-xs mt-1">{gb.event_date}</p>}
+                        </div>
+                        <BookOpen className="text-primary" size={20} />
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-white/50">{gb.message_count || 0} messages</span>
+                        {gb.pending_count > 0 && (
+                          <span className="bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded text-xs">
+                            {gb.pending_count} en attente
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {guestbooks.length === 0 && (
+                    <div className="col-span-full text-center py-12 text-white/40">
+                      <BookOpen size={48} className="mx-auto mb-4 opacity-50" />
+                      <p>Aucun livre d'or créé</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                {/* Guestbook Detail View */}
+                <div className="flex items-center gap-4 mb-6">
+                  <button 
+                    onClick={() => setSelectedGuestbook(null)}
+                    className="text-white/60 hover:text-white"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
+                  <div className="flex-1">
+                    <h2 className="font-primary font-bold text-xl">{selectedGuestbook.name}</h2>
+                    <p className="text-white/60 text-sm">{selectedGuestbook.client_name} • {selectedGuestbook.event_date}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => copyGuestbookLink(selectedGuestbook.id)}
+                      className="btn-outline px-4 py-2 text-sm flex items-center gap-2"
+                      title="Copier le lien de partage"
+                    >
+                      <Copy size={16} /> Copier le lien
+                    </button>
+                    <button 
+                      onClick={() => deleteGuestbook(selectedGuestbook.id)}
+                      className="bg-red-500/20 text-red-500 px-4 py-2 text-sm hover:bg-red-500/30"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* QR Code Section */}
+                <div className="bg-card border border-white/10 p-4 mb-6 flex items-center gap-6">
+                  <div className="bg-white p-2 rounded">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`${window.location.origin}/livre-dor/${selectedGuestbook.id}`)}`}
+                      alt="QR Code"
+                      className="w-24 h-24"
+                    />
+                  </div>
+                  <div>
+                    <p className="font-medium mb-1">QR Code de partage</p>
+                    <p className="text-white/60 text-sm mb-2">Les invités peuvent scanner ce code pour laisser un message</p>
+                    <code className="text-xs bg-black/50 px-2 py-1 rounded text-primary">
+                      {window.location.origin}/livre-dor/{selectedGuestbook.id}
+                    </code>
+                  </div>
+                </div>
+
+                {/* Messages List */}
+                <div>
+                  <h3 className="font-bold mb-4">
+                    Messages ({selectedGuestbook.messages?.length || 0})
+                  </h3>
+                  
+                  {selectedGuestbook.messages?.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedGuestbook.messages.map((msg) => (
+                        <div 
+                          key={msg.id} 
+                          className={`bg-card border p-4 ${msg.is_approved ? 'border-green-500/30' : 'border-yellow-500/30'}`}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                                <span className="text-primary font-bold">{msg.author_name.charAt(0).toUpperCase()}</span>
+                              </div>
+                              <div>
+                                <p className="font-medium">{msg.author_name}</p>
+                                <p className="text-white/40 text-xs">
+                                  {msg.message_type === "text" ? "Texte" : msg.message_type === "audio" ? "Audio" : "Vidéo"}
+                                  {" • "}
+                                  {new Date(msg.created_at).toLocaleDateString('fr-FR')}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {!msg.is_approved && (
+                                <button
+                                  onClick={() => approveGuestbookMessage(msg.id)}
+                                  className="bg-green-500/20 text-green-500 px-3 py-1 text-sm hover:bg-green-500/30 flex items-center gap-1"
+                                >
+                                  <Check size={14} /> Approuver
+                                </button>
+                              )}
+                              <button
+                                onClick={() => deleteGuestbookMessage(msg.id)}
+                                className="bg-red-500/20 text-red-500 p-1 hover:bg-red-500/30"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          {/* Message Content */}
+                          {msg.message_type === "text" && (
+                            <p className="text-white/80 ml-13 pl-13">{msg.text_content}</p>
+                          )}
+                          {msg.message_type === "audio" && (
+                            <audio src={`${BACKEND_URL}${msg.media_url}`} controls className="w-full mt-2" />
+                          )}
+                          {msg.message_type === "video" && (
+                            <video src={`${BACKEND_URL}${msg.media_url}`} controls className="w-full mt-2 rounded max-h-64" />
+                          )}
+                          
+                          {!msg.is_approved && (
+                            <span className="inline-block mt-2 bg-yellow-500/20 text-yellow-500 text-xs px-2 py-0.5 rounded">
+                              En attente d'approbation
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-white/40">
+                      <MessageCircle size={48} className="mx-auto mb-4 opacity-50" />
+                      <p>Aucun message pour le moment</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Site Content Tab */}
         {activeTab === "content" && siteContent && (
           <div>
