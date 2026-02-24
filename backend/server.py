@@ -3667,6 +3667,229 @@ async def get_client_service_invoices(client: dict = Depends(get_current_client)
     return invoices
 
 
+# ==================== PAYPAL FOR SERVICE BOOKINGS ====================
+
+class ServicePaymentCreate(BaseModel):
+    """Model for creating a PayPal payment for a service booking"""
+    booking_id: str
+    client_email: str
+    client_name: str
+    service_name: str
+    amount: float  # Deposit amount
+    total_price: float  # Total service price
+
+@api_router.post("/paypal/create-service-payment")
+async def create_service_paypal_payment(data: ServicePaymentCreate):
+    """Create a PayPal payment for a service/formule booking (public endpoint)"""
+    
+    # Validate amount
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Montant invalide")
+    
+    # Calculate HT and TVA (20%)
+    amount_ttc = round(data.amount, 2)
+    amount_ht = round(amount_ttc / 1.20, 2)
+    tva = round(amount_ttc - amount_ht, 2)
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    
+    # Create PayPal payment
+    payment = paypalrestsdk.Payment({
+        "intent": "sale",
+        "payer": {
+            "payment_method": "paypal"
+        },
+        "redirect_urls": {
+            "return_url": f"{site_url}/paiement-confirme?booking_id={data.booking_id}",
+            "cancel_url": f"{site_url}/mariages?payment_cancelled=true"
+        },
+        "transactions": [{
+            "item_list": {
+                "items": [{
+                    "name": f"Acompte - {data.service_name}",
+                    "sku": f"booking_{data.booking_id}",
+                    "price": f"{amount_ttc:.2f}",
+                    "currency": "EUR",
+                    "quantity": 1
+                }]
+            },
+            "amount": {
+                "total": f"{amount_ttc:.2f}",
+                "currency": "EUR"
+            },
+            "description": f"Acompte pour {data.service_name} - CREATIVINDUSTRY"
+        }]
+    })
+    
+    if payment.create():
+        # Store pending payment
+        payment_record = {
+            "id": str(uuid.uuid4()),
+            "paypal_payment_id": payment.id,
+            "booking_id": data.booking_id,
+            "client_email": data.client_email,
+            "client_name": data.client_name,
+            "service_name": data.service_name,
+            "amount_ttc": amount_ttc,
+            "amount_ht": amount_ht,
+            "tva": tva,
+            "total_price": data.total_price,
+            "payment_type": "service_booking",
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.service_paypal_payments.insert_one(payment_record)
+        
+        # Get approval URL
+        approval_url = None
+        for link in payment.links:
+            if link.rel == "approval_url":
+                approval_url = link.href
+                break
+        
+        return {
+            "success": True,
+            "payment_id": payment.id,
+            "approval_url": approval_url
+        }
+    else:
+        logging.error(f"PayPal error for service payment: {payment.error}")
+        raise HTTPException(status_code=500, detail=f"Erreur PayPal: {payment.error.get('message', 'Unknown error')}")
+
+
+@api_router.post("/paypal/execute-service-payment")
+async def execute_service_paypal_payment(payment_id: str, payer_id: str):
+    """Execute a PayPal payment for service booking after user approval"""
+    
+    # Find the payment record
+    payment_record = await db.service_paypal_payments.find_one(
+        {"paypal_payment_id": payment_id}, 
+        {"_id": 0}
+    )
+    if not payment_record:
+        raise HTTPException(status_code=404, detail="Paiement non trouvé")
+    
+    if payment_record["status"] != "pending":
+        return {"success": True, "message": "Paiement déjà traité", "already_processed": True}
+    
+    # Execute the payment
+    payment = paypalrestsdk.Payment.find(payment_id)
+    
+    if payment.execute({"payer_id": payer_id}):
+        now = datetime.now(timezone.utc).isoformat()
+        
+        # Update payment record
+        await db.service_paypal_payments.update_one(
+            {"paypal_payment_id": payment_id},
+            {"$set": {
+                "status": "completed",
+                "completed_at": now,
+                "payer_id": payer_id
+            }}
+        )
+        
+        # Update booking status
+        await db.bookings.update_one(
+            {"id": payment_record["booking_id"]},
+            {"$set": {
+                "payment_status": "deposit_paid",
+                "deposit_paid_at": now,
+                "deposit_amount": payment_record["amount_ttc"],
+                "payment_method": "PayPal"
+            }}
+        )
+        
+        # Generate invoice
+        invoice_number = f"FAC-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+        invoice = {
+            "id": str(uuid.uuid4()),
+            "invoice_number": invoice_number,
+            "booking_id": payment_record["booking_id"],
+            "client_email": payment_record["client_email"],
+            "client_name": payment_record["client_name"],
+            "service_name": payment_record["service_name"],
+            "paypal_payment_id": payment_id,
+            "amount_ht": payment_record["amount_ht"],
+            "tva": payment_record["tva"],
+            "amount_ttc": payment_record["amount_ttc"],
+            "total_price": payment_record["total_price"],
+            "payment_type": "deposit",
+            "status": "paid",
+            "payment_method": "PayPal",
+            "created_at": now
+        }
+        await db.service_invoices.insert_one(invoice)
+        
+        # Send confirmation email to client
+        if SMTP_EMAIL and SMTP_PASSWORD:
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center;">
+                        <h1 style="margin: 0; color: #fff;">✅ Paiement confirmé !</h1>
+                    </div>
+                    <div style="padding: 30px;">
+                        <p style="font-size: 18px;">Bonjour <strong>{payment_record['client_name']}</strong>,</p>
+                        <p style="color: #ccc;">Nous avons bien reçu votre acompte pour :</p>
+                        <div style="background: #3a3a3a; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                            <h2 style="color: #D4AF37; margin: 0 0 10px 0;">{payment_record['service_name']}</h2>
+                            <p style="color: #22c55e; font-size: 28px; margin: 0;"><strong>{payment_record['amount_ttc']:.2f}€ TTC</strong></p>
+                            <p style="color: #888; margin: 5px 0 0 0;">({payment_record['amount_ht']:.2f}€ HT + {payment_record['tva']:.2f}€ TVA)</p>
+                        </div>
+                        <p style="color: #ccc;">Référence facture : <strong style="color: #D4AF37;">{invoice_number}</strong></p>
+                        <p style="color: #888;">Nous vous contacterons très prochainement pour finaliser les détails de votre prestation.</p>
+                        <p style="color: #888;">Merci de votre confiance !</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            try:
+                send_email(payment_record["client_email"], f"✅ Acompte confirmé - {payment_record['service_name']}", html_content)
+            except Exception as e:
+                logging.error(f"Failed to send service payment confirmation: {e}")
+        
+        # Notify admin
+        if SMTP_EMAIL and SMTP_PASSWORD:
+            admin_html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 20px; text-align: center;">
+                        <h2 style="margin: 0; color: #fff;">💰 Nouvel acompte reçu !</h2>
+                    </div>
+                    <div style="padding: 20px;">
+                        <p><strong>Client :</strong> {payment_record['client_name']} ({payment_record['client_email']})</p>
+                        <p><strong>Formule :</strong> {payment_record['service_name']}</p>
+                        <p><strong>Prix total :</strong> {payment_record['total_price']}€</p>
+                        <p><strong>Acompte reçu :</strong> <span style="color: #22c55e; font-size: 24px;">{payment_record['amount_ttc']:.2f}€ TTC</span></p>
+                        <p><strong>Reste à payer :</strong> {payment_record['total_price'] - payment_record['amount_ttc']:.2f}€</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            try:
+                send_email(SMTP_EMAIL, f"💰 Acompte reçu - {payment_record['client_name']} - {payment_record['service_name']}", admin_html)
+            except:
+                pass
+        
+        return {
+            "success": True,
+            "message": f"Paiement de {payment_record['amount_ttc']:.2f}€ confirmé !",
+            "invoice_number": invoice_number,
+            "service_name": payment_record["service_name"]
+        }
+    else:
+        await db.service_paypal_payments.update_one(
+            {"paypal_payment_id": payment_id},
+            {"$set": {"status": "failed", "error": str(payment.error)}}
+        )
+        logging.error(f"PayPal execution error for service: {payment.error}")
+        raise HTTPException(status_code=500, detail="Le paiement a échoué. Veuillez réessayer.")
+
+
 # ==================== RENEWAL REQUESTS (Legacy - kept for manual validation) ====================
 
 class RenewalRequest(BaseModel):
