@@ -2077,7 +2077,7 @@ const ClientDashboard = () => {
             url: `${BACKEND_URL}${photo.url}`
           }))}
           galleryName={selectedGallery.name}
-          shareUrl={`${window.location.origin}/client/dashboard?gallery=${selectedGallery.id}`}
+          shareUrl={`${window.location.origin}/galerie/${selectedGallery.id}`}
           musicUrl={selectedGallery.music_url ? `${BACKEND_URL}${selectedGallery.music_url}` : null}
         />
       )}
