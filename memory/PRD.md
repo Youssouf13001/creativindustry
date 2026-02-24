@@ -25,43 +25,32 @@ Site vitrine pour photographe/vidéaste de mariage avec plateaux TV et studio po
   - Design élégant avec grille responsive 3 colonnes
   - Affichage des témoignages approuvés avec étoiles dorées
   - Badge "RECOMMANDÉ" pour les témoignages mis en avant (featured)
-  - Icônes de service (Caméra/Micro/TV) avec label
-  - Animation Framer Motion à l'apparition
-  - Formulaire de soumission de témoignage
-  - Message de succès après soumission
+  - Avatar du client visible sur chaque témoignage
+  - **Authentification requise** pour laisser un témoignage
+  - Formulaire pré-rempli avec infos du client connecté
 - ✅ **Gestion Admin Témoignages** (onglet "⭐ Témoignages") :
-  - Liste tous les témoignages avec statut (En attente/Approuvé/Rejeté)
-  - Compteurs En attente et Approuvés
+  - Liste tous les témoignages avec statut
   - Boutons Approuver/Rejeter/Supprimer
-  - Toggle "Mettre en avant" (featured) pour les témoignages approuvés
-  - Email de notification admin lors d'une nouvelle soumission
+  - Toggle "Mettre en avant" pour les témoignages approuvés
 - ✅ **Popup d'Accueil avec Vidéo** :
   - Popup modal animé à l'arrivée sur le site
-  - Upload vidéo depuis l'admin (MP4, WebM, MOV - max 100MB)
-  - Bouton Play avec lecture vidéo intégrée
-  - Configuration : Titre, Sous-titre, Texte du bouton, Lien
-  - Toggle activation/désactivation
-  - Option "Une fois par session" (sessionStorage)
-- ✅ **Gestion Admin Popup** (onglet "🎬 Popup Accueil") :
-  - Zone d'upload vidéo avec preview
-  - Paramètres complets du popup
-  - Toggle ON/OFF pour activer le popup
+  - Upload vidéo max **500MB** (MP4, WebM, MOV)
+  - Fonctionne avec ou sans vidéo
+- ✅ **Page Actualités** (`/actualites`) - Style Instagram :
+  - Grille de photos/vidéos carrées
+  - Likes (clients connectés uniquement)
+  - Commentaires avec validation :
+    - Clients connectés → publication immédiate avec avatar
+    - Visiteurs → nom/email requis + validation admin
+  - Modal détail avec lecture vidéo
+- ✅ **Gestion Admin Actualités** (onglet "📰 Actualités") :
+  - Création de publications (photo/vidéo + légende + lieu)
+  - Modération des commentaires visiteurs
+  - Suppression des publications
 - ✅ **Endpoints Backend** :
-  - `POST /api/testimonials` - Soumettre témoignage (public)
-  - `GET /api/testimonials` - Liste témoignages approuvés (public)
-  - `GET /api/testimonials/featured` - Témoignages mis en avant
-  - `GET /api/admin/testimonials` - Tous les témoignages (admin)
-  - `PUT /api/admin/testimonials/{id}` - Modifier statut/featured
-  - `DELETE /api/admin/testimonials/{id}` - Supprimer
-  - `GET /api/welcome-popup` - Configuration popup (public)
-  - `PUT /api/admin/welcome-popup` - Modifier configuration
-  - `POST /api/admin/welcome-popup/video` - Upload vidéo
-  - `DELETE /api/admin/welcome-popup/video` - Supprimer vidéo
-- ✅ **Fichiers créés** :
-  - `/app/frontend/src/pages/TestimonialsPage.js`
-  - `/app/frontend/src/components/WelcomePopup.js`
-  - `/app/backend/tests/test_testimonials_and_popup.py`
-- ✅ **Tests** : 16/16 backend (100%), Frontend UI vérifié
+  - Témoignages : POST (auth required), GET, admin CRUD
+  - Actualités : CRUD posts, likes, comments avec modération
+- ✅ **Tests** : UI vérifiée ✅
 
 ### V19 - Notifications E-mail Progression Client (22 Fév 2026)
 - ✅ **E-mail automatique au client lors de l'avancement du projet** :
