@@ -7945,13 +7945,39 @@ async def check_task_reminders(request: Request):
 
 # ==================== TESTIMONIAL ROUTES ====================
 
+class TestimonialCreateAuth(BaseModel):
+    """Model for creating a testimonial (authenticated client)"""
+    message: str
+    rating: int = Field(default=5, ge=1, le=5)
+    service_type: Optional[str] = None
+
+
 @api_router.post("/testimonials", response_model=dict)
-async def create_testimonial(testimonial: TestimonialCreate):
-    """Submit a new testimonial (public endpoint)"""
+async def create_testimonial(
+    testimonial: TestimonialCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Submit a new testimonial (client only - must be authenticated)"""
+    # Require authentication
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        client_id = payload.get("client_id")
+        if not client_id:
+            raise HTTPException(status_code=401, detail="Vous devez être connecté pour laisser un témoignage")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Vous devez être connecté pour laisser un témoignage")
+    
+    # Get client info
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
     testimonial_data = {
         "id": str(uuid.uuid4()),
-        "client_name": testimonial.client_name,
-        "client_email": testimonial.client_email,
+        "client_id": client_id,
+        "client_name": client.get("name", "Client"),
+        "client_email": client.get("email", ""),
+        "client_avatar": client.get("profile_photo"),
         "client_role": testimonial.client_role,
         "message": testimonial.message,
         "rating": testimonial.rating,
@@ -7974,8 +8000,8 @@ async def create_testimonial(testimonial: TestimonialCreate):
                     <h1 style="margin: 0; color: #000; font-size: 24px;">⭐ Nouveau témoignage reçu</h1>
                 </div>
                 <div style="padding: 30px;">
-                    <p style="font-size: 18px; margin-bottom: 10px;"><strong>{testimonial.client_name}</strong></p>
-                    <p style="color: #888; margin-bottom: 5px;">{testimonial.client_email}</p>
+                    <p style="font-size: 18px; margin-bottom: 10px;"><strong>{client.get('name', 'Client')}</strong></p>
+                    <p style="color: #888; margin-bottom: 5px;">{client.get('email', '')}</p>
                     <p style="color: #D4AF37; margin-bottom: 20px;">{"⭐" * testimonial.rating}</p>
                     <div style="background-color: #3a3a3a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
                         <p style="color: #ccc; font-style: italic;">"{testimonial.message}"</p>
