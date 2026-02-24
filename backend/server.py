@@ -3393,10 +3393,10 @@ async def create_renewal_request(data: RenewalRequest):
     if not client:
         raise HTTPException(status_code=404, detail="Client non trouvé")
     
-    # Get plan details
+    # Get plan details (TTC prices with 20% TVA)
     plans = {
-        "weekly": {"label": "1 semaine", "price": 20, "days": 7},
-        "6months": {"label": "6 mois", "price": 90, "days": 180}
+        "weekly": {"label": "1 semaine", "price": 24, "price_ht": 20, "tva": 4, "days": 7},
+        "6months": {"label": "6 mois", "price": 108, "price_ht": 90, "tva": 18, "days": 180}
     }
     
     if data.plan not in plans:
@@ -3413,6 +3413,8 @@ async def create_renewal_request(data: RenewalRequest):
         "plan": data.plan,
         "plan_label": plan["label"],
         "amount": plan["price"],
+        "amount_ht": plan["price_ht"],
+        "tva": plan["tva"],
         "days": plan["days"],
         "status": "pending",  # pending, approved, rejected
         "created_at": datetime.now(timezone.utc).isoformat(),
