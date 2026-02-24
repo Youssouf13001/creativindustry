@@ -4862,6 +4862,94 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Client Expiration Modal */}
+        {showExpirationModal && expirationClient && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-card border border-white/10 p-6 w-full max-w-md">
+              <h3 className="font-primary font-bold text-xl mb-2">Délai d'expiration</h3>
+              <p className="text-white/60 text-sm mb-6">
+                Définir le délai de suppression automatique pour <strong className="text-primary">{expirationClient.name}</strong>
+              </p>
+              
+              <div className="space-y-3 mb-6">
+                {[
+                  { value: "3_days", label: "3 jours" },
+                  { value: "1_week", label: "1 semaine" },
+                  { value: "2_weeks", label: "2 semaines" },
+                  { value: "1_month", label: "1 mois" },
+                  { value: "3_months", label: "3 mois" },
+                  { value: "6_months", label: "6 mois (par défaut)" },
+                  { value: "1_year", label: "1 an" },
+                  { value: "custom", label: "Personnalisé" },
+                ].map((option) => (
+                  <label
+                    key={option.value}
+                    className={`flex items-center gap-3 p-3 border cursor-pointer transition-colors ${
+                      expirationOption === option.value
+                        ? "border-primary bg-primary/10"
+                        : "border-white/10 hover:border-white/30"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="expiration"
+                      value={option.value}
+                      checked={expirationOption === option.value}
+                      onChange={(e) => setExpirationOption(e.target.value)}
+                      className="accent-primary"
+                    />
+                    <span>{option.label}</span>
+                  </label>
+                ))}
+              </div>
+              
+              {expirationOption === "custom" && (
+                <div className="mb-6">
+                  <label className="text-sm text-white/60 block mb-2">Nombre de jours</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="3650"
+                    value={customDays}
+                    onChange={(e) => setCustomDays(parseInt(e.target.value) || 1)}
+                    className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary"
+                  />
+                </div>
+              )}
+              
+              <div className="bg-amber-500/10 border border-amber-500/30 p-3 mb-6">
+                <p className="text-amber-400 text-sm">
+                  ⚠️ Le compte sera automatiquement supprimé après ce délai à partir de maintenant.
+                </p>
+              </div>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowExpirationModal(false)}
+                  className="btn-outline flex-1 py-3"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={updateClientExpiration}
+                  disabled={updatingExpiration}
+                  className="btn-primary flex-1 py-3 flex items-center justify-center gap-2"
+                >
+                  {updatingExpiration ? (
+                    <>
+                      <Loader size={16} className="animate-spin" /> Mise à jour...
+                    </>
+                  ) : (
+                    <>
+                      <Check size={16} /> Appliquer
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Extensions Tab */}
         {activeTab === "extensions" && (
           <div className="space-y-6">
