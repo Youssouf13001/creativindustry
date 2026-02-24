@@ -297,17 +297,20 @@ const GallerySlideshowModal = ({
                       )}
                     </button>
                     
-                    {/* Mute/Unmute */}
-                    <button
-                      onClick={() => setIsMuted(!isMuted)}
-                      className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
-                    >
-                      {isMuted ? (
-                        <VolumeX size={20} className="text-white" />
-                      ) : (
-                        <Volume2 size={20} className="text-white" />
-                      )}
-                    </button>
+                    {/* Mute/Unmute - only show if music available */}
+                    {hasMusic && (
+                      <button
+                        onClick={() => setIsMuted(!isMuted)}
+                        className="p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+                        title={isMuted ? "Activer la musique" : "Couper la musique"}
+                      >
+                        {isMuted ? (
+                          <VolumeX size={20} className="text-white" />
+                        ) : (
+                          <Volume2 size={20} className="text-white" />
+                        )}
+                      </button>
+                    )}
                   </div>
 
                   {/* Progress Bar */}
