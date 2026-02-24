@@ -2322,6 +2322,25 @@ async def get_client_account_status(client: dict = Depends(get_current_client)):
     except:
         days_remaining = 180
     
+    is_expired = days_remaining <= 0
+    
+    # If account is expired, return 403 to force logout
+    if is_expired:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "expired": True,
+                "client_id": client["id"],
+                "client_email": full_client.get("email"),
+                "client_name": full_client.get("name"),
+                "message": "Votre accès a expiré",
+                "renewal_options": [
+                    {"id": "weekly", "label": "1 semaine", "price": 20, "days": 7},
+                    {"id": "6months", "label": "6 mois", "price": 90, "days": 180}
+                ]
+            }
+        )
+    
     # Check for pending extension orders
     pending_order = await db.extension_orders.find_one({
         "client_id": client["id"],
@@ -2331,8 +2350,8 @@ async def get_client_account_status(client: dict = Depends(get_current_client)):
     return {
         "expires_at": expires_at,
         "days_remaining": max(0, days_remaining),
-        "is_expired": days_remaining <= 0,
-        "extension_price": 20,
+        "is_expired": False,
+        "extension_price": 24,
         "extension_days": 60,
         "pending_order": pending_order
     }
