@@ -1665,22 +1665,34 @@ const ClientDashboard = () => {
                       <p className="text-white/60 mt-1">{selectedGallery.description}</p>
                     )}
                   </div>
-                  {!isValidated && (
-                    <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    {/* Slideshow Button */}
+                    {(selectedGallery.photos || []).length > 0 && (
                       <button
-                        onClick={saveSelection}
-                        className="btn-outline px-4 py-2 text-sm"
+                        onClick={() => setShowSlideshow(true)}
+                        className="flex items-center gap-2 bg-primary/20 hover:bg-primary/30 text-primary px-4 py-2 rounded transition-colors"
+                        data-testid="slideshow-button"
                       >
-                        Sauvegarder ({selectedPhotos.length})
+                        <Play size={18} /> Diaporama
                       </button>
-                      <button
-                        onClick={validateSelection}
-                        className="btn-primary px-4 py-2 text-sm"
-                      >
-                        Valider ma sélection
-                      </button>
-                    </div>
-                  )}
+                    )}
+                    {!isValidated && (
+                      <>
+                        <button
+                          onClick={saveSelection}
+                          className="btn-outline px-4 py-2 text-sm"
+                        >
+                          Sauvegarder ({selectedPhotos.length})
+                        </button>
+                        <button
+                          onClick={validateSelection}
+                          className="btn-primary px-4 py-2 text-sm"
+                        >
+                          Valider ma sélection
+                        </button>
+                      </>
+                    )}
+                  </div>
                   {isValidated && (
                     <span className="bg-green-500/20 text-green-400 px-4 py-2 text-sm flex items-center gap-2">
                       <Check size={16} /> Sélection validée
