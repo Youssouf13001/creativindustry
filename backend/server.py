@@ -65,6 +65,7 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
 
 SECRET_KEY = os.environ.get('JWT_SECRET', 'creativindustry-secret-key-2024')
 ALGORITHM = "HS256"
