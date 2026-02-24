@@ -642,7 +642,7 @@ const ClientDashboard = () => {
                   <div className="flex justify-between items-center mb-4">
                     <span className="text-white font-semibold">Progression de votre projet</span>
                     <span className="text-primary font-bold text-2xl">
-                      {Math.round((projectStatus.filter(s => s.status === "completed").length / projectStatus.length) * 100)}%
+                      {Math.min(100, Math.round((projectStatus.filter(s => s.status === "completed").length / Math.max(1, projectStatus.length)) * 100))}%
                     </span>
                   </div>
                   
@@ -652,7 +652,7 @@ const ClientDashboard = () => {
                     <div className="w-full bg-white/10 rounded-full h-4 overflow-hidden">
                       <div 
                         className="bg-gradient-to-r from-primary via-yellow-500 to-green-500 h-4 rounded-full transition-all duration-700 ease-out"
-                        style={{ width: `${(projectStatus.filter(s => s.status === "completed").length / projectStatus.length) * 100}%` }}
+                        style={{ width: `${Math.min(100, (projectStatus.filter(s => s.status === "completed").length / Math.max(1, projectStatus.length)) * 100)}%` }}
                       />
                     </div>
                     
