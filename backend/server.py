@@ -6528,6 +6528,27 @@ async def get_client_gallery(gallery_id: str, credentials: HTTPAuthorizationCred
     
     return gallery
 
+
+# Public: Get a shared gallery (for QR code sharing)
+@api_router.get("/public/galleries/{gallery_id}")
+async def get_public_gallery(gallery_id: str):
+    """Public endpoint for viewing a shared gallery via QR code"""
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Galerie non trouvée")
+    
+    gallery.pop("_id", None)
+    
+    # Return limited info for public view (only photos, name, music)
+    return {
+        "id": gallery["id"],
+        "name": gallery.get("name", "Galerie"),
+        "description": gallery.get("description"),
+        "photos": gallery.get("photos", []),
+        "music_url": gallery.get("music_url"),
+        "photo_count": len(gallery.get("photos", []))
+    }
+
 # Client: Save/update selection
 @api_router.post("/client/galleries/{gallery_id}/selection", response_model=dict)
 async def save_selection(
