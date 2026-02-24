@@ -107,6 +107,11 @@ const AdminDashboard = () => {
   // Backup reminder state
   const [backupStatus, setBackupStatus] = useState(null);
   const [backupProgress, setBackupProgress] = useState({ active: false, step: '', progress: 0 });
+  // Guestbook states
+  const [guestbooks, setGuestbooks] = useState([]);
+  const [selectedGuestbook, setSelectedGuestbook] = useState(null);
+  const [showAddGuestbook, setShowAddGuestbook] = useState(false);
+  const [newGuestbook, setNewGuestbook] = useState({ client_id: "", name: "", event_date: "", welcome_message: "" });
   // Chat state
   const [showChat, setShowChat] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
