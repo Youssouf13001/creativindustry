@@ -57,7 +57,7 @@ const ClientLogin = () => {
     }
   };
 
-  // Handle renewal request
+  // Handle renewal request (legacy - kept for fallback)
   const handleRenewalRequest = async () => {
     if (!selectedPlan || !expiredData) return;
     
@@ -70,6 +70,30 @@ const ClientLogin = () => {
       setRenewalStep("success");
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erreur lors de la demande");
+    } finally {
+      setRenewalLoading(false);
+    }
+  };
+
+  // Handle PayPal payment - creates order and redirects to PayPal
+  const handlePayPalPayment = async () => {
+    if (!selectedPlan || !expiredData) return;
+    
+    setRenewalLoading(true);
+    try {
+      const res = await axios.post(`${API}/paypal/create-order`, {
+        client_email: expiredData.client_email,
+        plan: selectedPlan.id
+      });
+      
+      if (res.data.approval_url) {
+        // Redirect to PayPal for payment
+        window.location.href = res.data.approval_url;
+      } else {
+        toast.error("Erreur: URL de paiement non reçue");
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la création du paiement");
     } finally {
       setRenewalLoading(false);
     }
