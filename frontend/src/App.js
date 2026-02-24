@@ -24,6 +24,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import ClientLogin from "./pages/ClientLogin";
 import ClientDashboard from "./pages/ClientDashboard";
 import UnsubscribePage from "./pages/UnsubscribePage";
+import RenewalPage from "./pages/RenewalPage";
 
 function App() {
   return (
