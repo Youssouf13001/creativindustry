@@ -2281,7 +2281,7 @@ const AdminDashboard = () => {
                     <h3 className="font-primary font-bold text-xl">{selectedGallery.name}</h3>
                     <p className="text-white/60">{selectedGallery.client_name} • {selectedGallery.photos?.length || 0} photos</p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <input
                       type="file"
                       ref={galleryFileRef}
@@ -2289,6 +2289,13 @@ const AdminDashboard = () => {
                       accept="image/*"
                       multiple
                       onChange={handleGalleryPhotoUpload}
+                    />
+                    <input
+                      type="file"
+                      ref={galleryMusicRef}
+                      className="hidden"
+                      accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg"
+                      onChange={handleGalleryMusicUpload}
                     />
                     <button 
                       onClick={() => galleryFileRef.current?.click()}
@@ -2298,6 +2305,28 @@ const AdminDashboard = () => {
                       {uploadingGalleryPhoto ? <Loader size={16} className="animate-spin" /> : <Upload size={16} />}
                       Ajouter des photos
                     </button>
+                    <button 
+                      onClick={() => galleryMusicRef.current?.click()}
+                      disabled={uploadingGalleryMusic}
+                      className={`px-4 py-2 text-sm flex items-center gap-2 disabled:opacity-50 ${
+                        selectedGallery.music_url 
+                          ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/30" 
+                          : "btn-outline"
+                      }`}
+                      data-testid="upload-music-button"
+                    >
+                      {uploadingGalleryMusic ? <Loader size={16} className="animate-spin" /> : <Music size={16} />}
+                      {selectedGallery.music_url ? "Changer musique" : "Ajouter musique"}
+                    </button>
+                    {selectedGallery.music_url && (
+                      <button 
+                        onClick={deleteGalleryMusic}
+                        className="bg-red-500/20 text-red-400 px-3 py-2 text-sm hover:bg-red-500/30"
+                        title="Supprimer la musique"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                     <button 
                       onClick={() => viewGallerySelection(selectedGallery)}
                       className="btn-outline px-4 py-2 text-sm"
