@@ -610,6 +610,7 @@ const ClientDashboard = () => {
                 { id: "devis", label: "Devis", icon: Receipt },
                 { id: "invoices", label: "Factures", icon: File },
                 { id: "payments", label: "Paiements", icon: Euro },
+                { id: "guestbooks", label: "Livre d'or", icon: BookOpen },
                 { id: "settings", label: "Paramètres", icon: Settings }
               ].map(({ id, label, icon: Icon }) => (
                 <button
