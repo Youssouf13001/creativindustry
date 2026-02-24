@@ -6344,6 +6344,77 @@ async def delete_gallery(gallery_id: str, credentials: HTTPAuthorizationCredenti
     
     return {"message": "Gallery deleted"}
 
+
+# Admin: Upload music for gallery slideshow
+@api_router.post("/admin/galleries/{gallery_id}/music", response_model=dict)
+async def upload_gallery_music(
+    gallery_id: str,
+    file: UploadFile = File(...),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    verify_token(credentials.credentials)
+    
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Gallery not found")
+    
+    # Check file type
+    allowed_types = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Type de fichier non supporté. Utilisez MP3, WAV ou OGG.")
+    
+    # Create gallery folder
+    gallery_folder = UPLOADS_DIR / "galleries" / gallery_id
+    gallery_folder.mkdir(exist_ok=True, parents=True)
+    
+    # Save file
+    file_ext = Path(file.filename).suffix.lower()
+    music_filename = f"music{file_ext}"
+    file_path = gallery_folder / music_filename
+    
+    # Delete old music if exists
+    old_music = gallery.get("music_url")
+    if old_music:
+        old_path = UPLOADS_DIR / "galleries" / gallery_id / Path(old_music).name
+        if old_path.exists():
+            old_path.unlink()
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    music_url = f"/uploads/galleries/{gallery_id}/{music_filename}"
+    
+    await db.galleries.update_one(
+        {"id": gallery_id},
+        {"$set": {"music_url": music_url}}
+    )
+    
+    return {"success": True, "music_url": music_url}
+
+
+# Admin: Delete music from gallery
+@api_router.delete("/admin/galleries/{gallery_id}/music", response_model=dict)
+async def delete_gallery_music(gallery_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    verify_token(credentials.credentials)
+    
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Gallery not found")
+    
+    music_url = gallery.get("music_url")
+    if music_url:
+        file_path = UPLOADS_DIR / "galleries" / gallery_id / Path(music_url).name
+        if file_path.exists():
+            file_path.unlink()
+    
+    await db.galleries.update_one(
+        {"id": gallery_id},
+        {"$unset": {"music_url": ""}}
+    )
+    
+    return {"success": True, "message": "Musique supprimée"}
+
+
 # Admin: Get selection for a gallery
 @api_router.get("/admin/galleries/{gallery_id}/selection", response_model=dict)
 async def get_gallery_selection_admin(gallery_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
