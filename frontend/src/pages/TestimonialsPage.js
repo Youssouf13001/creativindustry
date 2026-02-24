@@ -51,6 +51,39 @@ const TestimonialsPage = () => {
     }
   };
 
+  // Handle client login
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError("");
+    setLoggingIn(true);
+    
+    try {
+      const res = await axios.post(`${API}/client/login`, {
+        email: loginEmail,
+        password: loginPassword
+      });
+      
+      // Store token and client info
+      localStorage.setItem("client_token", res.data.token);
+      localStorage.setItem("client_info", JSON.stringify(res.data.client));
+      
+      // Update state
+      setClientToken(res.data.token);
+      setClientInfo(res.data.client);
+      setIsAuthenticated(true);
+      setShowLoginModal(false);
+      setShowForm(true);
+      
+      // Reset form
+      setLoginEmail("");
+      setLoginPassword("");
+    } catch (e) {
+      setLoginError(e.response?.data?.detail || "Email ou mot de passe incorrect");
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isAuthenticated) {
