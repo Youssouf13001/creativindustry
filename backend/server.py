@@ -3083,10 +3083,10 @@ paypalrestsdk.configure({
     "client_secret": PAYPAL_SECRET
 })
 
-# PayPal Plans
+# PayPal Plans (prices TTC with 20% TVA)
 PAYPAL_PLANS = {
-    "weekly": {"label": "1 semaine", "price": "20.00", "days": 7, "currency": "EUR"},
-    "6months": {"label": "6 mois", "price": "90.00", "days": 180, "currency": "EUR"}
+    "weekly": {"label": "1 semaine", "price": "24.00", "price_ht": "20.00", "tva": "4.00", "days": 7, "currency": "EUR"},
+    "6months": {"label": "6 mois", "price": "108.00", "price_ht": "90.00", "tva": "18.00", "days": 180, "currency": "EUR"}
 }
 
 class PayPalOrderCreate(BaseModel):
