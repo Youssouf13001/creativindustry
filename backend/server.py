@@ -1618,6 +1618,54 @@ class PhotoSelection(BaseModel):
     selected_photo_ids: List[str] = []
     is_validated: bool = False
     validated_at: Optional[datetime] = None
+
+
+# ==================== GUESTBOOK MODELS ====================
+
+class GuestbookMessage(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    guestbook_id: str
+    author_name: str
+    message_type: str  # "text", "audio", "video"
+    text_content: Optional[str] = None
+    media_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    duration: Optional[int] = None  # Duration in seconds for audio/video
+    is_approved: bool = False  # Modération par l'admin/client
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class Guestbook(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    client_id: str
+    name: str  # Ex: "Livre d'or - Mariage Julie & Marc"
+    event_date: Optional[str] = None
+    description: Optional[str] = None
+    welcome_message: Optional[str] = None  # Message affiché aux invités
+    is_active: bool = True
+    allow_video: bool = True
+    allow_audio: bool = True
+    allow_text: bool = True
+    max_video_duration: int = 60  # seconds
+    max_audio_duration: int = 120  # seconds
+    require_approval: bool = True  # Si True, messages doivent être approuvés
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class GuestbookCreate(BaseModel):
+    client_id: str
+    name: str
+    event_date: Optional[str] = None
+    description: Optional[str] = None
+    welcome_message: Optional[str] = None
+    allow_video: bool = True
+    allow_audio: bool = True
+    allow_text: bool = True
+    max_video_duration: int = 60
+    max_audio_duration: int = 120
+    require_approval: bool = True
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class SelectionUpdate(BaseModel):
