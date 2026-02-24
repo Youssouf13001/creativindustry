@@ -3378,7 +3378,7 @@ async def get_paypal_payments(admin: dict = Depends(get_current_admin)):
 
 
 @api_router.get("/admin/renewal-invoice/{invoice_id}/pdf")
-async def download_renewal_invoice_pdf(invoice_id: str, admin: dict = Depends(get_current_admin)):
+async def download_renewal_invoice_pdf(invoice_id: str, token: str = None, admin: dict = Depends(get_current_admin_optional)):
     """Generate and download a renewal invoice as PDF"""
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
@@ -3387,6 +3387,17 @@ async def download_renewal_invoice_pdf(invoice_id: str, admin: dict = Depends(ge
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
     from reportlab.lib.enums import TA_CENTER, TA_RIGHT
     from io import BytesIO
+    
+    # Verify admin access (either via header or query param)
+    if not admin and token:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            admin = await db.admins.find_one({"id": payload.get("sub")})
+        except:
+            pass
+    
+    if not admin:
+        raise HTTPException(status_code=401, detail="Non autorisé")
     
     # Find invoice
     invoice = await db.renewal_invoices.find_one({"id": invoice_id}, {"_id": 0})
