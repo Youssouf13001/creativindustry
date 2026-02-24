@@ -3342,6 +3342,41 @@ async def paypal_webhook(request: Request):
         return {"status": "error", "message": str(e)}
 
 
+# ==================== RENEWAL INVOICES ====================
+
+@api_router.get("/admin/renewal-invoices")
+async def get_renewal_invoices(admin: dict = Depends(get_current_admin)):
+    """Get all renewal invoices for admin dashboard"""
+    invoices = await db.renewal_invoices.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    # Calculate totals
+    total_revenue = sum(inv.get("amount_ttc", 0) for inv in invoices)
+    total_invoices = len(invoices)
+    
+    return {
+        "invoices": invoices,
+        "total_revenue": total_revenue,
+        "total_invoices": total_invoices
+    }
+
+
+@api_router.get("/client/my-renewal-invoices")
+async def get_client_renewal_invoices(client: dict = Depends(get_current_client)):
+    """Get renewal invoices for logged in client"""
+    invoices = await db.renewal_invoices.find(
+        {"client_id": client["id"]}, 
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return invoices
+
+
+@api_router.get("/admin/paypal-payments")
+async def get_paypal_payments(admin: dict = Depends(get_current_admin)):
+    """Get all PayPal payments for admin dashboard"""
+    payments = await db.paypal_payments.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return payments
+
+
 # ==================== RENEWAL REQUESTS (Legacy - kept for manual validation) ====================
 
 class RenewalRequest(BaseModel):
