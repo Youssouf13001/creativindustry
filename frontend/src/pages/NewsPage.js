@@ -121,7 +121,14 @@ const NewsPage = () => {
       setGuestName("");
       setGuestEmail("");
     } catch (e) {
-      alert(e.response?.data?.detail || "Erreur lors de l'envoi");
+      const errorMsg = e.response?.data?.detail;
+      if (typeof errorMsg === 'string') {
+        alert(errorMsg);
+      } else if (errorMsg) {
+        alert(JSON.stringify(errorMsg));
+      } else {
+        alert("Erreur lors de l'envoi du commentaire");
+      }
     } finally {
       setSubmittingComment(false);
     }
