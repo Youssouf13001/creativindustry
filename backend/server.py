@@ -8189,6 +8189,325 @@ async def delete_welcome_video(
     return {"success": True, "message": "Vidéo supprimée"}
 
 
+# ==================== NEWS/ACTUALITÉS ROUTES ====================
+
+@api_router.post("/admin/news", response_model=dict)
+async def create_news_post(
+    caption: str = Form(...),
+    location: Optional[str] = Form(None),
+    media: UploadFile = File(...),
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Create a new news post (admin only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    # Determine media type
+    content_type = media.content_type or ""
+    if content_type.startswith("image/"):
+        media_type = "photo"
+    elif content_type.startswith("video/"):
+        media_type = "video"
+    else:
+        raise HTTPException(status_code=400, detail="Format non supporté. Utilisez une image ou vidéo.")
+    
+    # Save file
+    file_ext = media.filename.split(".")[-1] if "." in media.filename else "jpg"
+    filename = f"news_{uuid.uuid4().hex[:12]}.{file_ext}"
+    file_path = UPLOADS_DIR / "news" / filename
+    
+    with open(file_path, "wb") as buffer:
+        content = await media.read()
+        buffer.write(content)
+    
+    media_url = f"/uploads/news/{filename}"
+    
+    post_data = {
+        "id": str(uuid.uuid4()),
+        "caption": caption,
+        "location": location,
+        "media_url": media_url,
+        "media_type": media_type,
+        "thumbnail_url": media_url if media_type == "photo" else None,
+        "likes": [],  # List of client_ids who liked
+        "likes_count": 0,
+        "comments_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.news_posts.insert_one(post_data)
+    
+    return {"success": True, "post_id": post_data["id"], "message": "Publication créée"}
+
+
+@api_router.get("/news", response_model=List[dict])
+async def get_news_posts():
+    """Get all news posts (public)"""
+    posts = await db.news_posts.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return posts
+
+
+@api_router.get("/news/{post_id}")
+async def get_news_post(post_id: str):
+    """Get a single news post with comments"""
+    post = await db.news_posts.find_one({"id": post_id}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Publication non trouvée")
+    
+    # Get approved comments
+    comments = await db.news_comments.find(
+        {"post_id": post_id, "status": "approved"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    post["comments"] = comments
+    return post
+
+
+@api_router.delete("/admin/news/{post_id}")
+async def delete_news_post(
+    post_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Delete a news post (admin only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    post = await db.news_posts.find_one({"id": post_id}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Publication non trouvée")
+    
+    # Delete media file
+    if post.get("media_url"):
+        file_path = UPLOADS_DIR / post["media_url"].replace("/uploads/", "")
+        if file_path.exists():
+            file_path.unlink()
+    
+    # Delete post and its comments
+    await db.news_posts.delete_one({"id": post_id})
+    await db.news_comments.delete_many({"post_id": post_id})
+    
+    return {"success": True, "message": "Publication supprimée"}
+
+
+@api_router.post("/news/{post_id}/like")
+async def toggle_like_news(
+    post_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Toggle like on a news post (client only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        client_id = payload.get("client_id")
+        if not client_id:
+            raise HTTPException(status_code=401, detail="Vous devez être connecté pour aimer")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    post = await db.news_posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Publication non trouvée")
+    
+    likes = post.get("likes", [])
+    
+    if client_id in likes:
+        # Unlike
+        likes.remove(client_id)
+        action = "unliked"
+    else:
+        # Like
+        likes.append(client_id)
+        action = "liked"
+    
+    await db.news_posts.update_one(
+        {"id": post_id},
+        {"$set": {"likes": likes, "likes_count": len(likes)}}
+    )
+    
+    return {"success": True, "action": action, "likes_count": len(likes)}
+
+
+@api_router.get("/news/{post_id}/liked")
+async def check_if_liked(
+    post_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Check if current client has liked a post"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        client_id = payload.get("client_id")
+    except:
+        return {"liked": False}
+    
+    if not client_id:
+        return {"liked": False}
+    
+    post = await db.news_posts.find_one({"id": post_id}, {"likes": 1})
+    if not post:
+        return {"liked": False}
+    
+    return {"liked": client_id in post.get("likes", [])}
+
+
+@api_router.post("/news/{post_id}/comment")
+async def add_comment(
+    post_id: str,
+    comment: NewsCommentCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Add a comment to a news post (authenticated clients auto-approved, guests need validation)"""
+    post = await db.news_posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Publication non trouvée")
+    
+    # Check if authenticated
+    client_id = None
+    client_name = None
+    client_avatar = None
+    is_authenticated = False
+    
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        client_id = payload.get("client_id")
+        if client_id:
+            # Get client info
+            client = await db.clients.find_one({"id": client_id}, {"_id": 0, "name": 1, "profile_photo": 1})
+            if client:
+                client_name = client.get("name")
+                client_avatar = client.get("profile_photo")
+                is_authenticated = True
+    except:
+        pass
+    
+    # If not authenticated, require guest info
+    if not is_authenticated:
+        if not comment.guest_name or not comment.guest_email:
+            raise HTTPException(status_code=400, detail="Nom et email requis pour les visiteurs")
+    
+    comment_data = {
+        "id": str(uuid.uuid4()),
+        "post_id": post_id,
+        "content": comment.content,
+        "client_id": client_id if is_authenticated else None,
+        "client_name": client_name if is_authenticated else None,
+        "client_avatar": client_avatar if is_authenticated else None,
+        "guest_name": comment.guest_name if not is_authenticated else None,
+        "guest_email": comment.guest_email if not is_authenticated else None,
+        "status": "approved" if is_authenticated else "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.news_comments.insert_one(comment_data)
+    
+    # Update comments count (only for approved)
+    if is_authenticated:
+        await db.news_posts.update_one(
+            {"id": post_id},
+            {"$inc": {"comments_count": 1}}
+        )
+    
+    message = "Commentaire publié" if is_authenticated else "Commentaire soumis, en attente de validation"
+    return {"success": True, "status": comment_data["status"], "message": message}
+
+
+@api_router.get("/admin/news/comments/pending")
+async def get_pending_comments(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Get all pending comments (admin only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    comments = await db.news_comments.find(
+        {"status": "pending"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    # Get post info for each comment
+    for comment in comments:
+        post = await db.news_posts.find_one({"id": comment["post_id"]}, {"_id": 0, "caption": 1, "media_url": 1})
+        comment["post_info"] = post
+    
+    return comments
+
+
+@api_router.put("/admin/news/comments/{comment_id}")
+async def update_comment_status(
+    comment_id: str,
+    status: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Approve or reject a comment (admin only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    if status not in ["approved", "rejected"]:
+        raise HTTPException(status_code=400, detail="Statut invalide")
+    
+    comment = await db.news_comments.find_one({"id": comment_id})
+    if not comment:
+        raise HTTPException(status_code=404, detail="Commentaire non trouvé")
+    
+    await db.news_comments.update_one(
+        {"id": comment_id},
+        {"$set": {"status": status}}
+    )
+    
+    # Update post comments count if approved
+    if status == "approved":
+        await db.news_posts.update_one(
+            {"id": comment["post_id"]},
+            {"$inc": {"comments_count": 1}}
+        )
+    
+    return {"success": True, "message": f"Commentaire {status}"}
+
+
+@api_router.delete("/admin/news/comments/{comment_id}")
+async def delete_comment(
+    comment_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Delete a comment (admin only)"""
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
+    comment = await db.news_comments.find_one({"id": comment_id})
+    if not comment:
+        raise HTTPException(status_code=404, detail="Commentaire non trouvé")
+    
+    # Decrement count if was approved
+    if comment.get("status") == "approved":
+        await db.news_posts.update_one(
+            {"id": comment["post_id"]},
+            {"$inc": {"comments_count": -1}}
+        )
+    
+    await db.news_comments.delete_one({"id": comment_id})
+    
+    return {"success": True, "message": "Commentaire supprimé"}
+
+
+@api_router.get("/news/{post_id}/comments")
+async def get_post_comments(post_id: str):
+    """Get approved comments for a post"""
+    comments = await db.news_comments.find(
+        {"post_id": post_id, "status": "approved"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return comments
+
+
 app.include_router(api_router)
 
 # Mount static files for uploads
