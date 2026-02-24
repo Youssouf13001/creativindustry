@@ -78,8 +78,10 @@ const AdminDashboard = () => {
   const [showAddGallery, setShowAddGallery] = useState(false);
   const [newGallery, setNewGallery] = useState({ client_id: "", name: "", description: "" });
   const [uploadingGalleryPhoto, setUploadingGalleryPhoto] = useState(false);
+  const [uploadingGalleryMusic, setUploadingGalleryMusic] = useState(false);
   const [gallerySelection, setGallerySelection] = useState(null);
   const galleryFileRef = useRef(null);
+  const galleryMusicRef = useRef(null);
   // MFA states
   const [mfaStatus, setMfaStatus] = useState({ mfa_enabled: false, backup_codes_remaining: 0 });
   const [mfaSetupData, setMfaSetupData] = useState(null);
