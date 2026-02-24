@@ -2926,6 +2926,103 @@ async def delete_client_completely(client_id: str, admin: dict = Depends(get_cur
     }
 
 
+class ClientExpirationUpdate(BaseModel):
+    """Model for updating client expiration"""
+    expiration_option: str  # "3_days", "1_week", "2_weeks", "1_month", "3_months", "6_months", "1_year", "custom"
+    custom_days: Optional[int] = None  # Only used if expiration_option is "custom"
+
+
+@api_router.put("/admin/clients/{client_id}/expiration")
+async def update_client_expiration(
+    client_id: str,
+    data: ClientExpirationUpdate,
+    admin: dict = Depends(get_current_admin)
+):
+    """Update the expiration date for a specific client (admin only)"""
+    
+    # Check if client exists
+    client = await db.clients.find_one({"id": client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Calculate new expiration date
+    days_map = {
+        "3_days": 3,
+        "1_week": 7,
+        "2_weeks": 14,
+        "1_month": 30,
+        "3_months": 90,
+        "6_months": 180,
+        "1_year": 365,
+    }
+    
+    if data.expiration_option == "custom":
+        if not data.custom_days or data.custom_days < 1:
+            raise HTTPException(status_code=400, detail="Nombre de jours invalide")
+        days = data.custom_days
+    elif data.expiration_option in days_map:
+        days = days_map[data.expiration_option]
+    else:
+        raise HTTPException(status_code=400, detail="Option d'expiration invalide")
+    
+    # Calculate new expiration date from now
+    new_expires_at = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+    
+    # Update client
+    await db.clients.update_one(
+        {"id": client_id},
+        {"$set": {
+            "expires_at": new_expires_at,
+            "auto_delete_days": days,
+            "expiration_updated_at": datetime.now(timezone.utc).isoformat(),
+            "expiration_updated_by": admin.get("email")
+        }}
+    )
+    
+    # Format the expiration date for display
+    expiry_date = datetime.fromisoformat(new_expires_at.replace('Z', '+00:00'))
+    formatted_date = expiry_date.strftime("%d/%m/%Y à %H:%M")
+    
+    return {
+        "success": True,
+        "message": f"Expiration mise à jour : {formatted_date}",
+        "expires_at": new_expires_at,
+        "days": days
+    }
+
+
+@api_router.get("/admin/clients/{client_id}/expiration")
+async def get_client_expiration(
+    client_id: str,
+    admin: dict = Depends(get_current_admin)
+):
+    """Get expiration info for a specific client"""
+    
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    expires_at = client.get("expires_at")
+    auto_delete_days = client.get("auto_delete_days", 180)  # Default 6 months
+    
+    days_remaining = 0
+    if expires_at:
+        try:
+            expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            days_remaining = (expiry_date - datetime.now(timezone.utc)).days
+        except:
+            pass
+    
+    return {
+        "expires_at": expires_at,
+        "auto_delete_days": auto_delete_days,
+        "days_remaining": max(0, days_remaining),
+        "is_expired": days_remaining <= 0,
+        "expiration_updated_at": client.get("expiration_updated_at"),
+        "expiration_updated_by": client.get("expiration_updated_by")
+    }
+
+
 # ==================== CLIENT DOCUMENTS (Admin uploaded invoices/quotes) ====================
 
 @api_router.post("/admin/clients/{client_id}/documents")
