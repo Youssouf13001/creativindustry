@@ -3048,7 +3048,260 @@ async def get_client_expiration(
     }
 
 
-# ==================== RENEWAL REQUESTS ====================
+# ==================== PAYPAL INTEGRATION ====================
+
+import paypalrestsdk
+
+# PayPal Configuration
+PAYPAL_CLIENT_ID = os.environ.get('PAYPAL_CLIENT_ID', '')
+PAYPAL_SECRET = os.environ.get('PAYPAL_SECRET', '')
+PAYPAL_MODE = os.environ.get('PAYPAL_MODE', 'sandbox')  # 'sandbox' or 'live'
+
+# Configure PayPal SDK
+paypalrestsdk.configure({
+    "mode": PAYPAL_MODE,
+    "client_id": PAYPAL_CLIENT_ID,
+    "client_secret": PAYPAL_SECRET
+})
+
+# PayPal Plans
+PAYPAL_PLANS = {
+    "weekly": {"label": "1 semaine", "price": "20.00", "days": 7, "currency": "EUR"},
+    "6months": {"label": "6 mois", "price": "90.00", "days": 180, "currency": "EUR"}
+}
+
+class PayPalOrderCreate(BaseModel):
+    """Model for creating a PayPal order"""
+    client_email: str
+    plan: str  # "weekly" or "6months"
+
+class PayPalOrderCapture(BaseModel):
+    """Model for capturing a PayPal order"""
+    order_id: str
+
+@api_router.post("/paypal/create-order")
+async def create_paypal_order(data: PayPalOrderCreate):
+    """Create a PayPal order for renewal payment"""
+    
+    # Validate client exists
+    client = await db.clients.find_one({"email": data.client_email}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Validate plan
+    if data.plan not in PAYPAL_PLANS:
+        raise HTTPException(status_code=400, detail="Plan invalide")
+    
+    plan = PAYPAL_PLANS[data.plan]
+    
+    # Create PayPal payment
+    payment = paypalrestsdk.Payment({
+        "intent": "sale",
+        "payer": {
+            "payment_method": "paypal"
+        },
+        "redirect_urls": {
+            "return_url": f"{os.environ.get('SITE_URL', 'https://creativindustry.com')}/renouvellement/success",
+            "cancel_url": f"{os.environ.get('SITE_URL', 'https://creativindustry.com')}/renouvellement/cancel"
+        },
+        "transactions": [{
+            "item_list": {
+                "items": [{
+                    "name": f"Renouvellement CREATIVINDUSTRY - {plan['label']}",
+                    "sku": data.plan,
+                    "price": plan['price'],
+                    "currency": plan['currency'],
+                    "quantity": 1
+                }]
+            },
+            "amount": {
+                "total": plan['price'],
+                "currency": plan['currency']
+            },
+            "description": f"Renouvellement d'accès CREATIVINDUSTRY - {plan['label']} pour {client['name']}"
+        }],
+        "note_to_payer": f"Renouvellement compte CREATIVINDUSTRY pour {client['email']}"
+    })
+    
+    if payment.create():
+        # Store pending payment in database
+        payment_record = {
+            "id": str(uuid.uuid4()),
+            "paypal_payment_id": payment.id,
+            "client_id": client["id"],
+            "client_email": client["email"],
+            "client_name": client["name"],
+            "plan": data.plan,
+            "plan_label": plan["label"],
+            "amount": float(plan["price"]),
+            "days": plan["days"],
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.paypal_payments.insert_one(payment_record)
+        
+        # Get approval URL
+        approval_url = None
+        for link in payment.links:
+            if link.rel == "approval_url":
+                approval_url = link.href
+                break
+        
+        return {
+            "success": True,
+            "payment_id": payment.id,
+            "approval_url": approval_url
+        }
+    else:
+        logging.error(f"PayPal error: {payment.error}")
+        raise HTTPException(status_code=500, detail=f"Erreur PayPal: {payment.error.get('message', 'Unknown error')}")
+
+
+@api_router.post("/paypal/execute-payment")
+async def execute_paypal_payment(payment_id: str, payer_id: str):
+    """Execute (capture) a PayPal payment after user approval"""
+    
+    # Find the payment record
+    payment_record = await db.paypal_payments.find_one({"paypal_payment_id": payment_id}, {"_id": 0})
+    if not payment_record:
+        raise HTTPException(status_code=404, detail="Paiement non trouvé")
+    
+    if payment_record["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Ce paiement a déjà été traité")
+    
+    # Execute the payment
+    payment = paypalrestsdk.Payment.find(payment_id)
+    
+    if payment.execute({"payer_id": payer_id}):
+        # Payment successful - activate the account
+        new_expires_at = (datetime.now(timezone.utc) + timedelta(days=payment_record["days"])).isoformat()
+        
+        # Update client
+        await db.clients.update_one(
+            {"id": payment_record["client_id"]},
+            {"$set": {
+                "expires_at": new_expires_at,
+                "last_renewal": datetime.now(timezone.utc).isoformat(),
+                "last_renewal_plan": payment_record["plan"],
+                "last_renewal_amount": payment_record["amount"]
+            }}
+        )
+        
+        # Update payment record
+        await db.paypal_payments.update_one(
+            {"paypal_payment_id": payment_id},
+            {"$set": {
+                "status": "completed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "payer_id": payer_id
+            }}
+        )
+        
+        # Send confirmation email
+        expiry_date = datetime.fromisoformat(new_expires_at.replace('Z', '+00:00'))
+        formatted_date = expiry_date.strftime("%d/%m/%Y")
+        
+        if SMTP_EMAIL and SMTP_PASSWORD:
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center;">
+                        <h1 style="margin: 0; color: #fff;">✅ Paiement confirmé !</h1>
+                    </div>
+                    <div style="padding: 30px;">
+                        <p style="font-size: 18px;">Bonjour <strong>{payment_record['client_name']}</strong>,</p>
+                        <p style="color: #ccc;">Votre paiement de <strong style="color: #22c55e;">{payment_record['amount']}€</strong> a été reçu avec succès !</p>
+                        <div style="background: #3a3a3a; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                            <p style="color: #22c55e; font-size: 20px; margin: 0;">Votre accès est prolongé jusqu'au</p>
+                            <p style="color: #D4AF37; font-size: 28px; margin: 10px 0;"><strong>{formatted_date}</strong></p>
+                        </div>
+                        <p style="color: #888;">Vous pouvez maintenant vous reconnecter et profiter de vos photos et vidéos.</p>
+                        <a href="{os.environ.get('SITE_URL', 'https://creativindustry.com')}/espace-client" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 20px;">
+                            Se connecter
+                        </a>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            try:
+                send_email(payment_record["client_email"], "✅ Paiement confirmé - CREATIVINDUSTRY", html_content)
+            except Exception as e:
+                logging.error(f"Failed to send payment confirmation email: {e}")
+        
+        return {
+            "success": True,
+            "message": f"Paiement confirmé ! Votre accès est prolongé jusqu'au {formatted_date}",
+            "new_expires_at": new_expires_at
+        }
+    else:
+        # Payment failed
+        await db.paypal_payments.update_one(
+            {"paypal_payment_id": payment_id},
+            {"$set": {
+                "status": "failed",
+                "error": str(payment.error)
+            }}
+        )
+        logging.error(f"PayPal execution error: {payment.error}")
+        raise HTTPException(status_code=500, detail="Le paiement a échoué. Veuillez réessayer.")
+
+
+@api_router.post("/paypal/webhook")
+async def paypal_webhook(request: Request):
+    """Handle PayPal webhook notifications for automatic payment confirmation"""
+    
+    try:
+        body = await request.json()
+        event_type = body.get("event_type", "")
+        
+        logging.info(f"PayPal webhook received: {event_type}")
+        
+        # Handle payment completed events
+        if event_type in ["PAYMENT.CAPTURE.COMPLETED", "CHECKOUT.ORDER.APPROVED"]:
+            resource = body.get("resource", {})
+            payment_id = resource.get("parent_payment") or resource.get("id")
+            
+            if payment_id:
+                # Find and process the payment
+                payment_record = await db.paypal_payments.find_one(
+                    {"paypal_payment_id": payment_id, "status": "pending"},
+                    {"_id": 0}
+                )
+                
+                if payment_record:
+                    # Activate account
+                    new_expires_at = (datetime.now(timezone.utc) + timedelta(days=payment_record["days"])).isoformat()
+                    
+                    await db.clients.update_one(
+                        {"id": payment_record["client_id"]},
+                        {"$set": {
+                            "expires_at": new_expires_at,
+                            "last_renewal": datetime.now(timezone.utc).isoformat(),
+                            "last_renewal_plan": payment_record["plan"]
+                        }}
+                    )
+                    
+                    await db.paypal_payments.update_one(
+                        {"paypal_payment_id": payment_id},
+                        {"$set": {
+                            "status": "completed",
+                            "completed_at": datetime.now(timezone.utc).isoformat(),
+                            "webhook_event": event_type
+                        }}
+                    )
+                    
+                    logging.info(f"Account activated via webhook for client {payment_record['client_email']}")
+        
+        return {"status": "received"}
+        
+    except Exception as e:
+        logging.error(f"Webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+# ==================== RENEWAL REQUESTS (Legacy - kept for manual validation) ====================
 
 class RenewalRequest(BaseModel):
     """Model for renewal request"""
