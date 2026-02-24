@@ -2078,6 +2078,7 @@ const ClientDashboard = () => {
           }))}
           galleryName={selectedGallery.name}
           shareUrl={`${window.location.origin}/client/dashboard?gallery=${selectedGallery.id}`}
+          musicUrl={selectedGallery.music_url ? `${BACKEND_URL}${selectedGallery.music_url}` : null}
         />
       )}
     </div>
