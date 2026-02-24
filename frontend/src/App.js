@@ -51,6 +51,8 @@ function App() {
             <Route path="/client/dashboard" element={<ClientDashboard />} />
             <Route path="/unsubscribe/:clientId" element={<UnsubscribePage />} />
             <Route path="/renouvellement" element={<RenewalPage />} />
+            <Route path="/renouvellement/success" element={<RenewalPage />} />
+            <Route path="/renouvellement/cancel" element={<RenewalPage />} />
             <Route path="/espace-client" element={<ClientLogin />} />
           </Routes>
         </main>
