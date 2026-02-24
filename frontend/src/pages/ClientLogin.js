@@ -324,6 +324,166 @@ const ClientLogin = () => {
           </button>
         </p>
       </div>
+
+      {/* Expired Account Modal */}
+      {showExpiredModal && expiredData && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-white/10 w-full max-w-lg overflow-hidden">
+            {renewalStep === "options" && (
+              <>
+                {/* Header */}
+                <div className="bg-amber-500/20 p-6 text-center border-b border-white/10">
+                  <Lock size={48} className="text-amber-500 mx-auto mb-3" />
+                  <h2 className="font-primary font-bold text-2xl text-amber-500">Accès expiré</h2>
+                  <p className="text-white/60 mt-2">
+                    Bonjour <strong className="text-white">{expiredData.client_name}</strong>
+                  </p>
+                </div>
+
+                {/* Plans */}
+                <div className="p-6">
+                  <p className="text-center text-white/70 mb-6">
+                    Renouvelez votre abonnement pour accéder à vos photos et vidéos
+                  </p>
+
+                  <div className="space-y-3 mb-6">
+                    {expiredData.renewal_options?.map((plan) => (
+                      <div
+                        key={plan.id}
+                        onClick={() => setSelectedPlan(plan)}
+                        className={`p-4 border-2 cursor-pointer transition-all flex items-center justify-between ${
+                          selectedPlan?.id === plan.id
+                            ? "border-primary bg-primary/10"
+                            : "border-white/10 hover:border-white/30"
+                        }`}
+                      >
+                        <div>
+                          <p className="font-bold">{plan.label}</p>
+                          <p className="text-white/50 text-sm">{plan.days} jours d'accès</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-primary">{plan.price}€</p>
+                        </div>
+                        {selectedPlan?.id === plan.id && (
+                          <Check size={24} className="text-primary ml-2" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => selectedPlan && setRenewalStep("payment")}
+                    disabled={!selectedPlan}
+                    className="w-full btn-primary py-4 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <CreditCard size={20} />
+                    Continuer vers le paiement
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowExpiredModal(false);
+                      setExpiredData(null);
+                      setSelectedPlan(null);
+                      setRenewalStep("options");
+                    }}
+                    className="w-full text-white/50 text-sm mt-4 hover:text-white"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </>
+            )}
+
+            {renewalStep === "payment" && (
+              <div className="p-6">
+                <h2 className="font-bold text-xl mb-6 text-center">Paiement PayPal</h2>
+                
+                <div className="bg-background/50 border border-white/10 p-4 mb-6 text-center">
+                  <p className="text-white/60 mb-1">Montant à payer</p>
+                  <p className="text-3xl font-bold text-primary">{selectedPlan?.price}€</p>
+                  <p className="text-white/50 text-sm">{selectedPlan?.label}</p>
+                </div>
+
+                <div className="space-y-3 mb-6 text-sm">
+                  <div className="flex items-center gap-3 text-white/70">
+                    <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs">1</div>
+                    <p>Cliquez sur "Payer avec PayPal"</p>
+                  </div>
+                  <div className="flex items-center gap-3 text-white/70">
+                    <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs">2</div>
+                    <p>Payez <strong className="text-primary">{selectedPlan?.price}€</strong></p>
+                  </div>
+                  <div className="flex items-center gap-3 text-white/70">
+                    <div className="w-6 h-6 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-xs">3</div>
+                    <p>Cliquez sur "J'ai payé"</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <a
+                    href={`${expiredData.paypal_link}/${selectedPlan?.price}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-[#0070ba] hover:bg-[#005ea6] text-white py-4 flex items-center justify-center gap-2 font-bold"
+                  >
+                    <CreditCard size={20} />
+                    Payer avec PayPal
+                  </a>
+                  
+                  <button
+                    onClick={handleRenewalRequest}
+                    disabled={renewalLoading}
+                    className="w-full btn-primary py-4 flex items-center justify-center gap-2"
+                  >
+                    {renewalLoading ? "Vérification..." : (
+                      <>
+                        <Check size={20} />
+                        J'ai payé
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => setRenewalStep("options")}
+                    className="w-full text-white/50 text-sm hover:text-white"
+                  >
+                    Retour
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {renewalStep === "success" && (
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check size={32} className="text-green-500" />
+                </div>
+                
+                <h2 className="font-bold text-xl mb-2 text-green-500">Demande enregistrée !</h2>
+                
+                <p className="text-white/70 mb-6">
+                  Votre compte sera débloqué dès validation du paiement
+                  <br />
+                  <span className="text-white/50 text-sm">(généralement sous quelques heures)</span>
+                </p>
+
+                <button
+                  onClick={() => {
+                    setShowExpiredModal(false);
+                    setExpiredData(null);
+                    setSelectedPlan(null);
+                    setRenewalStep("options");
+                  }}
+                  className="btn-outline px-8 py-3"
+                >
+                  Fermer
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
