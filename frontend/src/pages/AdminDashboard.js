@@ -3417,6 +3417,198 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* News/Actualités Tab */}
+        {activeTab === "news" && (
+          <div data-testid="admin-news-tab">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl">Gérer les Actualités</h2>
+              <div className="flex gap-4 text-sm">
+                <span className="text-white/60">
+                  Publications: <span className="text-primary font-bold">{newsPosts.length}</span>
+                </span>
+                {pendingComments.length > 0 && (
+                  <span className="text-yellow-500">
+                    {pendingComments.length} commentaire(s) en attente
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Create New Post */}
+              <div className="bg-card border border-white/10 p-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Plus size={20} className="text-primary" />
+                  Nouvelle Publication
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm text-white/60 block mb-2">Légende *</label>
+                    <textarea
+                      value={newPostCaption}
+                      onChange={(e) => setNewPostCaption(e.target.value)}
+                      placeholder="Décrivez votre publication..."
+                      rows={3}
+                      className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary resize-none"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm text-white/60 block mb-2">Lieu (optionnel)</label>
+                    <input
+                      type="text"
+                      value={newPostLocation}
+                      onChange={(e) => setNewPostLocation(e.target.value)}
+                      placeholder="Paris, France"
+                      className="w-full bg-background border border-white/20 px-4 py-3 focus:border-primary"
+                    />
+                  </div>
+                  
+                  <div
+                    onClick={() => newPostCaption.trim() && newsMediaRef.current?.click()}
+                    className={`aspect-video bg-background/50 border-2 border-dashed cursor-pointer flex flex-col items-center justify-center transition-colors ${
+                      newPostCaption.trim() ? "border-white/20 hover:border-primary/50" : "border-white/10 cursor-not-allowed"
+                    }`}
+                  >
+                    {uploadingNewsMedia ? (
+                      <>
+                        <Loader className="animate-spin text-primary" size={48} />
+                        <p className="text-white/60 mt-4">Upload en cours...</p>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={48} className="text-white/30" />
+                        <p className="text-white/60 mt-4">
+                          {newPostCaption.trim() ? "Cliquez pour ajouter une photo ou vidéo" : "Ajoutez d'abord une légende"}
+                        </p>
+                        <p className="text-white/40 text-sm mt-2">JPG, PNG, MP4, WebM</p>
+                      </>
+                    )}
+                  </div>
+                  
+                  <input
+                    ref={newsMediaRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={createNewsPost}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Pending Comments */}
+              <div className="bg-card border border-white/10 p-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <MessageCircle size={20} className="text-yellow-500" />
+                  Commentaires à Valider ({pendingComments.length})
+                </h3>
+                
+                {pendingComments.length === 0 ? (
+                  <p className="text-white/40 text-center py-8">Aucun commentaire en attente</p>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {pendingComments.map((comment) => (
+                      <div key={comment.id} className="bg-background/50 border border-white/10 p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center">
+                            <User size={16} className="text-white/50" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-bold text-sm">{comment.guest_name}</p>
+                            <p className="text-xs text-white/50">{comment.guest_email}</p>
+                            <p className="text-sm mt-2">{comment.content}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={() => updateCommentStatus(comment.id, "approved")}
+                            className="flex-1 px-3 py-1.5 bg-green-500 text-white text-xs hover:bg-green-600"
+                          >
+                            Approuver
+                          </button>
+                          <button
+                            onClick={() => updateCommentStatus(comment.id, "rejected")}
+                            className="flex-1 px-3 py-1.5 bg-red-500/20 text-red-400 text-xs hover:bg-red-500/30"
+                          >
+                            Rejeter
+                          </button>
+                          <button
+                            onClick={() => deleteComment(comment.id)}
+                            className="px-3 py-1.5 bg-white/5 text-white/50 text-xs hover:bg-white/10"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Posts Grid */}
+            <div className="mt-8">
+              <h3 className="font-bold text-lg mb-4">Publications ({newsPosts.length})</h3>
+              
+              {loadingNews ? (
+                <div className="text-center py-12">
+                  <Loader className="animate-spin mx-auto text-primary" size={32} />
+                </div>
+              ) : newsPosts.length === 0 ? (
+                <div className="text-center py-12 bg-card border border-white/10">
+                  <p className="text-white/60">Aucune publication. Créez votre première actualité !</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                  {newsPosts.map((post) => (
+                    <div key={post.id} className="relative aspect-square group bg-card overflow-hidden">
+                      {post.media_type === "photo" ? (
+                        <img
+                          src={`${BACKEND_URL}${post.media_url}`}
+                          alt={post.caption}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <video
+                          src={`${BACKEND_URL}${post.media_url}`}
+                          className="w-full h-full object-cover"
+                          muted
+                        />
+                      )}
+                      
+                      {/* Overlay */}
+                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-2">
+                        <div className="flex gap-4 text-white text-sm mb-2">
+                          <span className="flex items-center gap-1">
+                            <Heart size={14} /> {post.likes_count}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MessageCircle size={14} /> {post.comments_count}
+                          </span>
+                        </div>
+                        <p className="text-xs text-center text-white/70 line-clamp-2 mb-2">{post.caption}</p>
+                        <button
+                          onClick={() => deleteNewsPost(post.id)}
+                          className="px-3 py-1 bg-red-500 text-white text-xs hover:bg-red-600"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                      
+                      {post.media_type === "video" && (
+                        <div className="absolute top-1 right-1 bg-black/50 px-1.5 py-0.5 text-xs text-white">
+                          VIDEO
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Testimonials Tab */}
         {activeTab === "testimonials" && (
           <div data-testid="admin-testimonials-tab">
