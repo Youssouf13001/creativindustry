@@ -58,6 +58,9 @@ const ClientDashboard = () => {
   // Project status (visible tasks from admin)
   const [projectStatus, setProjectStatus] = useState([]);
   
+  // PayPal payment state
+  const [payingDocument, setPayingDocument] = useState(null);
+  
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
   const headers = { Authorization: `Bearer ${token}` };
