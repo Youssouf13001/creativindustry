@@ -80,14 +80,30 @@ SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
 # ==================== EMAIL HELPER ====================
 
 def send_email(to_email: str, subject: str, html_content: str):
-    """Send an email using SMTP"""
+    """Send an email using SMTP with improved deliverability"""
+    import re
+    from email.utils import formatdate, make_msgid
+    
     try:
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From'] = f"CREATIVINDUSTRY <{SMTP_EMAIL}>"
         msg['To'] = to_email
+        msg['Date'] = formatdate(localtime=True)
+        msg['Message-ID'] = make_msgid(domain='creativindustry.com')
+        msg['X-Priority'] = '3'  # Normal priority
+        msg['X-Mailer'] = 'CREATIVINDUSTRY Mailer'
         
-        html_part = MIMEText(html_content, 'html')
+        # Create plain text version from HTML (improves deliverability)
+        text_content = re.sub(r'<[^>]+>', '', html_content)
+        text_content = re.sub(r'\s+', ' ', text_content).strip()
+        text_content = text_content.replace('&nbsp;', ' ')
+        text_part = MIMEText(text_content, 'plain', 'utf-8')
+        
+        html_part = MIMEText(html_content, 'html', 'utf-8')
+        
+        # Attach text first, then HTML (order matters for some clients)
+        msg.attach(text_part)
         msg.attach(html_part)
         
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
