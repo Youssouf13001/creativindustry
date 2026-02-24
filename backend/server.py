@@ -2164,7 +2164,7 @@ async def login_client(data: ClientLogin):
                         "client_name": client["name"],
                         "message": "Votre accès a expiré",
                         "renewal_options": [
-                            {"id": "weekly", "label": "1 semaine", "price": 2, "days": 7},
+                            {"id": "weekly", "label": "1 semaine", "price": 20, "days": 7},
                             {"id": "6months", "label": "6 mois", "price": 90, "days": 180}
                         ],
                         "paypal_link": "https://paypal.me/creativindustryfranc"
