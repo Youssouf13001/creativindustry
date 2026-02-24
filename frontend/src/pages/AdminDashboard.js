@@ -5343,18 +5343,32 @@ const AdminDashboard = () => {
                             </span>
                           </td>
                           <td className="py-3 px-2">
-                            <a
-                              href={`${API}/admin/renewal-invoice/${invoice.id}/pdf`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:text-primary/80 flex items-center gap-1 text-sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                window.open(`${API}/admin/renewal-invoice/${invoice.id}/pdf?token=${localStorage.getItem('token')}`, '_blank');
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const response = await axios.get(
+                                    `${API}/admin/renewal-invoice/${invoice.id}/pdf`,
+                                    { 
+                                      headers,
+                                      responseType: 'blob'
+                                    }
+                                  );
+                                  const url = window.URL.createObjectURL(new Blob([response.data]));
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.setAttribute('download', `Facture_${invoice.invoice_number}.pdf`);
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  link.remove();
+                                  window.URL.revokeObjectURL(url);
+                                } catch (e) {
+                                  toast.error("Erreur lors du téléchargement");
+                                }
                               }}
+                              className="text-primary hover:text-primary/80 flex items-center gap-1 text-sm"
                             >
                               <Download size={16} /> PDF
-                            </a>
+                            </button>
                           </td>
                         </tr>
                       ))}
