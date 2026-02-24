@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Star, Quote, Send, CheckCircle, Camera, Mic, Tv, LogIn, User } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Star, Quote, Send, CheckCircle, Camera, Mic, Tv, LogIn, User, X } from "lucide-react";
 import axios from "axios";
 import { API, BACKEND_URL } from "../config/api";
 
@@ -17,16 +16,25 @@ const TestimonialsPage = () => {
     rating: 5,
     service_type: ""
   });
+  
+  // Login modal state
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
 
   // Check if client is authenticated
-  const clientToken = localStorage.getItem("client_token");
-  const isAuthenticated = !!clientToken;
+  const [clientToken, setClientToken] = useState(localStorage.getItem("client_token"));
+  const [isAuthenticated, setIsAuthenticated] = useState(!!clientToken);
   const headers = clientToken ? { Authorization: `Bearer ${clientToken}` } : {};
   
   // Get client info from localStorage
-  const clientInfo = localStorage.getItem("client_info") 
-    ? JSON.parse(localStorage.getItem("client_info")) 
-    : null;
+  const [clientInfo, setClientInfo] = useState(
+    localStorage.getItem("client_info") 
+      ? JSON.parse(localStorage.getItem("client_info")) 
+      : null
+  );
 
   useEffect(() => {
     fetchTestimonials();
