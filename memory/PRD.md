@@ -36,7 +36,7 @@ French
 - [x] **Popup d'accueil** - Avec vidéo gérable depuis admin
 - [x] **Page d'actualités** - Publications, likes, commentaires avec modération
 - [x] **Expiration de compte personnalisée** - Délai configurable par client
-- [x] **Système de renouvellement payant** - 20€/semaine ou 90€/6 mois via PayPal
+- [x] **Système de renouvellement PayPal avec activation automatique** - Intégration API PayPal, pas de validation admin nécessaire
 
 ### 🔴 Known Issues (P0 - BLOCKER)
 1. **Erreur `[object Object]`** - Soumission de témoignage en production (IONOS)
