@@ -1313,32 +1313,36 @@ const ClientDashboard = () => {
                       {remaining > 0 && (
                         <div className="mt-4 pt-4 border-t border-white/10">
                           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            <div className="text-sm text-white/60">
-                              <span className="text-white font-semibold">Reste à payer :</span> {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)}
+                            <div className="text-sm">
+                              <span className="text-white font-semibold">Reste à payer :</span>{" "}
+                              <span className="text-primary font-bold">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)}</span>
+                              <span className="text-white/40 text-xs ml-2">(TVA 20% incluse)</span>
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              {totalPaid > 0 && (
-                                <a
-                                  href={`https://paypal.me/creativindustryfranc/${remaining.toFixed(2)}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="bg-[#0070ba] hover:bg-[#005ea6] text-white px-4 py-2 text-sm rounded flex items-center gap-2 transition-colors"
-                                >
-                                  <CreditCard size={16} /> Payer le reste ({new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)})
-                                </a>
-                              )}
-                              <a
-                                href={`https://paypal.me/creativindustryfranc/${(invoice.amount || 0).toFixed(2)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="bg-[#0070ba] hover:bg-[#005ea6] text-white px-4 py-2 text-sm rounded flex items-center gap-2 transition-colors"
+                              <button
+                                onClick={() => handlePayPalPayment(
+                                  "invoice", 
+                                  invoice.invoice_id, 
+                                  remaining,
+                                  `Facture N° ${invoice.invoice_number || invoice.invoice_id?.slice(-8)}`
+                                )}
+                                disabled={payingDocument?.docRef === invoice.invoice_id}
+                                className="bg-[#0070ba] hover:bg-[#005ea6] disabled:bg-gray-600 text-white px-4 py-2 text-sm rounded flex items-center gap-2 transition-colors"
                               >
-                                <CreditCard size={16} /> {totalPaid > 0 ? "Payer la totalité" : "Payer avec PayPal"}
-                              </a>
+                                {payingDocument?.docRef === invoice.invoice_id ? (
+                                  <>
+                                    <Loader size={16} className="animate-spin" /> Redirection...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CreditCard size={16} /> Payer {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)} avec PayPal
+                                  </>
+                                )}
+                              </button>
                             </div>
                           </div>
-                          <p className="text-xs text-white/40 mt-2">
-                            Après votre paiement PayPal, il sera enregistré par notre équipe sous 24h.
+                          <p className="text-xs text-green-400/80 mt-2">
+                            ✓ Paiement sécurisé - Enregistrement automatique
                           </p>
                         </div>
                       )}
