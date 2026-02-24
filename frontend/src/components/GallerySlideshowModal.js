@@ -14,7 +14,7 @@ const GallerySlideshowModal = ({
   photos = [], 
   galleryName = "Galerie",
   shareUrl = "",
-  musicUrl = "/default-music.mp3" // Default background music
+  musicUrl = null // Optional background music URL
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -23,6 +23,7 @@ const GallerySlideshowModal = ({
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [hasMusic, setHasMusic] = useState(false);
   
   const audioRef = useRef(null);
   const slideshowRef = useRef(null);
