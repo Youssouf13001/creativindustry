@@ -27,6 +27,7 @@ import ClientDashboard from "./pages/ClientDashboard";
 import UnsubscribePage from "./pages/UnsubscribePage";
 import RenewalPage from "./pages/RenewalPage";
 import PaymentConfirmPage from "./pages/PaymentConfirmPage";
+import SharedGalleryPage from "./pages/SharedGalleryPage";
 
 function App() {
   return (
