@@ -5254,6 +5254,105 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Billing/Facturation Tab */}
+        {activeTab === "billing" && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="font-primary font-bold text-xl">🧾 Facturation - Renouvellements PayPal</h2>
+              <button
+                onClick={fetchBillingData}
+                className="btn-outline px-4 py-2 text-sm"
+              >
+                Actualiser
+              </button>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-card border border-white/10 p-6">
+                <p className="text-white/60 text-sm mb-1">Chiffre d'affaires total</p>
+                <p className="text-3xl font-bold text-green-400">
+                  {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(billingStats.total_revenue)}
+                </p>
+              </div>
+              <div className="bg-card border border-white/10 p-6">
+                <p className="text-white/60 text-sm mb-1">Nombre de factures</p>
+                <p className="text-3xl font-bold text-primary">{billingStats.total_invoices}</p>
+              </div>
+              <div className="bg-card border border-white/10 p-6">
+                <p className="text-white/60 text-sm mb-1">Panier moyen</p>
+                <p className="text-3xl font-bold text-blue-400">
+                  {billingStats.total_invoices > 0 
+                    ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(billingStats.total_revenue / billingStats.total_invoices)
+                    : "0,00 €"
+                  }
+                </p>
+              </div>
+            </div>
+
+            {/* Invoices Table */}
+            <div className="bg-card border border-white/10 p-6">
+              <h3 className="font-bold mb-4">Historique des factures</h3>
+              
+              {loadingBilling ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader className="animate-spin text-primary" size={32} />
+                </div>
+              ) : renewalInvoices.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="text-left py-3 px-2 text-white/60 text-sm">N° Facture</th>
+                        <th className="text-left py-3 px-2 text-white/60 text-sm">Client</th>
+                        <th className="text-left py-3 px-2 text-white/60 text-sm">Forfait</th>
+                        <th className="text-right py-3 px-2 text-white/60 text-sm">HT</th>
+                        <th className="text-right py-3 px-2 text-white/60 text-sm">TVA</th>
+                        <th className="text-right py-3 px-2 text-white/60 text-sm">TTC</th>
+                        <th className="text-left py-3 px-2 text-white/60 text-sm">Date</th>
+                        <th className="text-left py-3 px-2 text-white/60 text-sm">Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {renewalInvoices.map((invoice) => (
+                        <tr key={invoice.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="py-3 px-2 font-mono text-sm text-primary">{invoice.invoice_number}</td>
+                          <td className="py-3 px-2">
+                            <p className="font-medium">{invoice.client_name}</p>
+                            <p className="text-white/50 text-xs">{invoice.client_email}</p>
+                          </td>
+                          <td className="py-3 px-2">
+                            <span className={`px-2 py-1 text-xs rounded ${
+                              invoice.plan === "weekly" ? "bg-blue-500/20 text-blue-400" : "bg-purple-500/20 text-purple-400"
+                            }`}>
+                              {invoice.plan_label}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-right">{invoice.amount_ht?.toFixed(2)} €</td>
+                          <td className="py-3 px-2 text-right text-white/50">{invoice.tva?.toFixed(2)} €</td>
+                          <td className="py-3 px-2 text-right font-bold text-green-400">{invoice.amount_ttc?.toFixed(2)} €</td>
+                          <td className="py-3 px-2 text-white/60 text-sm">
+                            {new Date(invoice.created_at).toLocaleDateString('fr-FR', { 
+                              day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </td>
+                          <td className="py-3 px-2">
+                            <span className="px-2 py-1 text-xs rounded bg-green-500/20 text-green-400">
+                              Payée
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-white/50 text-center py-8">Aucune facture de renouvellement pour le moment</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Newsletter Tab */}
         {activeTab === "newsletter" && (
           <div className="space-y-6">
