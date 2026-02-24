@@ -513,6 +513,41 @@ const AdminDashboard = () => {
     }
   };
 
+  // Open expiration modal for a client
+  const openExpirationModal = (client) => {
+    setExpirationClient(client);
+    setExpirationOption(client.auto_delete_days ? "custom" : "6_months");
+    setCustomDays(client.auto_delete_days || 180);
+    setShowExpirationModal(true);
+  };
+
+  // Update client expiration
+  const updateClientExpiration = async () => {
+    if (!expirationClient) return;
+    
+    setUpdatingExpiration(true);
+    try {
+      const payload = {
+        expiration_option: expirationOption,
+        custom_days: expirationOption === "custom" ? customDays : null
+      };
+      
+      const res = await axios.put(
+        `${API}/admin/clients/${expirationClient.id}/expiration`,
+        payload,
+        { headers }
+      );
+      
+      toast.success(res.data.message);
+      setShowExpirationModal(false);
+      fetchClients(); // Refresh client list
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la mise à jour");
+    } finally {
+      setUpdatingExpiration(false);
+    }
+  };
+
   // Fetch backup status for reminder
   const fetchBackupStatus = async () => {
     try {
