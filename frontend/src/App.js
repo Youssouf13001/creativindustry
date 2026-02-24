@@ -28,6 +28,7 @@ import UnsubscribePage from "./pages/UnsubscribePage";
 import RenewalPage from "./pages/RenewalPage";
 import PaymentConfirmPage from "./pages/PaymentConfirmPage";
 import SharedGalleryPage from "./pages/SharedGalleryPage";
+import GuestbookPage from "./pages/GuestbookPage";
 
 function App() {
   return (
