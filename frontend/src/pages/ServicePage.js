@@ -92,7 +92,7 @@ const ServicePage = ({ category }) => {
       });
       
       if (paymentMethod === "paypal") {
-        // Create PayPal payment for the deposit
+        // Create PayPal payment for the deposit (TTC amount)
         setPaypalRedirecting(true);
         try {
           const paypalRes = await axios.post(`${API}/paypal/create-service-payment`, {
@@ -100,8 +100,8 @@ const ServicePage = ({ category }) => {
             client_email: buyFormData.client_email,
             client_name: buyFormData.client_name,
             service_name: selectedPackage.name,
-            amount: depositAmount,
-            total_price: selectedPackage.price
+            amount: depositAmount,  // Already TTC (price * 1.20 * 30%)
+            total_price: priceTTC   // Total TTC
           });
           
           if (paypalRes.data.approval_url) {
