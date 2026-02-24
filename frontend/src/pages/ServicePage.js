@@ -238,11 +238,11 @@ const ServicePage = ({ category }) => {
                     </div>
                     <div className="flex justify-between text-sm text-white/50">
                       <span>TVA (20%)</span>
-                      <span>{priceTVA.toFixed(2)}€</span>
+                      <span>+{priceTVA.toFixed(2)}€</span>
                     </div>
                     <div className="flex justify-between font-bold mt-1">
                       <span>Total TTC</span>
-                      <span className="text-primary">{selectedPackage.price}€</span>
+                      <span className="text-primary">{priceTTC.toFixed(2)}€</span>
                     </div>
                   </div>
                   
@@ -255,7 +255,7 @@ const ServicePage = ({ category }) => {
                     </div>
                     <div className="flex justify-between text-sm text-white/50">
                       <span>TVA (20%)</span>
-                      <span>{depositTVA.toFixed(2)}€</span>
+                      <span>+{depositTVA.toFixed(2)}€</span>
                     </div>
                     <div className="flex justify-between font-bold text-lg mt-1">
                       <span>Acompte TTC</span>
