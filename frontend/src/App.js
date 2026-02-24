@@ -61,6 +61,8 @@ function App() {
             <Route path="/paiement-confirme" element={<PaymentConfirmPage />} />
             {/* Shared Gallery (public access) */}
             <Route path="/galerie/:galleryId" element={<SharedGalleryPage />} />
+            {/* Guestbook (public access) */}
+            <Route path="/livre-dor/:guestbookId" element={<GuestbookPage />} />
             {/* Aliases for different URLs */}
             <Route path="/mariages" element={<ServicePage category="wedding" />} />
             <Route path="/podcast" element={<ServicePage category="podcast" />} />
