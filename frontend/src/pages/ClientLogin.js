@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { User, Mail, KeyRound } from "lucide-react";
+import { User, Mail, KeyRound, Lock, CreditCard, Check, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { API } from "../config/api";
 
@@ -14,6 +14,12 @@ const ClientLogin = () => {
   const [passwordResetCode, setPasswordResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  // Expired account state
+  const [showExpiredModal, setShowExpiredModal] = useState(false);
+  const [expiredData, setExpiredData] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [renewalStep, setRenewalStep] = useState("options"); // options, payment, success
+  const [renewalLoading, setRenewalLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
