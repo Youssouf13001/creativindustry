@@ -231,16 +231,69 @@ const ServicePage = ({ category }) => {
                     <span className="font-primary font-bold text-2xl text-primary">{depositAmount.toFixed(0)}€</span>
                   </div>
                   <p className="text-xs text-white/50 mt-2">
-                    Vous recevrez un email avec les coordonnées bancaires pour effectuer le virement.
+                    TVA 20% incluse dans le prix
                   </p>
+                </div>
+
+                {/* Payment Method Selection */}
+                <div className="mb-6">
+                  <label className="text-sm text-white/60 block mb-3">Mode de paiement de l'acompte</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("paypal")}
+                      className={`p-4 border-2 transition-all flex flex-col items-center gap-2 ${
+                        paymentMethod === "paypal" 
+                          ? "border-[#0070ba] bg-[#0070ba]/10" 
+                          : "border-white/20 hover:border-white/40"
+                      }`}
+                    >
+                      <CreditCard size={24} className={paymentMethod === "paypal" ? "text-[#0070ba]" : "text-white/60"} />
+                      <span className={`font-bold ${paymentMethod === "paypal" ? "text-[#0070ba]" : ""}`}>PayPal</span>
+                      <span className="text-xs text-white/50">Paiement immédiat</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("bank")}
+                      className={`p-4 border-2 transition-all flex flex-col items-center gap-2 ${
+                        paymentMethod === "bank" 
+                          ? "border-primary bg-primary/10" 
+                          : "border-white/20 hover:border-white/40"
+                      }`}
+                    >
+                      <Building2 size={24} className={paymentMethod === "bank" ? "text-primary" : "text-white/60"} />
+                      <span className={`font-bold ${paymentMethod === "bank" ? "text-primary" : ""}`}>Virement</span>
+                      <span className="text-xs text-white/50">Sous 48h</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setShowBuyModal(false)} className="btn-outline flex-1 py-3">
                     Annuler
                   </button>
-                  <button type="submit" disabled={buyLoading} className="btn-primary flex-1 py-3 disabled:opacity-50">
-                    {buyLoading ? "Envoi..." : "Valider et recevoir le RIB"}
+                  <button 
+                    type="submit" 
+                    disabled={buyLoading || paypalRedirecting} 
+                    className={`flex-1 py-3 font-bold flex items-center justify-center gap-2 ${
+                      paymentMethod === "paypal" 
+                        ? "bg-[#0070ba] hover:bg-[#005ea6] text-white" 
+                        : "btn-primary"
+                    } disabled:opacity-50`}
+                  >
+                    {buyLoading || paypalRedirecting ? (
+                      <>
+                        <Loader size={20} className="animate-spin" />
+                        {paypalRedirecting ? "Redirection PayPal..." : "Envoi..."}
+                      </>
+                    ) : paymentMethod === "paypal" ? (
+                      <>
+                        <CreditCard size={20} />
+                        Payer {depositAmount.toFixed(0)}€ avec PayPal
+                      </>
+                    ) : (
+                      "Valider et recevoir le RIB"
+                    )}
                   </button>
                 </div>
               </form>
