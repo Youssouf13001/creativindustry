@@ -138,6 +138,9 @@ const AdminDashboard = () => {
   const [expirationOption, setExpirationOption] = useState("6_months");
   const [customDays, setCustomDays] = useState(30);
   const [updatingExpiration, setUpdatingExpiration] = useState(false);
+  // Renewal requests state
+  const [renewalRequests, setRenewalRequests] = useState([]);
+  const [loadingRenewals, setLoadingRenewals] = useState(false);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
