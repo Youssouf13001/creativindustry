@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { Camera, Mic, Tv, Check, ArrowRight, X, Image, Video } from "lucide-react";
+import { Camera, Mic, Tv, Check, ArrowRight, X, Image, Video, CreditCard, Building2, Loader } from "lucide-react";
 import { toast } from "sonner";
 import { API } from "../config/api";
 
@@ -12,6 +12,7 @@ const ServicePage = ({ category }) => {
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [bankDetails, setBankDetails] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("paypal"); // "paypal" or "bank"
   const [buyFormData, setBuyFormData] = useState({
     client_name: "",
     client_email: "",
@@ -22,6 +23,7 @@ const ServicePage = ({ category }) => {
   });
   const [buyLoading, setBuyLoading] = useState(false);
   const [buySuccess, setBuySuccess] = useState(false);
+  const [paypalRedirecting, setPaypalRedirecting] = useState(false);
 
   const categoryInfo = {
     wedding: {
