@@ -129,6 +129,12 @@ const ServicePage = ({ category }) => {
   };
 
   const depositAmount = selectedPackage ? (selectedPackage.price * (bankDetails?.deposit_percentage || 30) / 100) : 0;
+  
+  // Calculate HT and TVA (price is TTC, TVA 20%)
+  const priceHT = selectedPackage ? (selectedPackage.price / 1.20) : 0;
+  const priceTVA = selectedPackage ? (selectedPackage.price - priceHT) : 0;
+  const depositHT = depositAmount / 1.20;
+  const depositTVA = depositAmount - depositHT;
 
   return (
     <div className="pt-20" data-testid={`service-page-${category}`}>
