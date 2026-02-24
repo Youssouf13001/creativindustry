@@ -132,6 +132,10 @@ const AdminDashboard = () => {
   const [newPostLocation, setNewPostLocation] = useState("");
   const [uploadingNewsMedia, setUploadingNewsMedia] = useState(false);
   const newsMediaRef = useRef(null);
+  // Billing/Facturation state
+  const [renewalInvoices, setRenewalInvoices] = useState([]);
+  const [billingStats, setBillingStats] = useState({ total_revenue: 0, total_invoices: 0 });
+  const [loadingBilling, setLoadingBilling] = useState(false);
   // Client expiration modal state
   const [showExpirationModal, setShowExpirationModal] = useState(false);
   const [expirationClient, setExpirationClient] = useState(null);
