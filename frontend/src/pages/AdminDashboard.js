@@ -1745,6 +1745,7 @@ const AdminDashboard = () => {
             { id: "galleries", label: "📸 Galeries" },
             { id: "content", label: "Contenu Site" },
             { id: "portfolio", label: "Portfolio" },
+            { id: "news", label: "📰 Actualités" },
             { id: "testimonials", label: "⭐ Témoignages" },
             { id: "welcome-popup", label: "🎬 Popup Accueil" },
             { id: "quotes", label: "Devis Mariage" },
