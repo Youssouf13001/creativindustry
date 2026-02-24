@@ -351,7 +351,21 @@ const ClientDashboard = () => {
     if (["devis", "invoices", "payments", "transfers"].includes(activeTab)) {
       fetchDevisData();
     }
+    if (activeTab === "invoices") {
+      // Also fetch renewal invoices
+      fetchRenewalInvoices();
+    }
   }, [activeTab]);
+
+  // Fetch renewal invoices for the client
+  const fetchRenewalInvoices = async () => {
+    try {
+      const res = await axios.get(`${API}/client/my-renewal-invoices`, { headers });
+      setMyRenewalInvoices(res.data || []);
+    } catch (e) {
+      console.error("Error fetching renewal invoices:", e);
+    }
+  };
 
   // Upload file transfer (supports multiple files)
   const handleFileTransfer = async (fileType, files) => {
