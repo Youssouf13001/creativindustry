@@ -56,6 +56,7 @@ const Header = () => {
     { name: "Podcast", path: "/services/podcast" },
     { name: "Plateau TV", path: "/services/tv_set" },
     { name: "Portfolio", path: "/portfolio" },
+    { name: "Actualités", path: "/actualites" },
     { name: "Témoignages", path: "/temoignages" },
     { name: "Rendez-vous", path: "/rendez-vous" },
     { name: "Contact", path: "/contact" },
