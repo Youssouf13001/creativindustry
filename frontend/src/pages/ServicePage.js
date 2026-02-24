@@ -360,7 +360,7 @@ const ServicePage = ({ category }) => {
                         </div>
                         <div className="flex justify-between text-white/50">
                           <span>TVA (20%)</span>
-                          <span>{depositTVA.toFixed(2)}€</span>
+                          <span>+{depositTVA.toFixed(2)}€</span>
                         </div>
                         <div className="flex justify-between text-primary font-bold text-lg">
                           <span>Montant à virer (TTC)</span>
