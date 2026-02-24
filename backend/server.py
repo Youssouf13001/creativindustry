@@ -3377,6 +3377,296 @@ async def get_paypal_payments(admin: dict = Depends(get_current_admin)):
     return payments
 
 
+# ==================== PAYPAL PAYMENTS FOR DEVIS/INVOICES ====================
+
+class DevisPaymentCreate(BaseModel):
+    """Model for creating a PayPal payment for a devis/invoice"""
+    devis_id: Optional[str] = None
+    invoice_id: Optional[str] = None
+    document_id: Optional[str] = None  # For admin uploaded documents
+    amount: float  # Amount to pay (can be partial)
+    description: Optional[str] = None
+
+@api_router.post("/client/paypal/create-devis-payment")
+async def create_devis_paypal_payment(data: DevisPaymentCreate, client: dict = Depends(get_current_client)):
+    """Create a PayPal payment for a devis, invoice or admin document"""
+    
+    # Validate amount
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Montant invalide")
+    
+    # Get client info
+    full_client = await db.clients.find_one({"id": client["id"]}, {"_id": 0, "password": 0})
+    if not full_client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Determine document type and get details
+    doc_type = None
+    doc_ref = None
+    doc_title = "Paiement"
+    
+    if data.devis_id:
+        devis = await db.client_devis.find_one({"devis_id": data.devis_id, "client_id": client["id"]}, {"_id": 0})
+        if not devis:
+            raise HTTPException(status_code=404, detail="Devis non trouvé")
+        doc_type = "devis"
+        doc_ref = data.devis_id
+        doc_title = f"Devis {devis.get('event_type', '')} - {devis.get('devis_number', data.devis_id[:8])}"
+    elif data.invoice_id:
+        invoice = await db.client_invoices.find_one({"invoice_id": data.invoice_id, "client_id": client["id"]}, {"_id": 0})
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Facture non trouvée")
+        doc_type = "invoice"
+        doc_ref = data.invoice_id
+        doc_title = f"Facture N° {invoice.get('invoice_number', data.invoice_id[:8])}"
+    elif data.document_id:
+        doc = await db.client_documents.find_one({"id": data.document_id, "client_id": client["id"]}, {"_id": 0})
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document non trouvé")
+        doc_type = "document"
+        doc_ref = data.document_id
+        doc_title = doc.get("title", f"Document {data.document_id[:8]}")
+    else:
+        raise HTTPException(status_code=400, detail="Veuillez spécifier un devis, une facture ou un document")
+    
+    # Calculate HT and TVA (20%)
+    amount_ttc = round(data.amount, 2)
+    amount_ht = round(amount_ttc / 1.20, 2)
+    tva = round(amount_ttc - amount_ht, 2)
+    
+    # Create PayPal payment
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    
+    payment = paypalrestsdk.Payment({
+        "intent": "sale",
+        "payer": {
+            "payment_method": "paypal"
+        },
+        "redirect_urls": {
+            "return_url": f"{site_url}/client/dashboard?payment_success=true&doc_type={doc_type}&doc_ref={doc_ref}",
+            "cancel_url": f"{site_url}/client/dashboard?payment_cancelled=true"
+        },
+        "transactions": [{
+            "item_list": {
+                "items": [{
+                    "name": doc_title,
+                    "sku": f"{doc_type}_{doc_ref}",
+                    "price": f"{amount_ttc:.2f}",
+                    "currency": "EUR",
+                    "quantity": 1
+                }]
+            },
+            "amount": {
+                "total": f"{amount_ttc:.2f}",
+                "currency": "EUR"
+            },
+            "description": data.description or f"Paiement {doc_title} - CREATIVINDUSTRY"
+        }]
+    })
+    
+    if payment.create():
+        # Store pending payment
+        payment_record = {
+            "id": str(uuid.uuid4()),
+            "paypal_payment_id": payment.id,
+            "client_id": client["id"],
+            "client_email": full_client["email"],
+            "client_name": full_client["name"],
+            "doc_type": doc_type,
+            "doc_ref": doc_ref,
+            "doc_title": doc_title,
+            "amount_ttc": amount_ttc,
+            "amount_ht": amount_ht,
+            "tva": tva,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.devis_paypal_payments.insert_one(payment_record)
+        
+        # Get approval URL
+        approval_url = None
+        for link in payment.links:
+            if link.rel == "approval_url":
+                approval_url = link.href
+                break
+        
+        return {
+            "success": True,
+            "payment_id": payment.id,
+            "approval_url": approval_url
+        }
+    else:
+        logging.error(f"PayPal error for devis payment: {payment.error}")
+        raise HTTPException(status_code=500, detail=f"Erreur PayPal: {payment.error.get('message', 'Unknown error')}")
+
+
+@api_router.post("/client/paypal/execute-devis-payment")
+async def execute_devis_paypal_payment(payment_id: str, payer_id: str, client: dict = Depends(get_current_client)):
+    """Execute a PayPal payment for devis/invoice after user approval"""
+    
+    # Find the payment record
+    payment_record = await db.devis_paypal_payments.find_one(
+        {"paypal_payment_id": payment_id, "client_id": client["id"]}, 
+        {"_id": 0}
+    )
+    if not payment_record:
+        raise HTTPException(status_code=404, detail="Paiement non trouvé")
+    
+    if payment_record["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Ce paiement a déjà été traité")
+    
+    # Execute the payment
+    payment = paypalrestsdk.Payment.find(payment_id)
+    
+    if payment.execute({"payer_id": payer_id}):
+        # Payment successful
+        now = datetime.now(timezone.utc).isoformat()
+        
+        # Update payment record
+        await db.devis_paypal_payments.update_one(
+            {"paypal_payment_id": payment_id},
+            {"$set": {
+                "status": "completed",
+                "completed_at": now,
+                "payer_id": payer_id
+            }}
+        )
+        
+        # Record the payment in client_payments
+        client_payment = {
+            "id": str(uuid.uuid4()),
+            "payment_id": str(uuid.uuid4()),
+            "client_id": client["id"],
+            "devis_id": payment_record.get("doc_ref") if payment_record["doc_type"] == "devis" else None,
+            "invoice_id": payment_record.get("doc_ref") if payment_record["doc_type"] == "invoice" else None,
+            "document_id": payment_record.get("doc_ref") if payment_record["doc_type"] == "document" else None,
+            "amount": payment_record["amount_ttc"],
+            "amount_ht": payment_record["amount_ht"],
+            "tva": payment_record["tva"],
+            "payment_date": now,
+            "payment_method": "PayPal",
+            "paypal_payment_id": payment_id,
+            "description": payment_record["doc_title"]
+        }
+        await db.client_payments.insert_one(client_payment)
+        
+        # Update document paid amount if applicable
+        if payment_record["doc_type"] == "document":
+            doc = await db.client_documents.find_one({"id": payment_record["doc_ref"]}, {"_id": 0})
+            if doc:
+                new_paid = (doc.get("paid_amount", 0) or 0) + payment_record["amount_ttc"]
+                new_status = "paid" if new_paid >= doc.get("amount", 0) else "partial"
+                await db.client_documents.update_one(
+                    {"id": payment_record["doc_ref"]},
+                    {"$set": {"paid_amount": new_paid, "status": new_status}}
+                )
+        
+        # Generate invoice/receipt
+        invoice_number = f"FAC-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+        service_invoice = {
+            "id": str(uuid.uuid4()),
+            "invoice_number": invoice_number,
+            "client_id": client["id"],
+            "client_email": payment_record["client_email"],
+            "client_name": payment_record["client_name"],
+            "paypal_payment_id": payment_id,
+            "doc_type": payment_record["doc_type"],
+            "doc_ref": payment_record["doc_ref"],
+            "doc_title": payment_record["doc_title"],
+            "amount_ht": payment_record["amount_ht"],
+            "tva": payment_record["tva"],
+            "amount_ttc": payment_record["amount_ttc"],
+            "status": "paid",
+            "payment_method": "PayPal",
+            "created_at": now
+        }
+        await db.service_invoices.insert_one(service_invoice)
+        
+        # Send confirmation email
+        if SMTP_EMAIL and SMTP_PASSWORD:
+            html_content = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center;">
+                        <h1 style="margin: 0; color: #fff;">✅ Paiement reçu !</h1>
+                    </div>
+                    <div style="padding: 30px;">
+                        <p style="font-size: 18px;">Bonjour <strong>{payment_record['client_name']}</strong>,</p>
+                        <p style="color: #ccc;">Nous avons bien reçu votre paiement de <strong style="color: #22c55e;">{payment_record['amount_ttc']:.2f}€ TTC</strong></p>
+                        <div style="background: #3a3a3a; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <p style="margin: 0 0 10px 0;"><strong>Référence :</strong> {invoice_number}</p>
+                            <p style="margin: 0 0 10px 0;"><strong>Pour :</strong> {payment_record['doc_title']}</p>
+                            <p style="margin: 0 0 5px 0;"><strong>Montant HT :</strong> {payment_record['amount_ht']:.2f}€</p>
+                            <p style="margin: 0 0 5px 0;"><strong>TVA (20%) :</strong> {payment_record['tva']:.2f}€</p>
+                            <p style="margin: 0; color: #22c55e; font-size: 20px;"><strong>Total TTC :</strong> {payment_record['amount_ttc']:.2f}€</p>
+                        </div>
+                        <p style="color: #888;">Votre facture est disponible dans votre espace client.</p>
+                        <a href="{os.environ.get('SITE_URL', 'https://creativindustry.com')}/espace-client" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 20px;">
+                            Mon espace client
+                        </a>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            try:
+                send_email(payment_record["client_email"], f"✅ Paiement confirmé - {payment_record['doc_title']}", html_content)
+            except Exception as e:
+                logging.error(f"Failed to send payment confirmation email: {e}")
+        
+        # Notify admin
+        if SMTP_EMAIL and SMTP_PASSWORD:
+            admin_html = f"""
+            <html>
+            <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 20px; text-align: center;">
+                        <h2 style="margin: 0; color: #fff;">💰 Nouveau paiement PayPal</h2>
+                    </div>
+                    <div style="padding: 20px;">
+                        <p><strong>Client :</strong> {payment_record['client_name']} ({payment_record['client_email']})</p>
+                        <p><strong>Pour :</strong> {payment_record['doc_title']}</p>
+                        <p><strong>Montant :</strong> <span style="color: #22c55e; font-size: 24px;">{payment_record['amount_ttc']:.2f}€ TTC</span></p>
+                        <p style="color: #888;">({payment_record['amount_ht']:.2f}€ HT + {payment_record['tva']:.2f}€ TVA)</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            try:
+                send_email(SMTP_EMAIL, f"💰 Paiement reçu - {payment_record['client_name']}", admin_html)
+            except:
+                pass
+        
+        return {
+            "success": True,
+            "message": f"Paiement de {payment_record['amount_ttc']:.2f}€ confirmé !",
+            "invoice_number": invoice_number
+        }
+    else:
+        # Payment failed
+        await db.devis_paypal_payments.update_one(
+            {"paypal_payment_id": payment_id},
+            {"$set": {
+                "status": "failed",
+                "error": str(payment.error)
+            }}
+        )
+        logging.error(f"PayPal execution error for devis payment: {payment.error}")
+        raise HTTPException(status_code=500, detail="Le paiement a échoué. Veuillez réessayer.")
+
+
+@api_router.get("/client/my-service-invoices")
+async def get_client_service_invoices(client: dict = Depends(get_current_client)):
+    """Get service/payment invoices for client"""
+    invoices = await db.service_invoices.find(
+        {"client_id": client["id"]},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return invoices
+
+
 # ==================== RENEWAL REQUESTS (Legacy - kept for manual validation) ====================
 
 class RenewalRequest(BaseModel):
