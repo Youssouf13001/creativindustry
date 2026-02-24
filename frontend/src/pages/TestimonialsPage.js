@@ -103,7 +103,17 @@ const TestimonialsPage = () => {
       });
     } catch (e) {
       console.error("Error submitting testimonial:", e);
-      alert(e.response?.data?.detail || "Une erreur est survenue. Veuillez réessayer.");
+      const errorData = e.response?.data;
+      
+      // Handle Pydantic validation errors (array of objects)
+      if (errorData?.detail && Array.isArray(errorData.detail)) {
+        const messages = errorData.detail.map(err => err.msg || "Erreur de validation").join(", ");
+        alert(messages);
+      } else if (typeof errorData?.detail === 'string') {
+        alert(errorData.detail);
+      } else {
+        alert("Une erreur est survenue. Veuillez réessayer.");
+      }
     } finally {
       setSubmitting(false);
     }
