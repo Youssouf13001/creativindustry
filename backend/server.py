@@ -10021,6 +10021,410 @@ async def get_post_comments(post_id: str):
     return comments
 
 
+# ==================== GUESTBOOK ROUTES ====================
+
+# Create guestbook folder
+GUESTBOOK_DIR = UPLOADS_DIR / "guestbooks"
+GUESTBOOK_DIR.mkdir(exist_ok=True)
+
+
+@api_router.post("/admin/guestbooks", response_model=dict)
+async def create_guestbook(data: GuestbookCreate, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Create a new guestbook for a client"""
+    verify_token(credentials.credentials)
+    
+    # Verify client exists
+    client = await db.clients.find_one({"id": data.client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    guestbook_id = str(uuid.uuid4())
+    guestbook = {
+        "id": guestbook_id,
+        "client_id": data.client_id,
+        "client_name": client.get("name", ""),
+        "name": data.name,
+        "event_date": data.event_date,
+        "description": data.description,
+        "welcome_message": data.welcome_message or f"Laissez un message pour {client.get('name', 'les mariés')} !",
+        "is_active": True,
+        "allow_video": data.allow_video,
+        "allow_audio": data.allow_audio,
+        "allow_text": data.allow_text,
+        "max_video_duration": data.max_video_duration,
+        "max_audio_duration": data.max_audio_duration,
+        "require_approval": data.require_approval,
+        "message_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.guestbooks.insert_one(guestbook)
+    
+    # Create folder for media
+    guestbook_folder = GUESTBOOK_DIR / guestbook_id
+    guestbook_folder.mkdir(exist_ok=True)
+    
+    guestbook.pop("_id", None)
+    return guestbook
+
+
+@api_router.get("/admin/guestbooks", response_model=List[dict])
+async def get_all_guestbooks(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get all guestbooks for admin"""
+    verify_token(credentials.credentials)
+    
+    guestbooks = await db.guestbooks.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    # Add message counts
+    for gb in guestbooks:
+        total = await db.guestbook_messages.count_documents({"guestbook_id": gb["id"]})
+        pending = await db.guestbook_messages.count_documents({"guestbook_id": gb["id"], "is_approved": False})
+        gb["message_count"] = total
+        gb["pending_count"] = pending
+    
+    return guestbooks
+
+
+@api_router.get("/admin/guestbooks/{guestbook_id}", response_model=dict)
+async def get_guestbook_admin(guestbook_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get a specific guestbook with all messages"""
+    verify_token(credentials.credentials)
+    
+    guestbook = await db.guestbooks.find_one({"id": guestbook_id}, {"_id": 0})
+    if not guestbook:
+        raise HTTPException(status_code=404, detail="Livre d'or non trouvé")
+    
+    messages = await db.guestbook_messages.find(
+        {"guestbook_id": guestbook_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+    
+    guestbook["messages"] = messages
+    return guestbook
+
+
+@api_router.put("/admin/guestbooks/{guestbook_id}", response_model=dict)
+async def update_guestbook(guestbook_id: str, data: dict, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Update guestbook settings"""
+    verify_token(credentials.credentials)
+    
+    guestbook = await db.guestbooks.find_one({"id": guestbook_id})
+    if not guestbook:
+        raise HTTPException(status_code=404, detail="Livre d'or non trouvé")
+    
+    allowed_fields = ["name", "event_date", "description", "welcome_message", "is_active", 
+                      "allow_video", "allow_audio", "allow_text", "max_video_duration", 
+                      "max_audio_duration", "require_approval"]
+    
+    update_data = {k: v for k, v in data.items() if k in allowed_fields}
+    
+    if update_data:
+        await db.guestbooks.update_one({"id": guestbook_id}, {"$set": update_data})
+    
+    updated = await db.guestbooks.find_one({"id": guestbook_id}, {"_id": 0})
+    return updated
+
+
+@api_router.delete("/admin/guestbooks/{guestbook_id}")
+async def delete_guestbook(guestbook_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Delete a guestbook and all its messages"""
+    verify_token(credentials.credentials)
+    
+    guestbook = await db.guestbooks.find_one({"id": guestbook_id})
+    if not guestbook:
+        raise HTTPException(status_code=404, detail="Livre d'or non trouvé")
+    
+    # Delete media files
+    guestbook_folder = GUESTBOOK_DIR / guestbook_id
+    if guestbook_folder.exists():
+        shutil.rmtree(guestbook_folder)
+    
+    # Delete messages and guestbook
+    await db.guestbook_messages.delete_many({"guestbook_id": guestbook_id})
+    await db.guestbooks.delete_one({"id": guestbook_id})
+    
+    return {"success": True, "message": "Livre d'or supprimé"}
+
+
+@api_router.put("/admin/guestbook-messages/{message_id}/approve")
+async def approve_guestbook_message(message_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Approve a guestbook message"""
+    verify_token(credentials.credentials)
+    
+    message = await db.guestbook_messages.find_one({"id": message_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Message non trouvé")
+    
+    await db.guestbook_messages.update_one(
+        {"id": message_id},
+        {"$set": {"is_approved": True}}
+    )
+    
+    return {"success": True}
+
+
+@api_router.delete("/admin/guestbook-messages/{message_id}")
+async def delete_guestbook_message(message_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Delete a guestbook message"""
+    verify_token(credentials.credentials)
+    
+    message = await db.guestbook_messages.find_one({"id": message_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Message non trouvé")
+    
+    # Delete media file if exists
+    if message.get("media_url"):
+        media_path = UPLOADS_DIR / message["media_url"].lstrip("/uploads/")
+        if media_path.exists():
+            media_path.unlink()
+    
+    await db.guestbook_messages.delete_one({"id": message_id})
+    
+    return {"success": True}
+
+
+# ==================== PUBLIC GUESTBOOK ROUTES ====================
+
+@api_router.get("/public/guestbooks/{guestbook_id}")
+async def get_public_guestbook(guestbook_id: str):
+    """Public endpoint to access a guestbook for leaving messages"""
+    guestbook = await db.guestbooks.find_one({"id": guestbook_id}, {"_id": 0})
+    if not guestbook:
+        raise HTTPException(status_code=404, detail="Livre d'or non trouvé")
+    
+    if not guestbook.get("is_active", True):
+        raise HTTPException(status_code=403, detail="Ce livre d'or n'est plus actif")
+    
+    # Return only public info
+    return {
+        "id": guestbook["id"],
+        "name": guestbook.get("name"),
+        "event_date": guestbook.get("event_date"),
+        "welcome_message": guestbook.get("welcome_message"),
+        "allow_video": guestbook.get("allow_video", True),
+        "allow_audio": guestbook.get("allow_audio", True),
+        "allow_text": guestbook.get("allow_text", True),
+        "max_video_duration": guestbook.get("max_video_duration", 60),
+        "max_audio_duration": guestbook.get("max_audio_duration", 120)
+    }
+
+
+@api_router.get("/public/guestbooks/{guestbook_id}/messages")
+async def get_public_guestbook_messages(guestbook_id: str):
+    """Get approved messages for a public guestbook"""
+    guestbook = await db.guestbooks.find_one({"id": guestbook_id})
+    if not guestbook:
+        raise HTTPException(status_code=404, detail="Livre d'or non trouvé")
+    
+    # Get only approved messages
+    messages = await db.guestbook_messages.find(
+        {"guestbook_id": guestbook_id, "is_approved": True},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    return messages
+
+
+@api_router.post("/public/guestbooks/{guestbook_id}/messages/text")
+async def post_text_message(
+    guestbook_id: str,
+    author_name: str = Form(...),
+    text_content: str = Form(...)
+):
+    """Post a text message to the guestbook"""
+    guestbook = await db.guestbooks.find_one({"id": guestbook_id})
+    if not guestbook:
+        raise HTTPException(status_code=404, detail="Livre d'or non trouvé")
+    
+    if not guestbook.get("is_active", True):
+        raise HTTPException(status_code=403, detail="Ce livre d'or n'est plus actif")
+    
+    if not guestbook.get("allow_text", True):
+        raise HTTPException(status_code=403, detail="Les messages texte ne sont pas autorisés")
+    
+    message_id = str(uuid.uuid4())
+    message = {
+        "id": message_id,
+        "guestbook_id": guestbook_id,
+        "author_name": author_name,
+        "message_type": "text",
+        "text_content": text_content,
+        "is_approved": not guestbook.get("require_approval", True),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.guestbook_messages.insert_one(message)
+    message.pop("_id", None)
+    
+    return {"success": True, "message": message, "needs_approval": guestbook.get("require_approval", True)}
+
+
+@api_router.post("/public/guestbooks/{guestbook_id}/messages/media")
+async def post_media_message(
+    guestbook_id: str,
+    author_name: str = Form(...),
+    message_type: str = Form(...),  # "audio" or "video"
+    file: UploadFile = File(...),
+    duration: int = Form(default=0)
+):
+    """Post an audio or video message to the guestbook"""
+    guestbook = await db.guestbooks.find_one({"id": guestbook_id})
+    if not guestbook:
+        raise HTTPException(status_code=404, detail="Livre d'or non trouvé")
+    
+    if not guestbook.get("is_active", True):
+        raise HTTPException(status_code=403, detail="Ce livre d'or n'est plus actif")
+    
+    if message_type == "video" and not guestbook.get("allow_video", True):
+        raise HTTPException(status_code=403, detail="Les vidéos ne sont pas autorisées")
+    
+    if message_type == "audio" and not guestbook.get("allow_audio", True):
+        raise HTTPException(status_code=403, detail="Les messages audio ne sont pas autorisés")
+    
+    # Check duration limits
+    if message_type == "video" and duration > guestbook.get("max_video_duration", 60):
+        raise HTTPException(status_code=400, detail=f"Vidéo trop longue (max {guestbook.get('max_video_duration', 60)}s)")
+    
+    if message_type == "audio" and duration > guestbook.get("max_audio_duration", 120):
+        raise HTTPException(status_code=400, detail=f"Audio trop long (max {guestbook.get('max_audio_duration', 120)}s)")
+    
+    # Validate file type
+    allowed_video = ["video/mp4", "video/webm", "video/quicktime"]
+    allowed_audio = ["audio/webm", "audio/mp4", "audio/mpeg", "audio/ogg", "audio/wav"]
+    
+    if message_type == "video" and file.content_type not in allowed_video:
+        raise HTTPException(status_code=400, detail="Format vidéo non supporté")
+    
+    if message_type == "audio" and file.content_type not in allowed_audio:
+        raise HTTPException(status_code=400, detail="Format audio non supporté")
+    
+    # Save file
+    guestbook_folder = GUESTBOOK_DIR / guestbook_id
+    guestbook_folder.mkdir(exist_ok=True)
+    
+    message_id = str(uuid.uuid4())
+    file_ext = Path(file.filename).suffix.lower() or (".webm" if "webm" in file.content_type else ".mp4")
+    media_filename = f"{message_id}{file_ext}"
+    file_path = guestbook_folder / media_filename
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    media_url = f"/uploads/guestbooks/{guestbook_id}/{media_filename}"
+    
+    message = {
+        "id": message_id,
+        "guestbook_id": guestbook_id,
+        "author_name": author_name,
+        "message_type": message_type,
+        "media_url": media_url,
+        "duration": duration,
+        "is_approved": not guestbook.get("require_approval", True),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.guestbook_messages.insert_one(message)
+    message.pop("_id", None)
+    
+    return {"success": True, "message": message, "needs_approval": guestbook.get("require_approval", True)}
+
+
+# ==================== CLIENT GUESTBOOK ROUTES ====================
+
+@api_router.get("/client/guestbooks")
+async def get_client_guestbooks(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get guestbooks for the logged-in client"""
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    guestbooks = await db.guestbooks.find(
+        {"client_id": client_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    # Add message counts
+    for gb in guestbooks:
+        total = await db.guestbook_messages.count_documents({"guestbook_id": gb["id"]})
+        pending = await db.guestbook_messages.count_documents({"guestbook_id": gb["id"], "is_approved": False})
+        approved = await db.guestbook_messages.count_documents({"guestbook_id": gb["id"], "is_approved": True})
+        gb["message_count"] = total
+        gb["pending_count"] = pending
+        gb["approved_count"] = approved
+    
+    return guestbooks
+
+
+@api_router.get("/client/guestbooks/{guestbook_id}")
+async def get_client_guestbook(guestbook_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get a specific guestbook with messages for the client"""
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    guestbook = await db.guestbooks.find_one(
+        {"id": guestbook_id, "client_id": client_id},
+        {"_id": 0}
+    )
+    if not guestbook:
+        raise HTTPException(status_code=404, detail="Livre d'or non trouvé")
+    
+    messages = await db.guestbook_messages.find(
+        {"guestbook_id": guestbook_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(500)
+    
+    guestbook["messages"] = messages
+    return guestbook
+
+
+@api_router.put("/client/guestbook-messages/{message_id}/approve")
+async def client_approve_message(message_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Client approves a guestbook message"""
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    message = await db.guestbook_messages.find_one({"id": message_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Message non trouvé")
+    
+    # Verify client owns this guestbook
+    guestbook = await db.guestbooks.find_one({"id": message["guestbook_id"], "client_id": client_id})
+    if not guestbook:
+        raise HTTPException(status_code=403, detail="Non autorisé")
+    
+    await db.guestbook_messages.update_one(
+        {"id": message_id},
+        {"$set": {"is_approved": True}}
+    )
+    
+    return {"success": True}
+
+
+@api_router.delete("/client/guestbook-messages/{message_id}")
+async def client_delete_message(message_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Client deletes a guestbook message"""
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    message = await db.guestbook_messages.find_one({"id": message_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Message non trouvé")
+    
+    # Verify client owns this guestbook
+    guestbook = await db.guestbooks.find_one({"id": message["guestbook_id"], "client_id": client_id})
+    if not guestbook:
+        raise HTTPException(status_code=403, detail="Non autorisé")
+    
+    # Delete media file if exists
+    if message.get("media_url"):
+        media_path = UPLOADS_DIR / message["media_url"].lstrip("/uploads/")
+        if media_path.exists():
+            media_path.unlink()
+    
+    await db.guestbook_messages.delete_one({"id": message_id})
+    
+    return {"success": True}
+
+
 app.include_router(api_router)
 
 # Mount static files for uploads
