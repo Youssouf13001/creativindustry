@@ -66,6 +66,7 @@ function App() {
         <Footer />
         <ChatWidget />
         <WelcomePopup />
+        <PWAInstallPrompt />
         <Toaster position="top-right" richColors />
       </div>
     </BrowserRouter>
