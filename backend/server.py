@@ -2335,8 +2335,8 @@ async def get_client_account_status(client: dict = Depends(get_current_client)):
                 "client_name": full_client.get("name"),
                 "message": "Votre accès a expiré",
                 "renewal_options": [
-                    {"id": "weekly", "label": "1 semaine", "price": 20, "days": 7},
-                    {"id": "6months", "label": "6 mois", "price": 90, "days": 180}
+                    {"id": "weekly", "label": "1 semaine", "price": 24, "price_ht": 20, "tva": 4, "days": 7},
+                    {"id": "6months", "label": "6 mois", "price": 108, "price_ht": 90, "tva": 18, "days": 180}
                 ]
             }
         )
