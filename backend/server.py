@@ -3048,6 +3048,201 @@ async def get_client_expiration(
     }
 
 
+# ==================== RENEWAL REQUESTS ====================
+
+class RenewalRequest(BaseModel):
+    """Model for renewal request"""
+    client_email: str
+    plan: str  # "weekly" or "6months"
+    
+@api_router.post("/renewal/request")
+async def create_renewal_request(data: RenewalRequest):
+    """Create a renewal request after PayPal payment (public endpoint)"""
+    
+    # Find client by email
+    client = await db.clients.find_one({"email": data.client_email}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Get plan details
+    plans = {
+        "weekly": {"label": "1 semaine", "price": 2, "days": 7},
+        "6months": {"label": "6 mois", "price": 90, "days": 180}
+    }
+    
+    if data.plan not in plans:
+        raise HTTPException(status_code=400, detail="Plan invalide")
+    
+    plan = plans[data.plan]
+    
+    # Create renewal request
+    request_data = {
+        "id": str(uuid.uuid4()),
+        "client_id": client["id"],
+        "client_email": client["email"],
+        "client_name": client["name"],
+        "plan": data.plan,
+        "plan_label": plan["label"],
+        "amount": plan["price"],
+        "days": plan["days"],
+        "status": "pending",  # pending, approved, rejected
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "processed_at": None,
+        "processed_by": None
+    }
+    
+    await db.renewal_requests.insert_one(request_data)
+    
+    # Send notification email to admin
+    if SMTP_EMAIL and SMTP_PASSWORD:
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+                <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #fff;">💳 Nouvelle demande de renouvellement</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <p style="font-size: 18px;"><strong>{client['name']}</strong></p>
+                    <p style="color: #888;">{client['email']}</p>
+                    <div style="background: #3a3a3a; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <p style="color: #D4AF37; font-size: 24px; margin: 0;"><strong>{plan['price']}€</strong> - {plan['label']}</p>
+                    </div>
+                    <p style="color: #f59e0b;">⏳ En attente de validation du paiement</p>
+                    <p style="color: #888; font-size: 14px; margin-top: 20px;">
+                        Vérifiez le paiement PayPal et validez la demande dans le dashboard admin.
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        try:
+            send_email(SMTP_EMAIL, f"💳 Renouvellement: {client['name']} - {plan['price']}€", html_content)
+        except Exception as e:
+            logging.error(f"Failed to send renewal notification: {e}")
+    
+    return {
+        "success": True,
+        "message": "Demande de renouvellement enregistrée. Votre compte sera débloqué dès validation du paiement.",
+        "request_id": request_data["id"]
+    }
+
+
+@api_router.get("/admin/renewal-requests")
+async def get_renewal_requests(
+    admin: dict = Depends(get_current_admin)
+):
+    """Get all pending renewal requests (admin only)"""
+    requests = await db.renewal_requests.find(
+        {"status": "pending"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(100)
+    return requests
+
+
+@api_router.put("/admin/renewal-requests/{request_id}/approve")
+async def approve_renewal_request(
+    request_id: str,
+    admin: dict = Depends(get_current_admin)
+):
+    """Approve a renewal request and extend client access (admin only)"""
+    
+    # Find the request
+    request = await db.renewal_requests.find_one({"id": request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Demande non trouvée")
+    
+    if request["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Cette demande a déjà été traitée")
+    
+    # Calculate new expiration date
+    new_expires_at = (datetime.now(timezone.utc) + timedelta(days=request["days"])).isoformat()
+    
+    # Update client
+    await db.clients.update_one(
+        {"id": request["client_id"]},
+        {"$set": {
+            "expires_at": new_expires_at,
+            "auto_delete_days": request["days"],
+            "last_renewal": datetime.now(timezone.utc).isoformat(),
+            "last_renewal_plan": request["plan"]
+        }}
+    )
+    
+    # Update request status
+    await db.renewal_requests.update_one(
+        {"id": request_id},
+        {"$set": {
+            "status": "approved",
+            "processed_at": datetime.now(timezone.utc).isoformat(),
+            "processed_by": admin.get("email")
+        }}
+    )
+    
+    # Send confirmation email to client
+    if SMTP_EMAIL and SMTP_PASSWORD:
+        expiry_date = datetime.fromisoformat(new_expires_at.replace('Z', '+00:00'))
+        formatted_date = expiry_date.strftime("%d/%m/%Y")
+        
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+                <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #fff;">✅ Compte réactivé !</h1>
+                </div>
+                <div style="padding: 30px;">
+                    <p style="font-size: 18px;">Bonjour <strong>{request['client_name']}</strong>,</p>
+                    <p style="color: #ccc;">Votre paiement a été validé avec succès !</p>
+                    <div style="background: #3a3a3a; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                        <p style="color: #22c55e; font-size: 20px; margin: 0;">Votre accès est prolongé jusqu'au</p>
+                        <p style="color: #D4AF37; font-size: 28px; margin: 10px 0;"><strong>{formatted_date}</strong></p>
+                    </div>
+                    <p style="color: #888;">Vous pouvez maintenant vous reconnecter et profiter de vos photos et vidéos.</p>
+                    <a href="https://creativindustry.com/espace-client" style="display: inline-block; background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%); color: #000; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 20px;">
+                        Se connecter
+                    </a>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        try:
+            send_email(request["client_email"], "✅ Votre compte CREATIVINDUSTRY est réactivé !", html_content)
+        except Exception as e:
+            logging.error(f"Failed to send renewal confirmation: {e}")
+    
+    return {
+        "success": True,
+        "message": f"Compte de {request['client_name']} réactivé jusqu'au {formatted_date}",
+        "new_expires_at": new_expires_at
+    }
+
+
+@api_router.put("/admin/renewal-requests/{request_id}/reject")
+async def reject_renewal_request(
+    request_id: str,
+    admin: dict = Depends(get_current_admin)
+):
+    """Reject a renewal request (admin only)"""
+    
+    request = await db.renewal_requests.find_one({"id": request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Demande non trouvée")
+    
+    await db.renewal_requests.update_one(
+        {"id": request_id},
+        {"$set": {
+            "status": "rejected",
+            "processed_at": datetime.now(timezone.utc).isoformat(),
+            "processed_by": admin.get("email")
+        }}
+    )
+    
+    return {"success": True, "message": "Demande rejetée"}
+
+
 # ==================== CLIENT DOCUMENTS (Admin uploaded invoices/quotes) ====================
 
 @api_router.post("/admin/clients/{client_id}/documents")
