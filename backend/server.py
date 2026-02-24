@@ -8383,7 +8383,7 @@ async def check_if_liked(
 async def add_comment(
     post_id: str,
     comment: NewsCommentCreate,
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    authorization: Optional[str] = Header(None)
 ):
     """Add a comment to a news post (authenticated clients auto-approved, guests need validation)"""
     post = await db.news_posts.find_one({"id": post_id})
@@ -8396,18 +8396,20 @@ async def add_comment(
     client_avatar = None
     is_authenticated = False
     
-    try:
-        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        client_id = payload.get("client_id")
-        if client_id:
-            # Get client info
-            client = await db.clients.find_one({"id": client_id}, {"_id": 0, "name": 1, "profile_photo": 1})
-            if client:
-                client_name = client.get("name")
-                client_avatar = client.get("profile_photo")
-                is_authenticated = True
-    except:
-        pass
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            token = authorization.replace("Bearer ", "")
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            client_id = payload.get("client_id")
+            if client_id:
+                # Get client info
+                client = await db.clients.find_one({"id": client_id}, {"_id": 0, "name": 1, "profile_photo": 1})
+                if client:
+                    client_name = client.get("name")
+                    client_avatar = client.get("profile_photo")
+                    is_authenticated = True
+        except:
+            pass
     
     # If not authenticated, require guest info
     if not is_authenticated:
