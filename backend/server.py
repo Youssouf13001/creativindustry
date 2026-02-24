@@ -3216,6 +3216,28 @@ async def execute_paypal_payment(payment_id: str, payer_id: str):
             }}
         )
         
+        # Generate invoice
+        invoice_number = f"FAC-{datetime.now().strftime('%Y%m%d')}-{str(uuid.uuid4())[:6].upper()}"
+        invoice = {
+            "id": str(uuid.uuid4()),
+            "invoice_number": invoice_number,
+            "client_id": payment_record["client_id"],
+            "client_email": payment_record["client_email"],
+            "client_name": payment_record["client_name"],
+            "paypal_payment_id": payment_id,
+            "plan": payment_record["plan"],
+            "plan_label": payment_record["plan_label"],
+            "amount_ht": round(payment_record["amount"] / 1.20, 2),  # HT (sans TVA 20%)
+            "tva": round(payment_record["amount"] - (payment_record["amount"] / 1.20), 2),
+            "amount_ttc": payment_record["amount"],
+            "days": payment_record["days"],
+            "new_expires_at": new_expires_at,
+            "status": "paid",
+            "payment_method": "PayPal",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.renewal_invoices.insert_one(invoice)
+        
         # Send confirmation email
         expiry_date = datetime.fromisoformat(new_expires_at.replace('Z', '+00:00'))
         formatted_date = expiry_date.strftime("%d/%m/%Y")
