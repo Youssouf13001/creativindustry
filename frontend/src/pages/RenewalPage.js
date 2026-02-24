@@ -20,17 +20,21 @@ const RenewalPage = () => {
     {
       id: "weekly",
       label: "1 semaine",
-      price: 20,
+      price: 24,
+      price_ht: 20,
+      tva: 4,
       description: "Accès pendant 7 jours",
       popular: false
     },
     {
       id: "6months",
       label: "6 mois",
-      price: 90,
+      price: 108,
+      price_ht: 90,
+      tva: 18,
       description: "Accès pendant 180 jours",
       popular: true,
-      savings: "Économisez 50€ !"
+      savings: "Économisez 36€ !"
     }
   ];
 
