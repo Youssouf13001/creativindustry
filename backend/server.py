@@ -7950,11 +7950,12 @@ class TestimonialCreateAuth(BaseModel):
     message: str
     rating: int = Field(default=5, ge=1, le=5)
     service_type: Optional[str] = None
+    client_role: Optional[str] = None  # ex: "Mariés 2024"
 
 
 @api_router.post("/testimonials", response_model=dict)
 async def create_testimonial(
-    testimonial: TestimonialCreate,
+    testimonial: TestimonialCreateAuth,
     credentials: HTTPAuthorizationCredentials = Depends(security)
 ):
     """Submit a new testimonial (client only - must be authenticated)"""
