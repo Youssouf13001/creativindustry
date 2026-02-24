@@ -92,13 +92,23 @@ const NewsPage = () => {
     e.preventDefault();
     if (!newComment.trim()) return;
     
+    // Validate guest fields if not authenticated
+    if (!isAuthenticated && (!guestName.trim() || !guestEmail.trim())) {
+      alert("Veuillez remplir votre nom et email");
+      return;
+    }
+    
     setSubmittingComment(true);
     try {
       const payload = {
-        content: newComment,
-        guest_name: !isAuthenticated ? guestName : null,
-        guest_email: !isAuthenticated ? guestEmail : null
+        content: newComment
       };
+      
+      // Only add guest fields if not authenticated
+      if (!isAuthenticated) {
+        payload.guest_name = guestName;
+        payload.guest_email = guestEmail;
+      }
       
       const res = await axios.post(
         `${API}/news/${selectedPost.id}/comment`,
@@ -114,6 +124,7 @@ const NewsPage = () => {
         setPosts(prev => prev.map(p => 
           p.id === selectedPost.id ? { ...p, comments_count: p.comments_count + 1 } : p
         ));
+        setSelectedPost(prev => prev ? { ...prev, comments_count: prev.comments_count + 1 } : prev);
       }
       
       alert(res.data.message);
@@ -121,11 +132,15 @@ const NewsPage = () => {
       setGuestName("");
       setGuestEmail("");
     } catch (e) {
-      const errorMsg = e.response?.data?.detail;
-      if (typeof errorMsg === 'string') {
-        alert(errorMsg);
-      } else if (errorMsg) {
-        alert(JSON.stringify(errorMsg));
+      console.error("Comment error:", e);
+      const errorData = e.response?.data;
+      
+      // Handle Pydantic validation errors (array of objects)
+      if (errorData?.detail && Array.isArray(errorData.detail)) {
+        const messages = errorData.detail.map(err => err.msg || "Erreur de validation").join(", ");
+        alert(messages);
+      } else if (typeof errorData?.detail === 'string') {
+        alert(errorData.detail);
       } else {
         alert("Erreur lors de l'envoi du commentaire");
       }
