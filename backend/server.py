@@ -8400,15 +8400,19 @@ async def add_comment(
         try:
             token = authorization.replace("Bearer ", "")
             payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-            client_id = payload.get("client_id")
-            if client_id:
+            # Client tokens use 'sub' for client_id
+            client_id = payload.get("client_id") or payload.get("sub")
+            token_type = payload.get("type")
+            
+            if client_id and token_type == "client":
                 # Get client info
                 client = await db.clients.find_one({"id": client_id}, {"_id": 0, "name": 1, "profile_photo": 1})
                 if client:
                     client_name = client.get("name")
                     client_avatar = client.get("profile_photo")
                     is_authenticated = True
-        except:
+        except Exception as e:
+            logging.error(f"Token decode error: {e}")
             pass
     
     # If not authenticated, require guest info
