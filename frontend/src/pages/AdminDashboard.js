@@ -124,6 +124,14 @@ const AdminDashboard = () => {
   const [welcomePopup, setWelcomePopup] = useState(null);
   const [uploadingPopupVideo, setUploadingPopupVideo] = useState(false);
   const welcomeVideoRef = useRef(null);
+  // News/Actualités state
+  const [newsPosts, setNewsPosts] = useState([]);
+  const [loadingNews, setLoadingNews] = useState(false);
+  const [pendingComments, setPendingComments] = useState([]);
+  const [newPostCaption, setNewPostCaption] = useState("");
+  const [newPostLocation, setNewPostLocation] = useState("");
+  const [uploadingNewsMedia, setUploadingNewsMedia] = useState(false);
+  const newsMediaRef = useRef(null);
   const navigate = useNavigate();
 
   const token = localStorage.getItem("admin_token");
