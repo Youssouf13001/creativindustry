@@ -302,13 +302,13 @@ const RenewalPage = () => {
           ) : (
             <>
               <CreditCard size={24} />
-              Payer {selectedPlan ? `${selectedPlan.price}€` : ""} avec PayPal
+              Payer {selectedPlan ? `${selectedPlan.price}€ TTC` : ""} avec PayPal
             </>
           )}
         </button>
 
         <p className="text-center text-white/40 text-sm mt-4">
-          Paiement sécurisé via PayPal. Votre compte sera activé automatiquement.
+          Paiement sécurisé via PayPal. TVA 20% incluse. Votre compte sera activé automatiquement.
         </p>
 
         {/* Back link */}
