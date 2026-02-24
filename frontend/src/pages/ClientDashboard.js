@@ -43,6 +43,10 @@ const ClientDashboard = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showMustChangePassword, setShowMustChangePassword] = useState(false);
   const [forcePasswordData, setForcePasswordData] = useState({ current: "", new: "", confirm: "" });
+  
+  // Guestbook states
+  const [myGuestbooks, setMyGuestbooks] = useState([]);
+  const [selectedClientGuestbook, setSelectedClientGuestbook] = useState(null);
   const [myRenewalInvoices, setMyRenewalInvoices] = useState([]);
   
   // Account expiration states
