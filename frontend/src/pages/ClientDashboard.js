@@ -39,6 +39,7 @@ const ClientDashboard = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showMustChangePassword, setShowMustChangePassword] = useState(false);
   const [forcePasswordData, setForcePasswordData] = useState({ current: "", new: "", confirm: "" });
+  const [myRenewalInvoices, setMyRenewalInvoices] = useState([]);
   
   // Account expiration states
   const [accountStatus, setAccountStatus] = useState(null);
