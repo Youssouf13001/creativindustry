@@ -7,6 +7,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ChatWidget from "./components/ChatWidget";
 import WelcomePopup from "./components/WelcomePopup";
+import PWAInstallPrompt from "./components/PWAInstallPrompt";
 
 // Pages
 import HomePage from "./pages/HomePage";
