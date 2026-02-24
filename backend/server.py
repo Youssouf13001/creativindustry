@@ -3377,6 +3377,136 @@ async def get_paypal_payments(admin: dict = Depends(get_current_admin)):
     return payments
 
 
+@api_router.get("/admin/renewal-invoice/{invoice_id}/pdf")
+async def download_renewal_invoice_pdf(invoice_id: str, admin: dict = Depends(get_current_admin)):
+    """Generate and download a renewal invoice as PDF"""
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+    from io import BytesIO
+    
+    # Find invoice
+    invoice = await db.renewal_invoices.find_one({"id": invoice_id}, {"_id": 0})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Facture non trouvée")
+    
+    # Create PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#D4AF37'), alignment=TA_CENTER)
+    normal_style = styles['Normal']
+    
+    content = []
+    
+    # Header
+    content.append(Paragraph("CREATIVINDUSTRY", title_style))
+    content.append(Paragraph("L'Industrie Créative", ParagraphStyle('Sub', parent=styles['Normal'], alignment=TA_CENTER, textColor=colors.gray)))
+    content.append(Spacer(1, 30))
+    
+    # Invoice title
+    content.append(Paragraph(f"FACTURE N° {invoice.get('invoice_number', 'N/A')}", ParagraphStyle('InvTitle', parent=styles['Heading2'], fontSize=16)))
+    content.append(Spacer(1, 10))
+    
+    # Date
+    created_at = invoice.get('created_at', '')
+    if created_at:
+        try:
+            date_obj = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+            formatted_date = date_obj.strftime("%d/%m/%Y")
+        except:
+            formatted_date = created_at[:10]
+    else:
+        formatted_date = "N/A"
+    content.append(Paragraph(f"Date : {formatted_date}", normal_style))
+    content.append(Spacer(1, 20))
+    
+    # Client info
+    content.append(Paragraph("<b>Client :</b>", normal_style))
+    content.append(Paragraph(f"{invoice.get('client_name', 'N/A')}", normal_style))
+    content.append(Paragraph(f"{invoice.get('client_email', 'N/A')}", normal_style))
+    content.append(Spacer(1, 30))
+    
+    # Invoice details table
+    data = [
+        ['Description', 'Quantité', 'Prix HT', 'TVA', 'Total TTC'],
+        [
+            f"Renouvellement accès - {invoice.get('plan_label', 'N/A')}\n({invoice.get('days', 0)} jours)",
+            '1',
+            f"{invoice.get('amount_ht', 0):.2f} €",
+            f"{invoice.get('tva', 0):.2f} €",
+            f"{invoice.get('amount_ttc', 0):.2f} €"
+        ]
+    ]
+    
+    table = Table(data, colWidths=[8*cm, 2*cm, 2.5*cm, 2.5*cm, 2.5*cm])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#D4AF37')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f5f5f5')),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#dddddd')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 1), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 10),
+    ]))
+    content.append(table)
+    content.append(Spacer(1, 20))
+    
+    # Totals
+    totals_data = [
+        ['', 'Total HT :', f"{invoice.get('amount_ht', 0):.2f} €"],
+        ['', 'TVA (20%) :', f"{invoice.get('tva', 0):.2f} €"],
+        ['', 'Total TTC :', f"{invoice.get('amount_ttc', 0):.2f} €"],
+    ]
+    totals_table = Table(totals_data, colWidths=[10*cm, 4*cm, 3*cm])
+    totals_table.setStyle(TableStyle([
+        ('ALIGN', (1, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (1, 2), (-1, 2), 'Helvetica-Bold'),
+        ('FONTSIZE', (1, 2), (-1, 2), 12),
+        ('TEXTCOLOR', (2, 2), (2, 2), colors.HexColor('#D4AF37')),
+    ]))
+    content.append(totals_table)
+    content.append(Spacer(1, 30))
+    
+    # Payment info
+    content.append(Paragraph(f"<b>Mode de paiement :</b> {invoice.get('payment_method', 'PayPal')}", normal_style))
+    content.append(Paragraph(f"<b>Statut :</b> Payée ✓", ParagraphStyle('Paid', parent=normal_style, textColor=colors.green)))
+    content.append(Spacer(1, 40))
+    
+    # Footer
+    content.append(Paragraph("Merci pour votre confiance !", ParagraphStyle('Footer', parent=normal_style, alignment=TA_CENTER, textColor=colors.gray)))
+    content.append(Paragraph("CREATIVINDUSTRY - L'Industrie Créative", ParagraphStyle('Footer2', parent=normal_style, alignment=TA_CENTER, textColor=colors.gray, fontSize=8)))
+    
+    doc.build(content)
+    buffer.seek(0)
+    
+    return Response(
+        content=buffer.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=Facture_{invoice.get('invoice_number', 'N-A')}.pdf"}
+    )
+
+
+@api_router.delete("/admin/paypal-payments/cleanup-pending")
+async def cleanup_pending_payments(admin: dict = Depends(get_current_admin)):
+    """Delete old pending PayPal payments (not completed)"""
+    # Delete pending payments older than 24 hours
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    result = await db.paypal_payments.delete_many({
+        "status": "pending",
+        "created_at": {"$lt": cutoff}
+    })
+    return {"deleted": result.deleted_count}
+
+
 # ==================== PAYPAL PAYMENTS FOR DEVIS/INVOICES ====================
 
 class DevisPaymentCreate(BaseModel):
