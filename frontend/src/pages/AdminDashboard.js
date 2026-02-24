@@ -5341,6 +5341,20 @@ const AdminDashboard = () => {
                               Payée
                             </span>
                           </td>
+                          <td className="py-3 px-2">
+                            <a
+                              href={`${API}/admin/renewal-invoice/${invoice.id}/pdf`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:text-primary/80 flex items-center gap-1 text-sm"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                window.open(`${API}/admin/renewal-invoice/${invoice.id}/pdf?token=${localStorage.getItem('token')}`, '_blank');
+                              }}
+                            >
+                              <Download size={16} /> PDF
+                            </a>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
