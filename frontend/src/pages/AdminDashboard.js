@@ -568,6 +568,30 @@ const AdminDashboard = () => {
     }
   }, [activeTab]);
 
+  // Load billing data when switching to billing tab
+  useEffect(() => {
+    if (activeTab === "billing") {
+      fetchBillingData();
+    }
+  }, [activeTab]);
+
+  // Fetch billing/invoices data
+  const fetchBillingData = async () => {
+    setLoadingBilling(true);
+    try {
+      const res = await axios.get(`${API}/admin/renewal-invoices`, { headers });
+      setRenewalInvoices(res.data.invoices || []);
+      setBillingStats({
+        total_revenue: res.data.total_revenue || 0,
+        total_invoices: res.data.total_invoices || 0
+      });
+    } catch (e) {
+      console.error("Error fetching billing data:", e);
+    } finally {
+      setLoadingBilling(false);
+    }
+  };
+
   // Fetch renewal requests
   const fetchRenewalRequests = async () => {
     setLoadingRenewals(true);
