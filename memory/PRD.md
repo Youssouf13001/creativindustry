@@ -40,6 +40,14 @@ French
 - [x] Système de facturation avec PDF
 - [x] Application de TVA 20% sur tous les paiements
 - [x] **PWA (Progressive Web App)** - Installation mobile, notifications push, offline support
+- [x] **Galerie améliorée** - Diaporama plein écran avec :
+  - Contrôles lecture/pause
+  - Musique de fond configurable par galerie
+  - Partage WhatsApp, Instagram, Email
+  - QR Code pour partage
+  - Navigation clavier
+  - Téléchargement de photos
+  - Page publique de partage `/galerie/:id`
 
 ### 🔴 Known Issues (P0 - BLOCKER)
 1. **Erreur `[object Object]`** - Soumission de témoignage en production (IONOS)
@@ -63,19 +71,10 @@ Structure de refactoring créée :
 
 La migration sera progressive pour maintenir la stabilité.
 
-### Refactoring Frontend
-- `/app/frontend/src/pages/AdminDashboard.js` - ~7000 lignes
-- `/app/frontend/src/pages/ClientDashboard.js` - ~2000 lignes
-
 ## Upcoming Tasks
 
-### P1 - Prochaines fonctionnalités
-1. **Galerie améliorée**
-   - Diaporama plein écran avec musique
-   - Partage réseaux sociaux (Instagram, WhatsApp, Email)
-   - QR Code pour partager la galerie
-
-2. **Livre d'or digital**
+### P1 - Prochaine fonctionnalité
+1. **Livre d'or digital**
    - Messages vidéo/audio des invités
    - Accès via QR code sans compte
    - Galerie de messages simple
@@ -85,34 +84,44 @@ La migration sera progressive pour maintenir la stabilité.
 - Paiement en plusieurs fois (3x/4x via PayPal)
 - Compression images côté serveur
 - Synchronisation données devis ↔ creativindustry
+- Finaliser refactoring backend/frontend
 
 ## Key API Endpoints
-- `POST /api/client/login` - Gère expiration compte
-- `POST /api/paypal/create-order` - Créer paiement PayPal
+
+### Galerie
+- `GET /api/admin/galleries` - Liste des galeries (admin)
+- `POST /api/admin/galleries/{id}/music` - Upload musique galerie
+- `DELETE /api/admin/galleries/{id}/music` - Supprimer musique
+- `GET /api/public/galleries/{id}` - Vue publique galerie (partage QR)
+- `GET /api/client/galleries/{id}` - Vue client galerie
+
+### PayPal
+- `POST /api/paypal/create-order` - Créer paiement
 - `POST /api/paypal/execute-payment` - Exécuter paiement
 - `GET /api/admin/renewal-invoices` - Liste factures
 - `GET /api/admin/renewal-invoice/{id}/pdf` - Télécharger PDF
-- `GET/POST /api/testimonials` - Témoignages
-- `GET/POST /api/news` - Actualités
 
 ## Database Collections
 - `clients` - Avec `expires_at`, `auto_delete_days`
+- `galleries` - Avec `music_url` pour musique diaporama
 - `paypal_payments` - Paiements PayPal
 - `renewal_invoices` - Factures de renouvellement
 - `testimonials` - Témoignages clients
-- `news_posts` - Publications actualités
-- `news_comments` - Commentaires (avec modération)
 
 ## 3rd Party Integrations
 - IONOS SMTP (emails)
 - PayPal REST API (paiements)
 - openpyxl (export Excel)
 - reportlab (génération PDF)
+- qrcode (génération QR codes)
 
-## Important Notes for Development
-- Token JWT client utilise claim `sub` (pas `client_id`)
-- Déploiement IONOS : `git pull` + `pip install` + `npm run build` + `systemctl restart`
-- L'ancien `server.py` reste fonctionnel - migration progressive
+## Files Created/Modified This Session
+- `/app/frontend/src/components/GallerySlideshowModal.js` - Amélioré
+- `/app/frontend/src/pages/ClientDashboard.js` - Intégration diaporama
+- `/app/frontend/src/pages/AdminDashboard.js` - Upload musique galerie
+- `/app/frontend/src/pages/SharedGalleryPage.js` - NOUVEAU - Page publique galerie
+- `/app/backend/models/schemas.py` - Ajout `music_url` à Gallery
+- `/app/backend/server.py` - Endpoints upload/delete musique + galerie publique
 
 ## PWA Configuration
 - `manifest.json` - Icônes et métadonnées
