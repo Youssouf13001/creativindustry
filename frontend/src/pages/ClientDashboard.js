@@ -21,6 +21,9 @@ const ClientDashboard = () => {
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   
+  // Slideshow state
+  const [showSlideshow, setShowSlideshow] = useState(false);
+  
   // Profile states
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileData, setProfileData] = useState({ name: "", phone: "" });
