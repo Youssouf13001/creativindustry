@@ -1223,6 +1223,51 @@ class WelcomePopupUpdate(BaseModel):
     show_once_per_session: Optional[bool] = None
 
 
+# ==================== NEWS/ACTUALITÉS MODELS ====================
+
+class NewsPostCreate(BaseModel):
+    """Model for creating a news post (admin)"""
+    model_config = ConfigDict(extra="ignore")
+    caption: str
+    location: Optional[str] = None  # ex: "Paris, France"
+
+class NewsPostResponse(BaseModel):
+    """Model for news post response"""
+    id: str
+    caption: str
+    location: Optional[str] = None
+    media_url: str
+    media_type: str  # photo, video
+    thumbnail_url: Optional[str] = None
+    likes_count: int = 0
+    comments_count: int = 0
+    created_at: str
+    
+class NewsCommentCreate(BaseModel):
+    """Model for creating a comment"""
+    model_config = ConfigDict(extra="ignore")
+    content: str
+    # For non-authenticated users
+    guest_name: Optional[str] = None
+    guest_email: Optional[str] = None
+
+class NewsCommentResponse(BaseModel):
+    """Model for comment response"""
+    id: str
+    post_id: str
+    content: str
+    # User info (if authenticated)
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
+    client_avatar: Optional[str] = None
+    # Guest info (if not authenticated)
+    guest_name: Optional[str] = None
+    guest_email: Optional[str] = None
+    # Status
+    status: str  # approved, pending
+    created_at: str
+
+
 # ==================== SITE CONTENT MODELS ====================
 
 class SiteContent(BaseModel):
