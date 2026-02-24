@@ -2154,9 +2154,21 @@ async def login_client(data: ClientLogin):
         try:
             expiry_date = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
             if datetime.now(timezone.utc) > expiry_date:
+                # Return expired status with renewal options
                 raise HTTPException(
                     status_code=403, 
-                    detail="Votre accès a expiré. Pour continuer à profiter de vos photos et vidéos, renouvelez votre abonnement dès maintenant ! Contactez-nous pour débloquer votre compte."
+                    detail={
+                        "expired": True,
+                        "client_id": client["id"],
+                        "client_email": client["email"],
+                        "client_name": client["name"],
+                        "message": "Votre accès a expiré",
+                        "renewal_options": [
+                            {"id": "weekly", "label": "1 semaine", "price": 2, "days": 7},
+                            {"id": "6months", "label": "6 mois", "price": 90, "days": 180}
+                        ],
+                        "paypal_link": "https://paypal.me/creativindustryfranc"
+                    }
                 )
         except ValueError:
             pass  # Invalid date format, allow login
