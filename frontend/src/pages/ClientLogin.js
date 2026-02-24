@@ -38,12 +38,40 @@ const ClientLogin = () => {
       const res = await axios.post(`${API}${endpoint}`, payload);
       localStorage.setItem("client_token", res.data.token);
       localStorage.setItem("client_user", JSON.stringify(res.data.client));
+      localStorage.setItem("client_info", JSON.stringify(res.data.client));
       toast.success(isRegister ? "Compte créé !" : "Connexion réussie !");
       navigate("/client/dashboard");
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Erreur de connexion");
+      // Check if account is expired
+      if (e.response?.status === 403 && e.response?.data?.detail?.expired) {
+        setExpiredData(e.response.data.detail);
+        setShowExpiredModal(true);
+      } else {
+        const errorMsg = typeof e.response?.data?.detail === 'string' 
+          ? e.response?.data?.detail 
+          : "Erreur de connexion";
+        toast.error(errorMsg);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle renewal request
+  const handleRenewalRequest = async () => {
+    if (!selectedPlan || !expiredData) return;
+    
+    setRenewalLoading(true);
+    try {
+      await axios.post(`${API}/renewal/request`, {
+        client_email: expiredData.client_email,
+        plan: selectedPlan.id
+      });
+      setRenewalStep("success");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la demande");
+    } finally {
+      setRenewalLoading(false);
     }
   };
 
