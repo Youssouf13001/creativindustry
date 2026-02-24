@@ -366,7 +366,55 @@ const ClientDashboard = () => {
       // Also fetch renewal invoices
       fetchRenewalInvoices();
     }
+    if (activeTab === "guestbooks") {
+      fetchMyGuestbooks();
+    }
   }, [activeTab]);
+
+  // Fetch guestbooks for the client
+  const fetchMyGuestbooks = async () => {
+    try {
+      const res = await axios.get(`${API}/client/guestbooks`, { headers });
+      setMyGuestbooks(res.data || []);
+    } catch (e) {
+      console.error("Error fetching guestbooks:", e);
+    }
+  };
+
+  const fetchGuestbookDetail = async (guestbookId) => {
+    try {
+      const res = await axios.get(`${API}/client/guestbooks/${guestbookId}`, { headers });
+      setSelectedClientGuestbook(res.data);
+    } catch (e) {
+      toast.error("Erreur lors du chargement");
+    }
+  };
+
+  const approveClientGuestbookMessage = async (messageId) => {
+    try {
+      await axios.put(`${API}/client/guestbook-messages/${messageId}/approve`, {}, { headers });
+      toast.success("Message approuvé");
+      if (selectedClientGuestbook) fetchGuestbookDetail(selectedClientGuestbook.id);
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const deleteClientGuestbookMessage = async (messageId) => {
+    try {
+      await axios.delete(`${API}/client/guestbook-messages/${messageId}`, { headers });
+      toast.success("Message supprimé");
+      if (selectedClientGuestbook) fetchGuestbookDetail(selectedClientGuestbook.id);
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const copyGuestbookLink = (guestbookId) => {
+    const url = `${window.location.origin}/livre-dor/${guestbookId}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Lien copié !");
+  };
 
   // Fetch renewal invoices for the client
   const fetchRenewalInvoices = async () => {
