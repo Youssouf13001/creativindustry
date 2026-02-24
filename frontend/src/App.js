@@ -58,6 +58,8 @@ function App() {
             <Route path="/renouvellement/cancel" element={<RenewalPage />} />
             <Route path="/espace-client" element={<ClientLogin />} />
             <Route path="/paiement-confirme" element={<PaymentConfirmPage />} />
+            {/* Shared Gallery (public access) */}
+            <Route path="/galerie/:galleryId" element={<SharedGalleryPage />} />
             {/* Aliases for different URLs */}
             <Route path="/mariages" element={<ServicePage category="wedding" />} />
             <Route path="/podcast" element={<ServicePage category="podcast" />} />
