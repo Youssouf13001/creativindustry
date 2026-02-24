@@ -57,14 +57,14 @@ const GallerySlideshowModal = ({
 
   // Handle audio
   useEffect(() => {
-    if (audioRef.current) {
+    if (audioRef.current && hasMusic) {
       if (isPlaying && !isMuted) {
         audioRef.current.play().catch(() => {});
       } else {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, isMuted]);
+  }, [isPlaying, isMuted, hasMusic]);
 
   // Auto-hide controls
   const handleMouseMove = useCallback(() => {
