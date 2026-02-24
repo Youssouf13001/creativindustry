@@ -2156,7 +2156,7 @@ async def login_client(data: ClientLogin):
             if datetime.now(timezone.utc) > expiry_date:
                 raise HTTPException(
                     status_code=403, 
-                    detail="Votre compte a expiré. Veuillez contacter CREATIVINDUSTRY pour le réactiver."
+                    detail="Votre accès a expiré. Pour continuer à profiter de vos photos et vidéos, renouvelez votre abonnement dès maintenant ! Contactez-nous pour débloquer votre compte."
                 )
         except ValueError:
             pass  # Invalid date format, allow login
