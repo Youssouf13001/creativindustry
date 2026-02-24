@@ -4623,6 +4623,13 @@ const AdminDashboard = () => {
                               <Upload size={12} /> Fichiers
                             </button>
                             <button
+                              onClick={() => openExpirationModal(client)}
+                              className="bg-amber-500/20 text-amber-400 border border-amber-500/50 px-3 py-1 text-xs flex items-center gap-1 hover:bg-amber-500/30"
+                              title="Définir la date d'expiration"
+                            >
+                              <Clock size={12} /> Expiration
+                            </button>
+                            <button
                               onClick={() => deleteClient(client)}
                               className="bg-red-500/20 text-red-400 border border-red-500/50 px-3 py-1 text-xs flex items-center gap-1 hover:bg-red-500/30"
                               title="Supprimer le client"
