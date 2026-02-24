@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Star, Quote, Send, CheckCircle, Camera, Mic, Tv } from "lucide-react";
+import { Star, Quote, Send, CheckCircle, Camera, Mic, Tv, LogIn, User } from "lucide-react";
+import { Link } from "react-router-dom";
 import axios from "axios";
-import { API } from "../config/api";
+import { API, BACKEND_URL } from "../config/api";
 
 const TestimonialsPage = () => {
   const [testimonials, setTestimonials] = useState([]);
@@ -11,13 +12,21 @@ const TestimonialsPage = () => {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    client_name: "",
-    client_email: "",
     client_role: "",
     message: "",
     rating: 5,
     service_type: ""
   });
+
+  // Check if client is authenticated
+  const clientToken = localStorage.getItem("client_token");
+  const isAuthenticated = !!clientToken;
+  const headers = clientToken ? { Authorization: `Bearer ${clientToken}` } : {};
+  
+  // Get client info from localStorage
+  const clientInfo = localStorage.getItem("client_info") 
+    ? JSON.parse(localStorage.getItem("client_info")) 
+    : null;
 
   useEffect(() => {
     fetchTestimonials();
@@ -36,13 +45,16 @@ const TestimonialsPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      alert("Vous devez être connecté pour laisser un témoignage");
+      return;
+    }
+    
     setSubmitting(true);
     try {
-      await axios.post(`${API}/testimonials`, formData);
+      await axios.post(`${API}/testimonials`, formData, { headers });
       setSubmitted(true);
       setFormData({
-        client_name: "",
-        client_email: "",
         client_role: "",
         message: "",
         rating: 5,
@@ -50,7 +62,7 @@ const TestimonialsPage = () => {
       });
     } catch (e) {
       console.error("Error submitting testimonial:", e);
-      alert("Une erreur est survenue. Veuillez réessayer.");
+      alert(e.response?.data?.detail || "Une erreur est survenue. Veuillez réessayer.");
     } finally {
       setSubmitting(false);
     }
@@ -86,20 +98,32 @@ const TestimonialsPage = () => {
             <p className="font-secondary text-white/70 text-lg md:text-xl max-w-2xl mx-auto mb-10">
               Découvrez ce que nos clients disent de leur expérience avec CREATIVINDUSTRY
             </p>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="btn-primary px-8 py-4 text-sm inline-flex items-center gap-2"
-              data-testid="toggle-form-btn"
-            >
-              <Quote size={18} />
-              Laisser un témoignage
-            </button>
+            
+            {isAuthenticated ? (
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="btn-primary px-8 py-4 text-sm inline-flex items-center gap-2"
+                data-testid="toggle-form-btn"
+              >
+                <Quote size={18} />
+                Laisser un témoignage
+              </button>
+            ) : (
+              <Link
+                to="/espace-client"
+                className="btn-primary px-8 py-4 text-sm inline-flex items-center gap-2"
+                data-testid="login-btn"
+              >
+                <LogIn size={18} />
+                Connectez-vous pour laisser un témoignage
+              </Link>
+            )}
           </motion.div>
         </div>
       </section>
 
-      {/* Testimonial Form */}
-      {showForm && (
+      {/* Testimonial Form - Only for authenticated clients */}
+      {showForm && isAuthenticated && (
         <section className="py-12 bg-card border-y border-white/10" data-testid="testimonial-form-section">
           <div className="max-w-2xl mx-auto px-4">
             {submitted ? (
@@ -134,36 +158,29 @@ const TestimonialsPage = () => {
                   Partagez votre expérience
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-white/80 mb-2">
-                      Votre nom *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.client_name}
-                      onChange={(e) => setFormData({...formData, client_name: e.target.value})}
-                      className="w-full bg-background border border-white/20 px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors"
-                      placeholder="Jean Dupont"
-                      data-testid="input-name"
-                    />
+                {/* Client Info Display */}
+                {clientInfo && (
+                  <div className="flex items-center gap-4 p-4 bg-background/50 border border-white/10 mb-6">
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center">
+                      {clientInfo.profile_photo ? (
+                        <img 
+                          src={`${BACKEND_URL}${clientInfo.profile_photo}`} 
+                          alt={clientInfo.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User size={24} className="text-primary" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-bold text-white">{clientInfo.name}</p>
+                      <p className="text-sm text-white/50">{clientInfo.email}</p>
+                    </div>
+                    <span className="ml-auto text-xs text-green-500 bg-green-500/20 px-3 py-1">
+                      Connecté
+                    </span>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-white/80 mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={formData.client_email}
-                      onChange={(e) => setFormData({...formData, client_email: e.target.value})}
-                      className="w-full bg-background border border-white/20 px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors"
-                      placeholder="jean@exemple.com"
-                      data-testid="input-email"
-                    />
-                  </div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -293,6 +310,31 @@ const TestimonialsPage = () => {
                     <Quote size={48} className="text-primary" />
                   </div>
 
+                  {/* Client Avatar & Info */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full overflow-hidden bg-primary/20 flex items-center justify-center">
+                      {testimonial.client_avatar ? (
+                        <img 
+                          src={`${BACKEND_URL}${testimonial.client_avatar}`} 
+                          alt={testimonial.client_name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User size={20} className="text-primary" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="font-primary font-bold text-white">
+                        {testimonial.client_name}
+                      </h4>
+                      {testimonial.client_role && (
+                        <p className="text-white/50 text-xs">
+                          {testimonial.client_role}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Rating */}
                   <div className="flex gap-1 mb-4">
                     {[...Array(5)].map((_, i) => (
@@ -309,19 +351,9 @@ const TestimonialsPage = () => {
                     "{testimonial.message}"
                   </p>
 
-                  {/* Author info */}
+                  {/* Service badge */}
                   <div className="border-t border-white/10 pt-4 mt-auto">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-primary font-bold text-white">
-                          {testimonial.client_name}
-                        </h4>
-                        {testimonial.client_role && (
-                          <p className="text-white/50 text-xs mt-1">
-                            {testimonial.client_role}
-                          </p>
-                        )}
-                      </div>
                       {testimonial.service_type && (
                         <div className="flex items-center gap-2 bg-background/50 px-3 py-1.5 border border-white/10">
                           {serviceIcons[testimonial.service_type]}
