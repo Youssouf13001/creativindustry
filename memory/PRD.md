@@ -35,78 +35,57 @@ French
 - [x] Système de témoignages - Page publique + modération admin
 - [x] Popup d'accueil avec vidéo gérable depuis admin
 - [x] Page d'actualités - Publications, likes, commentaires avec modération
-- [x] Expiration de compte personnalisée - Délai configurable par client
+- [x] Expiration de compte personnalisée
 - [x] Système de renouvellement PayPal avec activation automatique
 - [x] Système de facturation avec PDF
 - [x] Application de TVA 20% sur tous les paiements
-- [x] **PWA (Progressive Web App)** - Installation mobile, notifications push, offline support
-- [x] **Galerie améliorée** - Diaporama plein écran avec :
-  - Contrôles lecture/pause
-  - Musique de fond configurable par galerie
-  - Partage WhatsApp, Instagram, Email
-  - QR Code pour partage
-  - Navigation clavier
-  - Téléchargement de photos
-  - Page publique de partage `/galerie/:id`
+- [x] **PWA (Progressive Web App)** - Installation mobile, notifications push
+- [x] **Galerie améliorée** - Diaporama, musique, partage social, QR code
+- [x] **Livre d'or digital** - Messages texte/audio/vidéo des invités via QR code
 
 ### 🔴 Known Issues (P0 - BLOCKER)
 1. **Erreur `[object Object]`** - Soumission de témoignage en production (IONOS)
-   - Status: Nécessite déploiement sur IONOS pour vérification
 
 ### 🟠 Issues (P1-P2)
 2. Dashboard site `devis` - Statistiques à zéro (P1)
 3. Téléchargement factures PDF depuis admin (P1, vérification requise)
 4. Erreur 404 mise à jour statut projet IONOS (P2)
 
-## Technical Debt
-
-### Refactoring Backend (IN PROGRESS)
-Le fichier `/app/backend/server.py` fait ~10,000 lignes.
-Structure de refactoring créée :
-- `/app/backend/config.py` - Configuration centralisée
-- `/app/backend/dependencies.py` - Auth helpers partagés
-- `/app/backend/routes/auth.py` - Routes d'authentification admin
-- `/app/backend/routes/clients.py` - Routes clients
-- `/app/backend/routes/paypal.py` - Routes PayPal
-
-La migration sera progressive pour maintenir la stabilité.
-
 ## Upcoming Tasks
-
-### P1 - Prochaine fonctionnalité
-1. **Livre d'or digital**
-   - Messages vidéo/audio des invités
-   - Accès via QR code sans compte
-   - Galerie de messages simple
 
 ### P2 - Améliorations
 - Rappels automatiques (expiration comptes, RDV)
 - Paiement en plusieurs fois (3x/4x via PayPal)
 - Compression images côté serveur
 - Synchronisation données devis ↔ creativindustry
-- Finaliser refactoring backend/frontend
+- Refactoring backend/frontend (dette technique)
 
 ## Key API Endpoints
 
-### Galerie
-- `GET /api/admin/galleries` - Liste des galeries (admin)
-- `POST /api/admin/galleries/{id}/music` - Upload musique galerie
-- `DELETE /api/admin/galleries/{id}/music` - Supprimer musique
-- `GET /api/public/galleries/{id}` - Vue publique galerie (partage QR)
-- `GET /api/client/galleries/{id}` - Vue client galerie
+### Livre d'or
+- `POST /api/admin/guestbooks` - Créer un livre d'or
+- `GET /api/admin/guestbooks` - Liste des livres d'or (admin)
+- `GET /api/admin/guestbooks/{id}` - Détails avec messages
+- `PUT /api/admin/guestbook-messages/{id}/approve` - Approuver message
+- `DELETE /api/admin/guestbook-messages/{id}` - Supprimer message
+- `GET /api/public/guestbooks/{id}` - Vue publique
+- `POST /api/public/guestbooks/{id}/messages/text` - Poster message texte
+- `POST /api/public/guestbooks/{id}/messages/media` - Poster audio/vidéo
+- `GET /api/client/guestbooks` - Livres d'or du client
+- `PUT /api/client/guestbook-messages/{id}/approve` - Client approuve
 
-### PayPal
-- `POST /api/paypal/create-order` - Créer paiement
-- `POST /api/paypal/execute-payment` - Exécuter paiement
-- `GET /api/admin/renewal-invoices` - Liste factures
-- `GET /api/admin/renewal-invoice/{id}/pdf` - Télécharger PDF
+### Galerie
+- `POST /api/admin/galleries/{id}/music` - Upload musique galerie
+- `GET /api/public/galleries/{id}` - Vue publique galerie
 
 ## Database Collections
-- `clients` - Avec `expires_at`, `auto_delete_days`
+- `guestbooks` - Livres d'or
+- `guestbook_messages` - Messages (texte/audio/vidéo)
 - `galleries` - Avec `music_url` pour musique diaporama
-- `paypal_payments` - Paiements PayPal
-- `renewal_invoices` - Factures de renouvellement
-- `testimonials` - Témoignages clients
+
+## New Pages Created
+- `/livre-dor/:guestbookId` - Page publique pour laisser des messages
+- `/galerie/:galleryId` - Page publique pour voir une galerie
 
 ## 3rd Party Integrations
 - IONOS SMTP (emails)
@@ -114,20 +93,12 @@ La migration sera progressive pour maintenir la stabilité.
 - openpyxl (export Excel)
 - reportlab (génération PDF)
 - qrcode (génération QR codes)
-
-## Files Created/Modified This Session
-- `/app/frontend/src/components/GallerySlideshowModal.js` - Amélioré
-- `/app/frontend/src/pages/ClientDashboard.js` - Intégration diaporama
-- `/app/frontend/src/pages/AdminDashboard.js` - Upload musique galerie
-- `/app/frontend/src/pages/SharedGalleryPage.js` - NOUVEAU - Page publique galerie
-- `/app/backend/models/schemas.py` - Ajout `music_url` à Gallery
-- `/app/backend/server.py` - Endpoints upload/delete musique + galerie publique
+- MediaRecorder API (enregistrement audio/vidéo)
 
 ## PWA Configuration
 - `manifest.json` - Icônes et métadonnées
 - `sw.js` - Service worker avec caching
 - `PWAInstallPrompt.js` - Composant d'installation
-- Notifications push configurées
 
 ---
 *Last updated: December 2025*
