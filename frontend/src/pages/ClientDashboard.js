@@ -1477,6 +1477,52 @@ const ClientDashboard = () => {
                 </div>
               </div>
             )}
+            
+            {/* Renewal Invoices Section */}
+            {myRenewalInvoices.length > 0 && (
+              <div className="mt-8">
+                <h3 className="font-primary font-bold text-lg mb-4">🔄 Factures de Renouvellement</h3>
+                <div className="space-y-3">
+                  {myRenewalInvoices.map((invoice) => (
+                    <div key={invoice.id} className="bg-card border border-green-500/20 p-4">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-1">
+                            <h4 className="font-bold text-lg">{invoice.invoice_number}</h4>
+                            <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-400">
+                              Payée
+                            </span>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              invoice.plan === "weekly" ? "bg-blue-500/20 text-blue-400" : "bg-purple-500/20 text-purple-400"
+                            }`}>
+                              {invoice.plan_label}
+                            </span>
+                          </div>
+                          <p className="text-white/60 text-sm">
+                            {new Date(invoice.created_at).toLocaleDateString('fr-FR', { 
+                              day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}
+                            {" • "}Prolongation de {invoice.days} jours
+                          </p>
+                          <p className="text-sm text-green-400 mt-1">
+                            Accès prolongé jusqu'au {new Date(invoice.new_expires_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-white/50 mb-1">
+                            HT: {invoice.amount_ht?.toFixed(2)}€ + TVA: {invoice.tva?.toFixed(2)}€
+                          </div>
+                          <p className="text-2xl font-bold text-green-400">
+                            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(invoice.amount_ttc)}
+                          </p>
+                          <p className="text-xs text-white/40">via {invoice.payment_method}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
