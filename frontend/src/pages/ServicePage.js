@@ -228,17 +228,39 @@ const ServicePage = ({ category }) => {
 
                 {/* Price Summary */}
                 <div className="bg-primary/10 border border-primary/30 p-4 mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-white/70">Prix de la formule</span>
-                    <span className="font-bold">{selectedPackage.price}€</span>
+                  {/* Total Price */}
+                  <div className="mb-4 pb-4 border-b border-white/10">
+                    <p className="text-white/60 text-sm mb-2">Prix de la formule</p>
+                    <div className="flex justify-between text-sm text-white/50">
+                      <span>Prix HT</span>
+                      <span>{priceHT.toFixed(2)}€</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-white/50">
+                      <span>TVA (20%)</span>
+                      <span>{priceTVA.toFixed(2)}€</span>
+                    </div>
+                    <div className="flex justify-between font-bold mt-1">
+                      <span>Total TTC</span>
+                      <span className="text-primary">{selectedPackage.price}€</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center text-lg">
-                    <span className="text-white/70">Acompte à régler ({bankDetails?.deposit_percentage || 30}%)</span>
-                    <span className="font-primary font-bold text-2xl text-primary">{depositAmount.toFixed(0)}€</span>
+                  
+                  {/* Deposit Amount */}
+                  <div>
+                    <p className="text-white/60 text-sm mb-2">Acompte à régler ({bankDetails?.deposit_percentage || 30}%)</p>
+                    <div className="flex justify-between text-sm text-white/50">
+                      <span>Acompte HT</span>
+                      <span>{depositHT.toFixed(2)}€</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-white/50">
+                      <span>TVA (20%)</span>
+                      <span>{depositTVA.toFixed(2)}€</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-lg mt-1">
+                      <span>Acompte TTC</span>
+                      <span className="font-primary text-2xl text-primary">{depositAmount.toFixed(2)}€</span>
+                    </div>
                   </div>
-                  <p className="text-xs text-white/50 mt-2">
-                    TVA 20% incluse dans le prix
-                  </p>
                 </div>
 
                 {/* Payment Method Selection */}
