@@ -8331,8 +8331,11 @@ async def toggle_like_news(
     """Toggle like on a news post (client only)"""
     try:
         payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
-        client_id = payload.get("client_id")
-        if not client_id:
+        # Client tokens use 'sub' for client_id
+        client_id = payload.get("client_id") or payload.get("sub")
+        token_type = payload.get("type")
+        
+        if not client_id or token_type != "client":
             raise HTTPException(status_code=401, detail="Vous devez être connecté pour aimer")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
