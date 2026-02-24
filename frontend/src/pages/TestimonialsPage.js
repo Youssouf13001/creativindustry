@@ -150,14 +150,14 @@ const TestimonialsPage = () => {
                 Laisser un témoignage
               </button>
             ) : (
-              <Link
-                to="/espace-client"
+              <button
+                onClick={() => setShowLoginModal(true)}
                 className="btn-primary px-8 py-4 text-sm inline-flex items-center gap-2"
                 data-testid="login-btn"
               >
                 <LogIn size={18} />
                 Connectez-vous pour laisser un témoignage
-              </Link>
+              </button>
             )}
           </motion.div>
         </div>
