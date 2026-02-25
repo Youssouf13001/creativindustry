@@ -88,15 +88,20 @@ French
 ## New Pages Created
 - `/livre-dor/:guestbookId` - Page publique pour laisser des messages
 - `/galerie/:galleryId` - Page publique pour voir une galerie
-- `/galerie3d/:galleryId` - Galerie interactive avec carrousel 3D et vue grille
+- `/galerie3d/:galleryId` - Galerie interactive avec carrousel 3D CSS et vue grille
 
-## Key API Endpoints (PhotoFind)
+## Key API Endpoints (Gallery 3D)
+- `GET /api/public/galleries/{gallery_id}` - Données publiques d'une galerie
+- `GET /api/public/galleries/{gallery_id}/image/{photo_id}` - Servir une image inline
+
+## 3rd Party Integrations
 - IONOS SMTP (emails)
 - PayPal REST API (paiements)
 - openpyxl (export Excel)
 - reportlab (génération PDF)
 - qrcode (génération QR codes)
 - MediaRecorder API (enregistrement audio/vidéo)
+- AWS Rekognition (PhotoFind - reconnaissance faciale)
 
 ## PWA Configuration
 - `manifest.json` - Icônes et métadonnées
