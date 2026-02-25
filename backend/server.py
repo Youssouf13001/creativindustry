@@ -11485,27 +11485,34 @@ async def get_gallery_options(
     
     # Check if options are unlocked
     has_3d = "gallery_3d" in purchased_options or "pack_complete" in purchased_options
+    has_video = "video_slideshow" in purchased_options or "pack_complete" in purchased_options
     has_hd = "hd_download" in purchased_options or "pack_complete" in purchased_options
     
     return {
         "gallery_id": gallery_id,
         "gallery_name": gallery.get("name", "Galerie"),
         "photo_count": len(gallery.get("photos", [])),
+        "music_url": gallery.get("music_url"),
         "options": {
             "gallery_3d": {
-                "price": pricing["gallery_3d"]["price"],
-                "label": pricing["gallery_3d"]["label"],
+                "price": pricing.get("gallery_3d", {}).get("price", 49),
+                "label": pricing.get("gallery_3d", {}).get("label", "Galerie 3D Immersive"),
                 "unlocked": has_3d
             },
+            "video_slideshow": {
+                "price": pricing.get("video_slideshow", {}).get("price", 79),
+                "label": pricing.get("video_slideshow", {}).get("label", "Vidéo Diaporama HD"),
+                "unlocked": has_video
+            },
             "hd_download": {
-                "price": pricing["hd_download"]["price"],
-                "label": pricing["hd_download"]["label"],
+                "price": pricing.get("hd_download", {}).get("price", 99),
+                "label": pricing.get("hd_download", {}).get("label", "Téléchargement HD"),
                 "unlocked": has_hd
             },
             "pack_complete": {
-                "price": pricing["pack_complete"]["price"],
-                "label": pricing["pack_complete"]["label"],
-                "unlocked": has_3d and has_hd
+                "price": pricing.get("pack_complete", {}).get("price", 199),
+                "label": pricing.get("pack_complete", {}).get("label", "Pack Complet"),
+                "unlocked": has_3d and has_video and has_hd
             }
         },
         "purchases": purchases
