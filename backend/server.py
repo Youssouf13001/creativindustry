@@ -11400,23 +11400,25 @@ async def client_delete_message(message_id: str, credentials: HTTPAuthorizationC
     return {"success": True}
 
 
-# ==================== GALLERY PREMIUM OPTIONS (3D + HD Downloads) ====================
+# ==================== GALLERY PREMIUM OPTIONS (3D + HD Downloads + Video) ====================
 
 # Default pricing (can be modified by admin)
 DEFAULT_GALLERY_PRICING = {
     "gallery_3d": {"price": 49.00, "label": "Galerie 3D Immersive"},
+    "video_slideshow": {"price": 79.00, "label": "Vidéo Diaporama HD"},
     "hd_download": {"price": 99.00, "label": "Téléchargement HD"},
-    "pack_complete": {"price": 129.00, "label": "Pack Complet (3D + HD)"}
+    "pack_complete": {"price": 199.00, "label": "Pack Complet (3D + Vidéo + HD)"}
 }
 
 class GalleryPricingUpdate(BaseModel):
     gallery_3d_price: float
+    video_slideshow_price: float
     hd_download_price: float
     pack_complete_price: float
 
 class GalleryPurchaseCreate(BaseModel):
     gallery_id: str
-    option: str  # "gallery_3d", "hd_download", or "pack_complete"
+    option: str  # "gallery_3d", "video_slideshow", "hd_download", or "pack_complete"
 
 # Admin: Get gallery pricing
 @api_router.get("/admin/gallery-pricing")
