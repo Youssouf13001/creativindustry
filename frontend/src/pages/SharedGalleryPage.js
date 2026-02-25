@@ -8,6 +8,7 @@ import GallerySlideshowModal from "../components/GallerySlideshowModal";
 
 const SharedGalleryPage = () => {
   const { galleryId } = useParams();
+  const navigate = useNavigate();
   const [gallery, setGallery] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
