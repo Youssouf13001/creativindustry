@@ -11400,6 +11400,479 @@ async def client_delete_message(message_id: str, credentials: HTTPAuthorizationC
     return {"success": True}
 
 
+# ==================== GALLERY PREMIUM OPTIONS (3D + HD Downloads) ====================
+
+# Default pricing (can be modified by admin)
+DEFAULT_GALLERY_PRICING = {
+    "gallery_3d": {"price": 49.00, "label": "Galerie 3D Immersive"},
+    "hd_download": {"price": 99.00, "label": "Téléchargement HD"},
+    "pack_complete": {"price": 129.00, "label": "Pack Complet (3D + HD)"}
+}
+
+class GalleryPricingUpdate(BaseModel):
+    gallery_3d_price: float
+    hd_download_price: float
+    pack_complete_price: float
+
+class GalleryPurchaseCreate(BaseModel):
+    gallery_id: str
+    option: str  # "gallery_3d", "hd_download", or "pack_complete"
+
+# Admin: Get gallery pricing
+@api_router.get("/admin/gallery-pricing")
+async def get_gallery_pricing(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get current gallery pricing settings"""
+    verify_token(credentials.credentials)
+    
+    pricing = await db.settings.find_one({"key": "gallery_pricing"}, {"_id": 0})
+    if not pricing:
+        return DEFAULT_GALLERY_PRICING
+    return pricing.get("value", DEFAULT_GALLERY_PRICING)
+
+# Admin: Update gallery pricing
+@api_router.put("/admin/gallery-pricing")
+async def update_gallery_pricing(
+    data: GalleryPricingUpdate,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Update gallery pricing settings"""
+    verify_token(credentials.credentials)
+    
+    pricing = {
+        "gallery_3d": {"price": data.gallery_3d_price, "label": "Galerie 3D Immersive"},
+        "hd_download": {"price": data.hd_download_price, "label": "Téléchargement HD"},
+        "pack_complete": {"price": data.pack_complete_price, "label": "Pack Complet (3D + HD)"}
+    }
+    
+    await db.settings.update_one(
+        {"key": "gallery_pricing"},
+        {"$set": {"key": "gallery_pricing", "value": pricing}},
+        upsert=True
+    )
+    
+    return {"success": True, "pricing": pricing}
+
+# Client: Get gallery options status (what they've purchased)
+@api_router.get("/client/gallery/{gallery_id}/options")
+async def get_gallery_options(
+    gallery_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Get gallery options status for a client"""
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    # Get gallery
+    gallery = await db.galleries.find_one({"id": gallery_id, "client_id": client_id}, {"_id": 0})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Galerie non trouvée")
+    
+    # Get pricing
+    pricing_doc = await db.settings.find_one({"key": "gallery_pricing"}, {"_id": 0})
+    pricing = pricing_doc.get("value", DEFAULT_GALLERY_PRICING) if pricing_doc else DEFAULT_GALLERY_PRICING
+    
+    # Get purchases for this gallery
+    purchases = await db.gallery_purchases.find({
+        "gallery_id": gallery_id,
+        "client_id": client_id,
+        "status": "completed"
+    }, {"_id": 0}).to_list(100)
+    
+    purchased_options = [p["option"] for p in purchases]
+    
+    # Check if options are unlocked
+    has_3d = "gallery_3d" in purchased_options or "pack_complete" in purchased_options
+    has_hd = "hd_download" in purchased_options or "pack_complete" in purchased_options
+    
+    return {
+        "gallery_id": gallery_id,
+        "gallery_name": gallery.get("name", "Galerie"),
+        "photo_count": len(gallery.get("photos", [])),
+        "options": {
+            "gallery_3d": {
+                "price": pricing["gallery_3d"]["price"],
+                "label": pricing["gallery_3d"]["label"],
+                "unlocked": has_3d
+            },
+            "hd_download": {
+                "price": pricing["hd_download"]["price"],
+                "label": pricing["hd_download"]["label"],
+                "unlocked": has_hd
+            },
+            "pack_complete": {
+                "price": pricing["pack_complete"]["price"],
+                "label": pricing["pack_complete"]["label"],
+                "unlocked": has_3d and has_hd
+            }
+        },
+        "purchases": purchases
+    }
+
+# Client: Create PayPal order for gallery option
+@api_router.post("/client/gallery/purchase")
+async def create_gallery_purchase(
+    data: GalleryPurchaseCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Create PayPal order for gallery premium option"""
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    # Get client
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    # Get gallery
+    gallery = await db.galleries.find_one({"id": data.gallery_id, "client_id": client_id}, {"_id": 0})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Galerie non trouvée")
+    
+    # Get pricing
+    pricing_doc = await db.settings.find_one({"key": "gallery_pricing"}, {"_id": 0})
+    pricing = pricing_doc.get("value", DEFAULT_GALLERY_PRICING) if pricing_doc else DEFAULT_GALLERY_PRICING
+    
+    if data.option not in pricing:
+        raise HTTPException(status_code=400, detail="Option invalide")
+    
+    option = pricing[data.option]
+    price = str(option["price"])
+    
+    # Check if already purchased
+    existing = await db.gallery_purchases.find_one({
+        "gallery_id": data.gallery_id,
+        "client_id": client_id,
+        "option": data.option,
+        "status": "completed"
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Cette option a déjà été achetée")
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    
+    # Create PayPal payment
+    payment = paypalrestsdk.Payment({
+        "intent": "sale",
+        "payer": {"payment_method": "paypal"},
+        "redirect_urls": {
+            "return_url": f"{site_url}/espace-client/gallery/{data.gallery_id}/payment-success?option={data.option}",
+            "cancel_url": f"{site_url}/espace-client/gallery/{data.gallery_id}/payment-cancel"
+        },
+        "transactions": [{
+            "item_list": {
+                "items": [{
+                    "name": f"{option['label']} - {gallery.get('name', 'Galerie')}",
+                    "sku": f"gallery_{data.option}",
+                    "price": price,
+                    "currency": "EUR",
+                    "quantity": 1
+                }]
+            },
+            "amount": {"total": price, "currency": "EUR"},
+            "description": f"{option['label']} pour la galerie {gallery.get('name', '')} - {client['name']}"
+        }],
+        "note_to_payer": f"Achat option galerie CREATIVINDUSTRY pour {client['email']}"
+    })
+    
+    if payment.create():
+        # Store pending purchase
+        purchase_record = {
+            "id": str(uuid.uuid4()),
+            "paypal_payment_id": payment.id,
+            "gallery_id": data.gallery_id,
+            "gallery_name": gallery.get("name", "Galerie"),
+            "client_id": client_id,
+            "client_email": client["email"],
+            "client_name": client["name"],
+            "option": data.option,
+            "option_label": option["label"],
+            "amount": float(price),
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.gallery_purchases.insert_one(purchase_record)
+        
+        approval_url = None
+        for link in payment.links:
+            if link.rel == "approval_url":
+                approval_url = link.href
+                break
+        
+        return {
+            "success": True,
+            "payment_id": payment.id,
+            "approval_url": approval_url
+        }
+    else:
+        logging.error(f"PayPal error: {payment.error}")
+        raise HTTPException(status_code=500, detail=f"Erreur PayPal: {payment.error.get('message', 'Unknown error')}")
+
+# Client: Execute gallery purchase after PayPal approval
+@api_router.post("/client/gallery/execute-payment")
+async def execute_gallery_payment(
+    payment_id: str,
+    payer_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Execute PayPal payment for gallery option"""
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    # Find the purchase record
+    purchase = await db.gallery_purchases.find_one({
+        "paypal_payment_id": payment_id,
+        "client_id": client_id
+    }, {"_id": 0})
+    
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Achat non trouvé")
+    
+    if purchase["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Ce paiement a déjà été traité")
+    
+    # Execute PayPal payment
+    payment = paypalrestsdk.Payment.find(payment_id)
+    
+    if payment.execute({"payer_id": payer_id}):
+        # Update purchase status
+        await db.gallery_purchases.update_one(
+            {"paypal_payment_id": payment_id},
+            {
+                "$set": {
+                    "status": "completed",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "payer_id": payer_id
+                }
+            }
+        )
+        
+        # Send confirmation email
+        try:
+            client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+            if client:
+                send_gallery_purchase_email(client, purchase)
+        except Exception as e:
+            logging.error(f"Error sending purchase email: {e}")
+        
+        return {
+            "success": True,
+            "message": "Paiement validé ! L'option est maintenant débloquée.",
+            "option": purchase["option"]
+        }
+    else:
+        await db.gallery_purchases.update_one(
+            {"paypal_payment_id": payment_id},
+            {"$set": {"status": "failed", "error": str(payment.error)}}
+        )
+        raise HTTPException(status_code=500, detail="Erreur lors du paiement")
+
+def send_gallery_purchase_email(client: dict, purchase: dict):
+    """Send confirmation email after gallery option purchase"""
+    try:
+        site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+        
+        if purchase["option"] == "gallery_3d" or purchase["option"] == "pack_complete":
+            gallery_link = f"{site_url}/galerie3d/{purchase['gallery_id']}"
+            feature_text = "Vous pouvez maintenant accéder à votre galerie en mode 3D immersif."
+        else:
+            gallery_link = f"{site_url}/espace-client"
+            feature_text = "Vous pouvez maintenant télécharger vos photos en haute qualité."
+        
+        html_content = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; padding: 30px;">
+                <h1 style="color: #fbbf24; text-align: center;">Merci pour votre achat !</h1>
+                <p>Bonjour {client['name']},</p>
+                <p>Votre achat a été confirmé :</p>
+                <div style="background-color: #3a3a3a; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                    <p><strong>Option :</strong> {purchase['option_label']}</p>
+                    <p><strong>Galerie :</strong> {purchase['gallery_name']}</p>
+                    <p><strong>Montant :</strong> {purchase['amount']}€</p>
+                </div>
+                <p>{feature_text}</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{gallery_link}" style="background-color: #fbbf24; color: #000000; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        Accéder à ma galerie
+                    </a>
+                </div>
+                <p style="color: #888888; font-size: 12px; text-align: center;">
+                    CREATIVINDUSTRY - Votre photographe professionnel
+                </p>
+            </div>
+        </body>
+        </html>
+        """
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = f"Confirmation d'achat - {purchase['option_label']}"
+        msg['From'] = os.environ.get('SMTP_EMAIL', 'contact@creativindustry.com')
+        msg['To'] = client['email']
+        msg.attach(MIMEText(html_content, 'html'))
+        
+        with smtplib.SMTP(os.environ.get('SMTP_HOST', 'smtp.ionos.fr'), int(os.environ.get('SMTP_PORT', 587))) as server:
+            server.starttls()
+            server.login(os.environ.get('SMTP_EMAIL', ''), os.environ.get('SMTP_PASSWORD', ''))
+            server.send_message(msg)
+            
+    except Exception as e:
+        logging.error(f"Error sending gallery purchase email: {e}")
+
+# Client: Download HD photos as ZIP
+@api_router.get("/client/gallery/{gallery_id}/download-hd")
+async def download_gallery_hd(
+    gallery_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Download all gallery photos in HD as ZIP"""
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    # Check if client has purchased HD download
+    purchases = await db.gallery_purchases.find({
+        "gallery_id": gallery_id,
+        "client_id": client_id,
+        "status": "completed",
+        "option": {"$in": ["hd_download", "pack_complete"]}
+    }).to_list(10)
+    
+    if not purchases:
+        raise HTTPException(status_code=403, detail="Vous devez acheter l'option téléchargement HD")
+    
+    # Get gallery
+    gallery = await db.galleries.find_one({"id": gallery_id, "client_id": client_id}, {"_id": 0})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Galerie non trouvée")
+    
+    photos = gallery.get("photos", [])
+    if not photos:
+        raise HTTPException(status_code=404, detail="Aucune photo dans cette galerie")
+    
+    # Create ZIP in memory
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for photo in photos:
+            photo_url = photo.get("url", "")
+            file_path = UPLOADS_DIR / "galleries" / Path(photo_url).name
+            
+            if file_path.exists():
+                zip_file.write(file_path, photo.get("filename", file_path.name))
+    
+    zip_buffer.seek(0)
+    gallery_name = gallery.get("name", "galerie").replace(" ", "_")
+    
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={gallery_name}_HD.zip"}
+    )
+
+# Client: Download single HD photo
+@api_router.get("/client/gallery/{gallery_id}/download-hd/{photo_id}")
+async def download_single_photo_hd(
+    gallery_id: str,
+    photo_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Download a single photo in HD"""
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    # Check if client has purchased HD download
+    purchases = await db.gallery_purchases.find({
+        "gallery_id": gallery_id,
+        "client_id": client_id,
+        "status": "completed",
+        "option": {"$in": ["hd_download", "pack_complete"]}
+    }).to_list(10)
+    
+    if not purchases:
+        raise HTTPException(status_code=403, detail="Vous devez acheter l'option téléchargement HD")
+    
+    # Get gallery and photo
+    gallery = await db.galleries.find_one({"id": gallery_id, "client_id": client_id}, {"_id": 0})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Galerie non trouvée")
+    
+    photo = None
+    for p in gallery.get("photos", []):
+        if p.get("id") == photo_id:
+            photo = p
+            break
+    
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo non trouvée")
+    
+    photo_url = photo.get("url", "")
+    file_path = UPLOADS_DIR / "galleries" / Path(photo_url).name
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+    
+    return FileResponse(
+        path=str(file_path),
+        filename=photo.get("filename", file_path.name),
+        media_type="image/jpeg"
+    )
+
+# Public: Check if gallery has 3D access (for public 3D page)
+@api_router.get("/public/gallery/{gallery_id}/check-3d-access")
+async def check_gallery_3d_access(gallery_id: str, client_token: Optional[str] = None):
+    """Check if 3D gallery access is available (free or purchased)"""
+    
+    gallery = await db.galleries.find_one({"id": gallery_id}, {"_id": 0})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Galerie non trouvée")
+    
+    # If client is logged in, check their purchases
+    if client_token:
+        try:
+            payload = verify_client_token(client_token)
+            client_id = payload["sub"]
+            
+            if gallery.get("client_id") == client_id:
+                # Check purchases
+                purchases = await db.gallery_purchases.find({
+                    "gallery_id": gallery_id,
+                    "client_id": client_id,
+                    "status": "completed",
+                    "option": {"$in": ["gallery_3d", "pack_complete"]}
+                }).to_list(10)
+                
+                if purchases:
+                    return {"has_access": True, "reason": "purchased"}
+        except:
+            pass
+    
+    # Check if gallery is set to free 3D access (admin can enable this per gallery)
+    if gallery.get("free_3d_access", False):
+        return {"has_access": True, "reason": "free"}
+    
+    return {"has_access": False, "reason": "payment_required"}
+
+# Admin: Get all gallery purchases (for billing/reporting)
+@api_router.get("/admin/gallery-purchases")
+async def get_all_gallery_purchases(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Get all gallery purchases for admin reporting"""
+    verify_token(credentials.credentials)
+    
+    purchases = await db.gallery_purchases.find(
+        {"status": "completed"},
+        {"_id": 0}
+    ).sort("completed_at", -1).to_list(500)
+    
+    # Calculate totals
+    total_revenue = sum(p.get("amount", 0) for p in purchases)
+    
+    return {
+        "purchases": purchases,
+        "total_count": len(purchases),
+        "total_revenue": total_revenue
+    }
+
+
 app.include_router(api_router)
 
 # Mount static files for uploads
