@@ -153,26 +153,13 @@ const PhotoFindPage = () => {
               Prenez un selfie ou importez une photo pour retrouver toutes les photos où vous apparaissez.
             </p>
 
-            {/* Camera Error Message */}
-            {cameraError && !cameraActive && (
-              <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-center">
-                <p className="text-red-400 mb-2">{cameraError}</p>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 bg-primary text-black font-bold rounded-lg text-sm"
-                >
-                  Importer une photo à la place
-                </button>
-              </div>
-            )}
-
             {/* Action Buttons */}
-            {!cameraActive && !searching && (
+            {!searching && (
               <div className="flex flex-col gap-4">
                 {/* Selfie button - uses native camera on mobile */}
                 <label 
                   htmlFor="selfie-input"
-                  className="px-8 py-4 bg-primary text-black font-bold rounded-lg flex items-center justify-center gap-2 text-lg cursor-pointer hover:bg-primary/90 transition-colors"
+                  className="px-8 py-4 bg-primary text-black font-bold rounded-lg flex items-center justify-center gap-2 text-lg cursor-pointer hover:bg-primary/90 transition-colors active:scale-95"
                 >
                   <Camera size={24} /> Prendre un selfie
                 </label>
