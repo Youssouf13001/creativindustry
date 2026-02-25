@@ -6277,6 +6277,125 @@ const AdminDashboard = () => {
                 <p className="text-white/50 text-center py-8">Aucune facture de renouvellement pour le moment</p>
               )}
             </div>
+
+            {/* PhotoFind Sales Section */}
+            <div className="bg-card border border-white/10 p-6">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <Camera size={20} className="text-primary" />
+                Ventes PhotoFind
+              </h3>
+              
+              {/* PhotoFind Stats */}
+              {photofindPurchases.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-background/50 p-4 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-green-400">
+                      {photofindPurchases.filter(p => p.status === 'confirmed').reduce((sum, p) => sum + (p.price || 0), 0).toFixed(2)} €
+                    </p>
+                    <p className="text-white/60 text-sm">CA PhotoFind</p>
+                  </div>
+                  <div className="bg-background/50 p-4 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-primary">
+                      {photofindPurchases.filter(p => p.status === 'confirmed').length}
+                    </p>
+                    <p className="text-white/60 text-sm">Ventes confirmées</p>
+                  </div>
+                  <div className="bg-background/50 p-4 rounded-lg text-center">
+                    <p className="text-2xl font-bold text-yellow-400">
+                      {photofindPurchases.filter(p => p.status === 'pending').length}
+                    </p>
+                    <p className="text-white/60 text-sm">En attente</p>
+                  </div>
+                </div>
+              )}
+
+              {photofindPurchases.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="text-left py-3 px-2 text-white/60 text-sm">Client</th>
+                        <th className="text-left py-3 px-2 text-white/60 text-sm">Événement</th>
+                        <th className="text-center py-3 px-2 text-white/60 text-sm">Photos</th>
+                        <th className="text-right py-3 px-2 text-white/60 text-sm">Montant</th>
+                        <th className="text-left py-3 px-2 text-white/60 text-sm">Date</th>
+                        <th className="text-left py-3 px-2 text-white/60 text-sm">Statut</th>
+                        <th className="text-left py-3 px-2 text-white/60 text-sm">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {photofindPurchases.map((purchase) => (
+                        <tr key={purchase.id} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="py-3 px-2">
+                            <p className="font-medium">{purchase.customer_name}</p>
+                            <p className="text-white/50 text-xs">{purchase.customer_email}</p>
+                          </td>
+                          <td className="py-3 px-2 text-white/80">{purchase.event_name || 'N/A'}</td>
+                          <td className="py-3 px-2 text-center">{purchase.num_photos}</td>
+                          <td className="py-3 px-2 text-right font-bold text-green-400">{purchase.price?.toFixed(2)} €</td>
+                          <td className="py-3 px-2 text-white/60 text-sm">
+                            {new Date(purchase.created_at).toLocaleDateString('fr-FR', { 
+                              day: '2-digit', month: '2-digit', year: 'numeric'
+                            })}
+                          </td>
+                          <td className="py-3 px-2">
+                            <span className={`px-2 py-1 text-xs rounded ${
+                              purchase.status === 'confirmed' 
+                                ? 'bg-green-500/20 text-green-400' 
+                                : 'bg-yellow-500/20 text-yellow-400'
+                            }`}>
+                              {purchase.status === 'confirmed' ? 'Confirmé' : 'En attente'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2">
+                            {purchase.status !== 'confirmed' && (
+                              <button
+                                onClick={() => confirmPhotofindPurchase(purchase.id)}
+                                className="px-3 py-1 bg-green-500/20 text-green-400 text-sm rounded hover:bg-green-500/30"
+                              >
+                                Confirmer
+                              </button>
+                            )}
+                            {purchase.status === 'confirmed' && purchase.download_count > 0 && (
+                              <span className="text-white/50 text-xs">
+                                {purchase.download_count} téléchargement(s)
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-white/50 text-center py-8">Aucune vente PhotoFind pour le moment</p>
+              )}
+            </div>
+
+            {/* Total Revenue Summary */}
+            {(billingStats.total_revenue > 0 || photofindPurchases.filter(p => p.status === 'confirmed').length > 0) && (
+              <div className="bg-gradient-to-r from-primary/20 to-transparent border border-primary/30 p-6 rounded-lg">
+                <h3 className="font-bold mb-4">📊 Résumé des revenus</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-white/60 text-sm">Renouvellements</p>
+                    <p className="text-2xl font-bold text-white">{billingStats.total_revenue?.toFixed(2) || '0.00'} €</p>
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-sm">PhotoFind</p>
+                    <p className="text-2xl font-bold text-white">
+                      {photofindPurchases.filter(p => p.status === 'confirmed').reduce((sum, p) => sum + (p.price || 0), 0).toFixed(2)} €
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-sm">Total</p>
+                    <p className="text-3xl font-bold text-primary">
+                      {((billingStats.total_revenue || 0) + photofindPurchases.filter(p => p.status === 'confirmed').reduce((sum, p) => sum + (p.price || 0), 0)).toFixed(2)} €
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
