@@ -760,7 +760,7 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes, clientsRes, contentRes, appointmentsRes, galleriesRes, onlineRes, downloadsRes] = await Promise.all([
+      const [statsRes, bookingsRes, quotesRes, servicesRes, optionsRes, messagesRes, portfolioRes, clientsRes, contentRes, appointmentsRes, galleriesRes, onlineRes, downloadsRes, guestbooksRes, storageRes] = await Promise.all([
         axios.get(`${API}/stats`, { headers }),
         axios.get(`${API}/bookings`, { headers }),
         axios.get(`${API}/wedding-quotes`, { headers }),
@@ -774,7 +774,8 @@ const AdminDashboard = () => {
         axios.get(`${API}/admin/galleries`, { headers }),
         axios.get(`${API}/admin/users/online`, { headers }).catch(() => ({ data: [] })),
         axios.get(`${API}/admin/downloads`, { headers }).catch(() => ({ data: [] })),
-        axios.get(`${API}/admin/guestbooks`, { headers }).catch(() => ({ data: [] }))
+        axios.get(`${API}/admin/guestbooks`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API}/admin/storage-stats`, { headers }).catch(() => ({ data: null }))
       ]);
       setStats(statsRes.data);
       setBookings(bookingsRes.data);
@@ -791,6 +792,7 @@ const AdminDashboard = () => {
       setOnlineUsers(onlineRes.data);
       setRecentDownloads(downloadsRes.data);
       setGuestbooks(guestbooksRes.data);
+      setStorageStats(storageRes.data);
     } catch (e) {
       if (e.response?.status === 401) {
         localStorage.removeItem("admin_token");
