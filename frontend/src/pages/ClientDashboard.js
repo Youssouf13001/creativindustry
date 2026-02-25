@@ -273,6 +273,7 @@ const ClientDashboard = () => {
     if (!selectedGallery) return;
     
     try {
+      toast.info("Préparation du téléchargement...");
       const response = await axios.get(
         `${API}/client/gallery/${selectedGallery.id}/download-hd`,
         { headers, responseType: 'blob' }
@@ -289,6 +290,31 @@ const ClientDashboard = () => {
       toast.success("Téléchargement démarré !");
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erreur lors du téléchargement");
+    }
+  };
+
+  // Download video slideshow
+  const downloadVideoSlideshow = async () => {
+    if (!selectedGallery) return;
+    
+    try {
+      toast.info("Génération de la vidéo en cours... Cela peut prendre quelques minutes.");
+      const response = await axios.get(
+        `${API}/client/gallery/${selectedGallery.id}/download-video`,
+        { headers, responseType: 'blob', timeout: 300000 } // 5 min timeout
+      );
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedGallery.name.replace(/\s/g, '_')}_diaporama.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Vidéo téléchargée !");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la génération de la vidéo");
     }
   };
 
