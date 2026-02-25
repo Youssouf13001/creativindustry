@@ -15,7 +15,7 @@ Site vitrine pour photographe avec espace client/admin comprenant :
 French
 
 ## Core Architecture
-- **Frontend**: React + TailwindCSS + Shadcn/UI
+- **Frontend**: React + TailwindCSS + Shadcn/UI + Recharts
 - **Backend**: FastAPI + Python
 - **Database**: MongoDB
 - **Hosting**: IONOS (production)
@@ -42,6 +42,7 @@ French
 - [x] **PWA (Progressive Web App)** - Installation mobile, notifications push
 - [x] **Galerie améliorée** - Diaporama, musique, partage social, QR code
 - [x] **Livre d'or digital** - Messages texte/audio/vidéo des invités via QR code
+- [x] **Graphique espace disque** - Camembert d'utilisation stockage dans admin (25 Fév 2026)
 
 ### 🔴 Known Issues (P0 - BLOCKER)
 1. **Erreur `[object Object]`** - Soumission de témoignage en production (IONOS)
