@@ -6389,11 +6389,12 @@ const AdminDashboard = () => {
               <button 
                 disabled={backupProgress.active}
                 onClick={async () => {
+                  const includeCode = window.backupIncludeCode || false;
                   setBackupProgress({ active: true, step: 'Préparation de la sauvegarde...', progress: 5 });
                   try {
                     // Step 1: Create the backup file
-                    setBackupProgress({ active: true, step: 'Création de la sauvegarde...', progress: 20 });
-                    const createResponse = await axios.post(`${API}/admin/backup/create`, {}, { headers });
+                    setBackupProgress({ active: true, step: includeCode ? 'Création de la sauvegarde complète (code + données)...' : 'Création de la sauvegarde...', progress: 20 });
+                    const createResponse = await axios.post(`${API}/admin/backup/create`, { include_code: includeCode }, { headers });
                     
                     if (createResponse.data.success) {
                       setBackupProgress({ active: true, step: `Sauvegarde créée (${createResponse.data.size_mb} MB). Téléchargement...`, progress: 50 });
