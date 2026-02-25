@@ -1975,6 +1975,122 @@ const ClientDashboard = () => {
                   )}
                 </div>
 
+                {/* Premium Options Section */}
+                {galleryOptions && (
+                  <div className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border border-purple-500/30 rounded-lg p-6 mb-6">
+                    <h3 className="font-primary font-bold text-lg mb-4 flex items-center gap-2">
+                      <Sparkles className="text-purple-400" size={20} />
+                      Options Premium
+                    </h3>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {/* 3D Gallery Option */}
+                      <div className={`bg-black/30 rounded-lg p-4 border ${galleryOptions.options.gallery_3d.unlocked ? 'border-green-500/50' : 'border-white/10'}`}>
+                        <div className="flex items-center gap-3 mb-3">
+                          <Box className="text-purple-400" size={24} />
+                          <div>
+                            <h4 className="font-semibold">Galerie 3D</h4>
+                            <p className="text-white/60 text-sm">Expérience immersive</p>
+                          </div>
+                        </div>
+                        {galleryOptions.options.gallery_3d.unlocked ? (
+                          <a
+                            href={`/galerie3d/${selectedGallery.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full bg-green-500/20 text-green-400 py-2 rounded flex items-center justify-center gap-2 hover:bg-green-500/30 transition-colors"
+                          >
+                            <Check size={16} /> Accéder à la 3D
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => purchaseGalleryOption('gallery_3d')}
+                            disabled={purchasingOption === 'gallery_3d'}
+                            className="w-full bg-purple-500 hover:bg-purple-600 text-white py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+                          >
+                            {purchasingOption === 'gallery_3d' ? (
+                              <Loader className="animate-spin" size={16} />
+                            ) : (
+                              <>
+                                <Lock size={16} /> Débloquer {galleryOptions.options.gallery_3d.price}€
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* HD Download Option */}
+                      <div className={`bg-black/30 rounded-lg p-4 border ${galleryOptions.options.hd_download.unlocked ? 'border-green-500/50' : 'border-white/10'}`}>
+                        <div className="flex items-center gap-3 mb-3">
+                          <Download className="text-indigo-400" size={24} />
+                          <div>
+                            <h4 className="font-semibold">Téléchargement HD</h4>
+                            <p className="text-white/60 text-sm">Toutes les photos</p>
+                          </div>
+                        </div>
+                        {galleryOptions.options.hd_download.unlocked ? (
+                          <button
+                            onClick={downloadHDPhotos}
+                            className="w-full bg-green-500/20 text-green-400 py-2 rounded flex items-center justify-center gap-2 hover:bg-green-500/30 transition-colors"
+                          >
+                            <Download size={16} /> Télécharger ZIP
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => purchaseGalleryOption('hd_download')}
+                            disabled={purchasingOption === 'hd_download'}
+                            className="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+                          >
+                            {purchasingOption === 'hd_download' ? (
+                              <Loader className="animate-spin" size={16} />
+                            ) : (
+                              <>
+                                <Lock size={16} /> Débloquer {galleryOptions.options.hd_download.price}€
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Pack Complete Option */}
+                      <div className={`bg-black/30 rounded-lg p-4 border-2 ${galleryOptions.options.pack_complete.unlocked ? 'border-green-500/50' : 'border-primary/50'}`}>
+                        <div className="flex items-center gap-3 mb-3">
+                          <Sparkles className="text-primary" size={24} />
+                          <div>
+                            <h4 className="font-semibold text-primary">Pack Complet</h4>
+                            <p className="text-white/60 text-sm">3D + HD (économisez !)</p>
+                          </div>
+                        </div>
+                        {galleryOptions.options.pack_complete.unlocked ? (
+                          <div className="w-full bg-green-500/20 text-green-400 py-2 rounded flex items-center justify-center gap-2">
+                            <Check size={16} /> Tout débloqué !
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => purchaseGalleryOption('pack_complete')}
+                            disabled={purchasingOption === 'pack_complete'}
+                            className="w-full bg-primary hover:bg-primary/90 text-black font-bold py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+                          >
+                            {purchasingOption === 'pack_complete' ? (
+                              <Loader className="animate-spin" size={16} />
+                            ) : (
+                              <>
+                                <Lock size={16} /> Débloquer {galleryOptions.options.pack_complete.price}€
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {loadingOptions && (
+                  <div className="bg-black/30 rounded-lg p-6 mb-6 flex items-center justify-center">
+                    <Loader className="animate-spin text-primary" size={24} />
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {(selectedGallery.photos || []).map((photo, index) => (
                     <div
