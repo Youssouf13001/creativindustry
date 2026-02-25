@@ -2642,6 +2642,31 @@ const AdminDashboard = () => {
                       🥽 Galerie 3D
                     </a>
                     <button 
+                      onClick={async () => {
+                        try {
+                          const res = await fetch(`${API}/admin/galleries/${selectedGallery.id}/qrcode-3d`, {
+                            headers: { Authorization: `Bearer ${localStorage.getItem("admin_token")}` }
+                          });
+                          const blob = await res.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `QR_3D_${selectedGallery.name.replace(/\s/g, '_')}.png`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                          toast.success("QR code 3D téléchargé !");
+                        } catch (e) {
+                          toast.error("Erreur lors du téléchargement");
+                        }
+                      }}
+                      className="bg-indigo-500/20 text-indigo-400 px-4 py-2 text-sm hover:bg-indigo-500/30 flex items-center gap-2"
+                      title="Télécharger QR code 3D"
+                    >
+                      <QrCode size={16} /> QR 3D
+                    </button>
+                    <button 
                       onClick={() => deleteGallery(selectedGallery.id)}
                       className="bg-red-500/20 text-red-500 px-4 py-2 text-sm hover:bg-red-500/30"
                     >
