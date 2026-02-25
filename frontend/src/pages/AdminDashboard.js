@@ -1814,6 +1814,108 @@ const AdminDashboard = () => {
     toast.success("Lien copié !");
   };
 
+  // PhotoFind functions
+  const fetchPhotofindEvents = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/photofind/events`, { headers });
+      setPhotofindEvents(res.data);
+    } catch (e) {
+      console.error("Error fetching PhotoFind events:", e);
+    }
+  };
+
+  const fetchPhotofindPurchases = async () => {
+    try {
+      const res = await axios.get(`${API}/admin/photofind/purchases`, { headers });
+      setPhotofindPurchases(res.data);
+    } catch (e) {
+      console.error("Error fetching PhotoFind purchases:", e);
+    }
+  };
+
+  const createPhotofindEvent = async () => {
+    if (!newPhotofindEvent.name || !newPhotofindEvent.event_date) {
+      toast.error("Veuillez remplir le nom et la date");
+      return;
+    }
+    try {
+      await axios.post(`${API}/admin/photofind/events`, newPhotofindEvent, { headers });
+      toast.success("Événement PhotoFind créé !");
+      setShowAddPhotofindEvent(false);
+      setNewPhotofindEvent({ name: "", description: "", event_date: "", price_per_photo: 5, price_pack_5: 20, price_pack_10: 35, price_all: 50 });
+      fetchPhotofindEvents();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la création");
+    }
+  };
+
+  const deletePhotofindEvent = async (eventId) => {
+    if (!window.confirm("Supprimer cet événement et toutes ses photos ?")) return;
+    try {
+      await axios.delete(`${API}/admin/photofind/events/${eventId}`, { headers });
+      toast.success("Événement supprimé");
+      setSelectedPhotofindEvent(null);
+      fetchPhotofindEvents();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  const fetchPhotofindEventDetail = async (eventId) => {
+    try {
+      const res = await axios.get(`${API}/admin/photofind/events/${eventId}`, { headers });
+      setSelectedPhotofindEvent(res.data);
+    } catch (e) {
+      toast.error("Erreur lors du chargement");
+    }
+  };
+
+  const uploadPhotofindPhotos = async (eventId, files) => {
+    setUploadingPhotofindPhotos(true);
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      formData.append("files", files[i]);
+    }
+    try {
+      const res = await axios.post(`${API}/admin/photofind/events/${eventId}/photos`, formData, {
+        headers: { ...headers, "Content-Type": "multipart/form-data" }
+      });
+      toast.success(`${res.data.uploaded} photos uploadées, ${res.data.total_faces_indexed} visages indexés`);
+      fetchPhotofindEventDetail(eventId);
+      fetchPhotofindEvents();
+    } catch (e) {
+      toast.error("Erreur lors de l'upload");
+    } finally {
+      setUploadingPhotofindPhotos(false);
+    }
+  };
+
+  const deletePhotofindPhoto = async (photoId) => {
+    try {
+      await axios.delete(`${API}/admin/photofind/photos/${photoId}`, { headers });
+      toast.success("Photo supprimée");
+      if (selectedPhotofindEvent) fetchPhotofindEventDetail(selectedPhotofindEvent.id);
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const confirmPhotofindPurchase = async (purchaseId) => {
+    try {
+      await axios.put(`${API}/admin/photofind/purchases/${purchaseId}/confirm`, {}, { headers });
+      toast.success("Achat confirmé !");
+      fetchPhotofindPurchases();
+    } catch (e) {
+      toast.error("Erreur");
+    }
+  };
+
+  const copyPhotofindLink = (eventId) => {
+    const url = `${window.location.origin}/photofind/${eventId}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Lien copié !");
+  };
+
   const statusColors = {
     pending: "bg-yellow-500/20 text-yellow-500",
     confirmed: "bg-green-500/20 text-green-500",
