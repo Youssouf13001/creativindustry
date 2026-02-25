@@ -6236,6 +6236,442 @@ def format_file_size(size_bytes):
         i += 1
     return f"{size_bytes:.1f} {size_names[i]}"
 
+# ==================== PHOTOFIND - RECONNAISSANCE FACIALE ====================
+
+import boto3
+from botocore.exceptions import ClientError
+
+# AWS Rekognition configuration
+AWS_ACCESS_KEY = os.environ.get('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+AWS_REGION = os.environ.get('AWS_REGION', 'eu-north-1')
+
+# Create PhotoFind uploads folder
+PHOTOFIND_DIR = UPLOADS_DIR / "photofind"
+PHOTOFIND_DIR.mkdir(exist_ok=True)
+
+def get_rekognition_client():
+    """Get AWS Rekognition client"""
+    return boto3.client(
+        'rekognition',
+        region_name=AWS_REGION,
+        aws_access_key_id=AWS_ACCESS_KEY,
+        aws_secret_access_key=AWS_SECRET_KEY
+    )
+
+# PhotoFind Models
+class PhotoFindEventCreate(BaseModel):
+    name: str
+    description: Optional[str] = ""
+    event_date: str
+    price_per_photo: float = 5.0
+    price_pack_5: float = 20.0
+    price_pack_10: float = 35.0
+    price_all: float = 50.0
+
+class PhotoFindEventUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    event_date: Optional[str] = None
+    price_per_photo: Optional[float] = None
+    price_pack_5: Optional[float] = None
+    price_pack_10: Optional[float] = None
+    price_all: Optional[float] = None
+    is_active: Optional[bool] = None
+
+@api_router.post("/admin/photofind/events")
+async def create_photofind_event(data: PhotoFindEventCreate, admin: dict = Depends(get_current_admin)):
+    """Create a new PhotoFind event with its own face collection"""
+    event_id = str(uuid.uuid4())
+    collection_id = f"photofind-{event_id[:8]}"
+    
+    # Create Rekognition collection for this event
+    try:
+        rekognition = get_rekognition_client()
+        rekognition.create_collection(CollectionId=collection_id)
+        logging.info(f"Created Rekognition collection: {collection_id}")
+    except ClientError as e:
+        if e.response['Error']['Code'] != 'ResourceAlreadyExistsException':
+            raise HTTPException(status_code=500, detail=f"Erreur AWS: {str(e)}")
+    
+    # Create event folder
+    event_folder = PHOTOFIND_DIR / event_id
+    event_folder.mkdir(exist_ok=True)
+    
+    event = {
+        "id": event_id,
+        "name": data.name,
+        "description": data.description,
+        "event_date": data.event_date,
+        "collection_id": collection_id,
+        "price_per_photo": data.price_per_photo,
+        "price_pack_5": data.price_pack_5,
+        "price_pack_10": data.price_pack_10,
+        "price_all": data.price_all,
+        "photos_count": 0,
+        "faces_indexed": 0,
+        "is_active": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": admin["id"]
+    }
+    
+    await db.photofind_events.insert_one(event)
+    
+    # Generate QR code for public access
+    public_url = f"{os.environ.get('SITE_URL', 'https://creativindustry.com')}/photofind/{event_id}"
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(public_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    
+    qr_path = event_folder / "qr_code.png"
+    qr_img.save(str(qr_path))
+    
+    event["qr_code_url"] = f"/uploads/photofind/{event_id}/qr_code.png"
+    event["public_url"] = public_url
+    del event["_id"]
+    
+    return event
+
+@api_router.get("/admin/photofind/events")
+async def get_photofind_events(admin: dict = Depends(get_current_admin)):
+    """Get all PhotoFind events"""
+    events = await db.photofind_events.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return events
+
+@api_router.get("/admin/photofind/events/{event_id}")
+async def get_photofind_event(event_id: str, admin: dict = Depends(get_current_admin)):
+    """Get a specific PhotoFind event with photos"""
+    event = await db.photofind_events.find_one({"id": event_id}, {"_id": 0})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    # Get photos for this event
+    photos = await db.photofind_photos.find({"event_id": event_id}, {"_id": 0}).to_list(1000)
+    event["photos"] = photos
+    
+    return event
+
+@api_router.put("/admin/photofind/events/{event_id}")
+async def update_photofind_event(event_id: str, data: PhotoFindEventUpdate, admin: dict = Depends(get_current_admin)):
+    """Update a PhotoFind event"""
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Aucune donnée à mettre à jour")
+    
+    result = await db.photofind_events.update_one({"id": event_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    event = await db.photofind_events.find_one({"id": event_id}, {"_id": 0})
+    return event
+
+@api_router.delete("/admin/photofind/events/{event_id}")
+async def delete_photofind_event(event_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a PhotoFind event and its Rekognition collection"""
+    event = await db.photofind_events.find_one({"id": event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    # Delete Rekognition collection
+    try:
+        rekognition = get_rekognition_client()
+        rekognition.delete_collection(CollectionId=event["collection_id"])
+    except ClientError:
+        pass  # Collection may not exist
+    
+    # Delete photos from database
+    await db.photofind_photos.delete_many({"event_id": event_id})
+    
+    # Delete event folder
+    event_folder = PHOTOFIND_DIR / event_id
+    if event_folder.exists():
+        shutil.rmtree(event_folder)
+    
+    await db.photofind_events.delete_one({"id": event_id})
+    
+    return {"message": "Événement supprimé"}
+
+@api_router.post("/admin/photofind/events/{event_id}/photos")
+async def upload_photofind_photos(
+    event_id: str,
+    files: List[UploadFile] = File(...),
+    admin: dict = Depends(get_current_admin)
+):
+    """Upload photos to a PhotoFind event and index faces"""
+    event = await db.photofind_events.find_one({"id": event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    event_folder = PHOTOFIND_DIR / event_id
+    event_folder.mkdir(exist_ok=True)
+    
+    rekognition = get_rekognition_client()
+    results = []
+    total_faces = 0
+    
+    for file in files:
+        photo_id = str(uuid.uuid4())
+        filename = f"{photo_id}_{file.filename}"
+        filepath = event_folder / filename
+        
+        # Save file
+        content = await file.read()
+        with open(filepath, "wb") as f:
+            f.write(content)
+        
+        # Index faces in Rekognition
+        faces_indexed = 0
+        face_ids = []
+        try:
+            response = rekognition.index_faces(
+                CollectionId=event["collection_id"],
+                Image={'Bytes': content},
+                ExternalImageId=photo_id,
+                MaxFaces=10,
+                QualityFilter='AUTO',
+                DetectionAttributes=['DEFAULT']
+            )
+            faces_indexed = len(response.get('FaceRecords', []))
+            face_ids = [fr['Face']['FaceId'] for fr in response.get('FaceRecords', [])]
+            total_faces += faces_indexed
+        except ClientError as e:
+            logging.error(f"Rekognition error for {filename}: {e}")
+        
+        # Save photo info to database
+        photo_data = {
+            "id": photo_id,
+            "event_id": event_id,
+            "filename": filename,
+            "url": f"/uploads/photofind/{event_id}/{filename}",
+            "faces_count": faces_indexed,
+            "face_ids": face_ids,
+            "uploaded_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.photofind_photos.insert_one(photo_data)
+        
+        results.append({
+            "id": photo_id,
+            "filename": file.filename,
+            "faces_indexed": faces_indexed,
+            "status": "success" if faces_indexed > 0 else "no_faces"
+        })
+    
+    # Update event stats
+    await db.photofind_events.update_one(
+        {"id": event_id},
+        {
+            "$inc": {"photos_count": len(files), "faces_indexed": total_faces}
+        }
+    )
+    
+    return {
+        "uploaded": len(files),
+        "total_faces_indexed": total_faces,
+        "results": results
+    }
+
+@api_router.delete("/admin/photofind/photos/{photo_id}")
+async def delete_photofind_photo(photo_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a photo from PhotoFind"""
+    photo = await db.photofind_photos.find_one({"id": photo_id})
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo non trouvée")
+    
+    event = await db.photofind_events.find_one({"id": photo["event_id"]})
+    
+    # Delete faces from Rekognition
+    if photo.get("face_ids") and event:
+        try:
+            rekognition = get_rekognition_client()
+            rekognition.delete_faces(
+                CollectionId=event["collection_id"],
+                FaceIds=photo["face_ids"]
+            )
+        except ClientError:
+            pass
+    
+    # Delete file
+    filepath = PHOTOFIND_DIR / photo["event_id"] / photo["filename"]
+    if filepath.exists():
+        filepath.unlink()
+    
+    # Update stats
+    await db.photofind_events.update_one(
+        {"id": photo["event_id"]},
+        {"$inc": {"photos_count": -1, "faces_indexed": -photo.get("faces_count", 0)}}
+    )
+    
+    await db.photofind_photos.delete_one({"id": photo_id})
+    
+    return {"message": "Photo supprimée"}
+
+# Public PhotoFind endpoints (for guests)
+@api_router.get("/public/photofind/{event_id}")
+async def get_public_photofind_event(event_id: str):
+    """Get public info about a PhotoFind event"""
+    event = await db.photofind_events.find_one(
+        {"id": event_id, "is_active": True},
+        {"_id": 0, "collection_id": 0, "created_by": 0}
+    )
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé ou inactif")
+    return event
+
+@api_router.post("/public/photofind/{event_id}/search")
+async def search_photofind_faces(event_id: str, file: UploadFile = File(...)):
+    """Search for matching faces in event photos using a selfie"""
+    event = await db.photofind_events.find_one({"id": event_id, "is_active": True})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé ou inactif")
+    
+    content = await file.read()
+    
+    try:
+        rekognition = get_rekognition_client()
+        response = rekognition.search_faces_by_image(
+            CollectionId=event["collection_id"],
+            Image={'Bytes': content},
+            FaceMatchThreshold=80.0,
+            MaxFaces=50
+        )
+        
+        matches = response.get('FaceMatches', [])
+        
+        # Get unique photo IDs from matches
+        photo_ids = list(set([match['Face']['ExternalImageId'] for match in matches]))
+        
+        # Get photo details
+        photos = await db.photofind_photos.find(
+            {"id": {"$in": photo_ids}},
+            {"_id": 0}
+        ).to_list(100)
+        
+        # Add similarity score to each photo
+        photo_scores = {}
+        for match in matches:
+            pid = match['Face']['ExternalImageId']
+            score = match['Similarity']
+            if pid not in photo_scores or score > photo_scores[pid]:
+                photo_scores[pid] = score
+        
+        for photo in photos:
+            photo["similarity"] = photo_scores.get(photo["id"], 0)
+        
+        # Sort by similarity
+        photos.sort(key=lambda x: x.get("similarity", 0), reverse=True)
+        
+        return {
+            "event_name": event["name"],
+            "matches_found": len(photos),
+            "photos": photos,
+            "prices": {
+                "per_photo": event.get("price_per_photo", 5),
+                "pack_5": event.get("price_pack_5", 20),
+                "pack_10": event.get("price_pack_10", 35),
+                "all": event.get("price_all", 50)
+            }
+        }
+        
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        if error_code == 'InvalidParameterException':
+            raise HTTPException(status_code=400, detail="Aucun visage détecté dans l'image. Essayez avec un selfie plus net.")
+        raise HTTPException(status_code=500, detail=f"Erreur de recherche: {str(e)}")
+
+@api_router.post("/public/photofind/{event_id}/purchase")
+async def create_photofind_purchase(
+    event_id: str,
+    photo_ids: List[str] = Form(...),
+    email: str = Form(...),
+    name: str = Form(...)
+):
+    """Create a purchase request for PhotoFind photos"""
+    event = await db.photofind_events.find_one({"id": event_id, "is_active": True})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    # Calculate price based on number of photos
+    num_photos = len(photo_ids)
+    if num_photos >= 10:
+        price = event.get("price_pack_10", 35)
+    elif num_photos >= 5:
+        price = event.get("price_pack_5", 20)
+    else:
+        price = num_photos * event.get("price_per_photo", 5)
+    
+    purchase_id = str(uuid.uuid4())
+    purchase = {
+        "id": purchase_id,
+        "event_id": event_id,
+        "photo_ids": photo_ids,
+        "customer_email": email,
+        "customer_name": name,
+        "num_photos": num_photos,
+        "price": price,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.photofind_purchases.insert_one(purchase)
+    
+    # Generate PayPal payment link
+    paypal_link = f"https://paypal.me/creativindustryfranc/{price}"
+    
+    return {
+        "purchase_id": purchase_id,
+        "num_photos": num_photos,
+        "price": price,
+        "paypal_link": paypal_link,
+        "message": f"Votre sélection de {num_photos} photo(s) est prête. Prix: {price}€"
+    }
+
+@api_router.get("/admin/photofind/purchases")
+async def get_photofind_purchases(admin: dict = Depends(get_current_admin)):
+    """Get all PhotoFind purchases"""
+    purchases = await db.photofind_purchases.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return purchases
+
+@api_router.put("/admin/photofind/purchases/{purchase_id}/confirm")
+async def confirm_photofind_purchase(purchase_id: str, admin: dict = Depends(get_current_admin)):
+    """Confirm a PhotoFind purchase and send download links"""
+    purchase = await db.photofind_purchases.find_one({"id": purchase_id})
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Achat non trouvé")
+    
+    # Get photos
+    photos = await db.photofind_photos.find(
+        {"id": {"$in": purchase["photo_ids"]}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    # Generate download token
+    download_token = secrets.token_urlsafe(32)
+    
+    await db.photofind_purchases.update_one(
+        {"id": purchase_id},
+        {
+            "$set": {
+                "status": "confirmed",
+                "download_token": download_token,
+                "confirmed_at": datetime.now(timezone.utc).isoformat(),
+                "confirmed_by": admin["id"]
+            }
+        }
+    )
+    
+    # Send email with download link
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    download_url = f"{site_url}/photofind/download/{purchase_id}?token={download_token}"
+    
+    # TODO: Send email to customer
+    
+    return {
+        "message": "Achat confirmé",
+        "download_url": download_url,
+        "customer_email": purchase["customer_email"]
+    }
+
 # ==================== SEED DATA ====================
 
 @api_router.post("/seed")
