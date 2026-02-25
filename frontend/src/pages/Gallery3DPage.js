@@ -238,7 +238,7 @@ const Gallery3DPage = () => {
 
   const fetchGallery = async () => {
     try {
-      const res = await axios.get(`${API}/galleries/${galleryId}`);
+      const res = await axios.get(`${API}/public/galleries/${galleryId}`);
       setGallery(res.data);
       
       // Prepare photos with full URLs
