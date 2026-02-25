@@ -3183,8 +3183,15 @@ const AdminDashboard = () => {
                         onClick={() => copyPhotofindLink(selectedPhotofindEvent.id)}
                         className="px-4 py-2 bg-primary/20 text-primary text-sm rounded flex items-center gap-2"
                       >
-                        <QrCode size={16} /> Lien public
+                        <Copy size={16} /> Copier le lien
                       </button>
+                      <a 
+                        href={`${BACKEND_URL}/uploads/photofind/${selectedPhotofindEvent.id}/qr_code.png`}
+                        download={`QRCode_${selectedPhotofindEvent.name.replace(/\s+/g, '_')}.png`}
+                        className="px-4 py-2 bg-green-500/20 text-green-400 text-sm rounded flex items-center gap-2"
+                      >
+                        <QrCode size={16} /> Télécharger QR Code
+                      </a>
                     </div>
                   </div>
                   
