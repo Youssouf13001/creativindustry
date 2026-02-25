@@ -15,9 +15,19 @@ const PWAInstallPrompt = () => {
       return;
     }
 
-    // Check if dismissed recently
+    // Check if dismissed - ne plus afficher pendant 30 jours
     const dismissed = localStorage.getItem('pwa-install-dismissed');
-    if (dismissed && Date.now() - parseInt(dismissed) < 86400000) { // 24h
+    if (dismissed) {
+      const dismissedTime = parseInt(dismissed);
+      const thirtyDays = 30 * 24 * 60 * 60 * 1000; // 30 jours en ms
+      if (Date.now() - dismissedTime < thirtyDays) {
+        return;
+      }
+    }
+
+    // Check if user already clicked "Installer" before (even if cancelled)
+    const alreadyPrompted = localStorage.getItem('pwa-install-prompted');
+    if (alreadyPrompted) {
       return;
     }
 
@@ -25,7 +35,7 @@ const PWAInstallPrompt = () => {
     const handleBeforeInstall = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      setTimeout(() => setShowInstallBanner(true), 3000); // Show after 3s
+      setTimeout(() => setShowInstallBanner(true), 5000); // Show after 5s
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
