@@ -225,8 +225,70 @@ const ClientDashboard = () => {
       setSelectedGallery(res.data);
       setSelectedPhotos(res.data.selected_photo_ids || []);
       setIsValidated(res.data.is_validated || false);
+      // Load premium options
+      loadGalleryOptions(gallery.id);
     } catch (e) {
       toast.error("Erreur lors du chargement de la galerie");
+    }
+  };
+
+  // Load gallery premium options (3D, HD download)
+  const loadGalleryOptions = async (galleryId) => {
+    setLoadingOptions(true);
+    try {
+      const res = await axios.get(`${API}/client/gallery/${galleryId}/options`, { headers });
+      setGalleryOptions(res.data);
+    } catch (e) {
+      console.error("Error loading gallery options:", e);
+      setGalleryOptions(null);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
+
+  // Purchase gallery option (3D or HD)
+  const purchaseGalleryOption = async (option) => {
+    if (!selectedGallery) return;
+    
+    setPurchasingOption(option);
+    try {
+      const res = await axios.post(`${API}/client/gallery/purchase`, {
+        gallery_id: selectedGallery.id,
+        option: option
+      }, { headers });
+      
+      if (res.data.approval_url) {
+        // Redirect to PayPal
+        window.location.href = res.data.approval_url;
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la création du paiement");
+    } finally {
+      setPurchasingOption(null);
+    }
+  };
+
+  // Download HD photos
+  const downloadHDPhotos = async () => {
+    if (!selectedGallery) return;
+    
+    try {
+      const response = await axios.get(
+        `${API}/client/gallery/${selectedGallery.id}/download-hd`,
+        { headers, responseType: 'blob' }
+      );
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedGallery.name.replace(/\s/g, '_')}_HD.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Téléchargement démarré !");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors du téléchargement");
     }
   };
 
