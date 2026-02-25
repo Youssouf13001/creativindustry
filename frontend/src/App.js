@@ -64,6 +64,8 @@ function App() {
             <Route path="/paiement-confirme" element={<PaymentConfirmPage />} />
             {/* Shared Gallery (public access) */}
             <Route path="/galerie/:galleryId" element={<SharedGalleryPage />} />
+            {/* 3D Gallery (immersive experience) */}
+            <Route path="/galerie3d/:galleryId" element={<Gallery3DPage />} />
             {/* Guestbook (public access) */}
             <Route path="/livre-dor/:guestbookId" element={<GuestbookPage />} />
             {/* PhotoFind - Facial Recognition Photo Booth */}
