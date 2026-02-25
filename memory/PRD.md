@@ -97,6 +97,16 @@ French
 - `GET /api/admin/galleries/{gallery_id}/3d-info` - Infos galerie 3D + QR code base64
 - `GET /api/admin/galleries/{gallery_id}/qrcode-3d` - Télécharger QR code PNG
 
+## Key API Endpoints (Gallery Premium Options)
+- `GET /api/admin/gallery-pricing` - Récupérer les tarifs
+- `PUT /api/admin/gallery-pricing` - Modifier les tarifs
+- `GET /api/admin/gallery-purchases` - Historique des ventes
+- `GET /api/client/gallery/{gallery_id}/options` - Statut des options pour un client
+- `POST /api/client/gallery/purchase` - Créer un paiement PayPal
+- `POST /api/client/gallery/execute-payment` - Valider le paiement
+- `GET /api/client/gallery/{gallery_id}/download-hd` - Télécharger toutes les photos HD en ZIP
+- `GET /api/client/gallery/{gallery_id}/download-hd/{photo_id}` - Télécharger une photo HD
+
 ## 3rd Party Integrations
 - IONOS SMTP (emails)
 - PayPal REST API (paiements)
