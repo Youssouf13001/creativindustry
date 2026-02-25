@@ -92,7 +92,7 @@ export default function Gallery3DPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-black to-zinc-950 overflow-hidden">
+    <div className="fixed inset-0 bg-gradient-to-b from-zinc-950 via-black to-zinc-950 overflow-hidden z-50">
       {/* Intro */}
       {showIntro && (
         <div className="absolute inset-0 z-20 bg-black/95 flex items-center justify-center p-4">
