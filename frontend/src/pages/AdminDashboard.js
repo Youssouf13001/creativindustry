@@ -1988,6 +1988,82 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Storage Stats - Pie Chart */}
+        {storageStats && storageStats.chart_data && storageStats.chart_data.length > 0 && (
+          <div className="bg-card border border-white/10 p-6 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <HardDrive className="text-primary" size={24} />
+              <h3 className="font-primary text-xl text-white">Espace de stockage</h3>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Pie Chart */}
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={storageStats.chart_data}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={2}
+                      dataKey="value"
+                      nameKey="name"
+                    >
+                      {storageStats.chart_data.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-background border border-white/20 rounded-lg p-3 shadow-lg">
+                              <p className="text-white font-medium">{data.name}</p>
+                              <p className="text-primary">{data.size_formatted}</p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Legend
+                      formatter={(value, entry) => (
+                        <span className="text-white/80 text-sm">{value}</span>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Storage Details */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-background/50 p-4 rounded-lg border border-white/10">
+                    <p className="text-white/60 text-sm">Espace utilisé</p>
+                    <p className="font-primary font-bold text-2xl text-primary">{storageStats.total_used_formatted}</p>
+                  </div>
+                  <div className="bg-background/50 p-4 rounded-lg border border-white/10">
+                    <p className="text-white/60 text-sm">Espace libre</p>
+                    <p className="font-primary font-bold text-2xl text-green-500">{storageStats.free_disk_formatted}</p>
+                  </div>
+                </div>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {storageStats.chart_data.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-sm p-2 bg-background/30 rounded">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-white/80">{item.name}</span>
+                      </div>
+                      <span className="text-white/60">{item.size_formatted}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="flex gap-4 mb-8 border-b border-white/10 pb-4 overflow-x-auto">
           {[
