@@ -6160,6 +6160,82 @@ async def get_stats(admin: dict = Depends(get_current_admin)):
         "pending_quotes": pending_quotes
     }
 
+@api_router.get("/admin/storage-stats")
+async def get_storage_stats(admin: dict = Depends(get_current_admin)):
+    """Get disk storage statistics for the uploads folder"""
+    import shutil
+    
+    storage_breakdown = {}
+    total_used = 0
+    
+    # Calculate size of each subfolder in uploads
+    if UPLOADS_DIR.exists():
+        for item in UPLOADS_DIR.iterdir():
+            if item.is_dir():
+                folder_size = sum(f.stat().st_size for f in item.rglob('*') if f.is_file())
+                storage_breakdown[item.name] = folder_size
+                total_used += folder_size
+            elif item.is_file():
+                file_size = item.stat().st_size
+                storage_breakdown["other_files"] = storage_breakdown.get("other_files", 0) + file_size
+                total_used += file_size
+    
+    # Get total disk space info
+    try:
+        disk_usage = shutil.disk_usage(UPLOADS_DIR)
+        total_disk = disk_usage.total
+        free_disk = disk_usage.free
+    except Exception:
+        total_disk = 0
+        free_disk = 0
+    
+    # Format for frontend chart
+    chart_data = []
+    colors = {
+        "clients": "#10B981",      # green
+        "galleries": "#3B82F6",    # blue
+        "portfolio": "#F59E0B",    # amber
+        "chat": "#8B5CF6",         # purple
+        "guestbooks": "#EC4899",   # pink
+        "news": "#06B6D4",         # cyan
+        "selections": "#EF4444",   # red
+        "social_media": "#F97316", # orange
+        "client_transfers": "#14B8A6", # teal
+        "archives": "#6366F1",     # indigo
+        "other_files": "#9CA3AF"   # gray
+    }
+    
+    for name, size in sorted(storage_breakdown.items(), key=lambda x: x[1], reverse=True):
+        if size > 0:  # Only include non-empty folders
+            chart_data.append({
+                "name": name.replace("_", " ").title(),
+                "value": size,
+                "size_formatted": format_file_size(size),
+                "color": colors.get(name, "#9CA3AF")
+            })
+    
+    return {
+        "total_used": total_used,
+        "total_used_formatted": format_file_size(total_used),
+        "total_disk": total_disk,
+        "total_disk_formatted": format_file_size(total_disk),
+        "free_disk": free_disk,
+        "free_disk_formatted": format_file_size(free_disk),
+        "breakdown": storage_breakdown,
+        "chart_data": chart_data
+    }
+
+def format_file_size(size_bytes):
+    """Format bytes to human readable string"""
+    if size_bytes == 0:
+        return "0 B"
+    size_names = ["B", "Ko", "Mo", "Go", "To"]
+    i = 0
+    while size_bytes >= 1024 and i < len(size_names) - 1:
+        size_bytes /= 1024
+        i += 1
+    return f"{size_bytes:.1f} {size_names[i]}"
+
 # ==================== SEED DATA ====================
 
 @api_router.post("/seed")
