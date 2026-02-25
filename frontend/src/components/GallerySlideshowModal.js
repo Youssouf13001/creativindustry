@@ -124,27 +124,19 @@ const GallerySlideshowModal = ({
     if (!photo) return;
     
     try {
-      // Try fetch with CORS mode
-      const response = await fetch(photo.url, { mode: 'cors' });
-      if (!response.ok) throw new Error('Fetch failed');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Direct link download approach
       const a = document.createElement('a');
-      a.href = url;
+      a.href = photo.url;
       a.download = photo.filename || `photo-${currentIndex + 1}.jpg`;
+      a.target = '_blank';
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url);
-      toast.success("Photo téléchargée !");
+      toast.success("Téléchargement en cours...");
     } catch {
-      // Fallback: open in new tab for manual download
-      try {
-        window.open(photo.url, '_blank');
-        toast.info("Faites clic droit → Enregistrer l'image");
-      } catch {
-        toast.error("Erreur lors du téléchargement");
-      }
+      // Fallback: open in new tab
+      window.open(photo.url, '_blank');
+      toast.info("Faites clic droit → Enregistrer l'image");
     }
   };
 
