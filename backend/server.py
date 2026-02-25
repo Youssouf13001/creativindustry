@@ -12034,6 +12034,189 @@ async def get_all_gallery_purchases(
     }
 
 
+# ==================== ADMIN SLIDESHOW CREATOR ====================
+
+SLIDESHOW_EFFECTS = {
+    "vintage": {
+        "name": "Vintage/Ancien",
+        "filter": "colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131,noise=alls=20:allf=t+u,vignette=PI/4"
+    },
+    "bw": {
+        "name": "Noir & Blanc",
+        "filter": "colorchannelmixer=.3:.4:.3:0:.3:.4:.3:0:.3:.4:.3,curves=preset=contrast"
+    },
+    "vivid": {
+        "name": "Couleur Vive",
+        "filter": "eq=saturation=1.5:contrast=1.1,unsharp=5:5:1.0"
+    },
+    "warm": {
+        "name": "Tons Chauds",
+        "filter": "colortemperature=temperature=5500,eq=saturation=1.2"
+    },
+    "cold": {
+        "name": "Tons Froids",
+        "filter": "colortemperature=temperature=8500,eq=saturation=1.1"
+    },
+    "cinema": {
+        "name": "Cinématique",
+        "filter": "colorbalance=rs=.1:gs=-.05:bs=-.1,vignette=PI/5,curves=preset=cross_process"
+    },
+    "none": {
+        "name": "Original (sans effet)",
+        "filter": ""
+    }
+}
+
+@api_router.get("/admin/slideshow/effects")
+async def get_slideshow_effects(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get available slideshow effects"""
+    verify_token(credentials.credentials)
+    return {effect: data["name"] for effect, data in SLIDESHOW_EFFECTS.items()}
+
+@api_router.post("/admin/slideshow/create")
+async def create_admin_slideshow(
+    name: str = Form(...),
+    effect: str = Form("vintage"),
+    duration: int = Form(4),
+    photos: List[UploadFile] = File(...),
+    music: Optional[UploadFile] = File(None),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    background_tasks: BackgroundTasks = None
+):
+    """Create a slideshow video with effects"""
+    verify_token(credentials.credentials)
+    
+    if effect not in SLIDESHOW_EFFECTS:
+        raise HTTPException(status_code=400, detail="Effet invalide")
+    
+    if len(photos) < 2:
+        raise HTTPException(status_code=400, detail="Minimum 2 photos requises")
+    
+    import tempfile
+    import subprocess
+    import shutil
+    
+    temp_dir = Path(tempfile.mkdtemp())
+    output_video = temp_dir / "slideshow.mp4"
+    
+    try:
+        effect_filter = SLIDESHOW_EFFECTS[effect]["filter"]
+        valid_photos = []
+        
+        # Save uploaded photos
+        for i, photo in enumerate(photos):
+            if photo.content_type and photo.content_type.startswith("image/"):
+                photo_path = temp_dir / f"photo_{i:04d}_orig.jpg"
+                with open(photo_path, "wb") as f:
+                    content = await photo.read()
+                    f.write(content)
+                
+                # Process photo: resize to 1920x1080 and apply effect
+                processed_path = temp_dir / f"photo_{i:04d}.jpg"
+                
+                # Build FFmpeg filter for image processing
+                if effect_filter:
+                    filter_complex = f"scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black,{effect_filter}"
+                else:
+                    filter_complex = "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black"
+                
+                resize_cmd = [
+                    "ffmpeg", "-y", "-i", str(photo_path),
+                    "-vf", filter_complex,
+                    "-q:v", "2",
+                    str(processed_path)
+                ]
+                subprocess.run(resize_cmd, capture_output=True, timeout=30)
+                
+                if processed_path.exists():
+                    valid_photos.append(processed_path)
+        
+        if len(valid_photos) < 2:
+            raise HTTPException(status_code=400, detail="Impossible de traiter les photos")
+        
+        # Create images list for FFmpeg concat
+        images_list = temp_dir / "images.txt"
+        with open(images_list, "w") as f:
+            for photo_path in valid_photos:
+                f.write(f"file '{photo_path}'\n")
+                f.write(f"duration {duration}\n")
+            # Add last image again (FFmpeg requirement)
+            f.write(f"file '{valid_photos[-1]}'\n")
+        
+        # Save music if provided
+        music_path = None
+        if music and music.filename:
+            music_path = temp_dir / f"music{Path(music.filename).suffix}"
+            with open(music_path, "wb") as f:
+                content = await music.read()
+                f.write(content)
+        
+        # Generate video
+        video_duration = len(valid_photos) * duration
+        
+        if music_path and music_path.exists():
+            # With music
+            ffmpeg_cmd = [
+                "ffmpeg", "-y",
+                "-f", "concat", "-safe", "0", "-i", str(images_list),
+                "-stream_loop", "-1", "-i", str(music_path),
+                "-c:v", "libx264", "-preset", "medium", "-crf", "23",
+                "-c:a", "aac", "-b:a", "192k",
+                "-t", str(video_duration),
+                "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart",
+                str(output_video)
+            ]
+        else:
+            # Without music
+            ffmpeg_cmd = [
+                "ffmpeg", "-y",
+                "-f", "concat", "-safe", "0", "-i", str(images_list),
+                "-c:v", "libx264", "-preset", "medium", "-crf", "23",
+                "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart",
+                str(output_video)
+            ]
+        
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, timeout=600)
+        
+        if not output_video.exists():
+            logging.error(f"FFmpeg error: {result.stderr.decode()}")
+            raise HTTPException(status_code=500, detail="Erreur lors de la génération")
+        
+        # Read video into memory
+        video_buffer = BytesIO()
+        with open(output_video, "rb") as f:
+            video_buffer.write(f.read())
+        video_buffer.seek(0)
+        
+        # Cleanup
+        def cleanup():
+            try:
+                shutil.rmtree(temp_dir)
+            except:
+                pass
+        
+        if background_tasks:
+            background_tasks.add_task(cleanup)
+        
+        safe_name = name.replace(" ", "_").replace("/", "-")
+        
+        return StreamingResponse(
+            video_buffer,
+            media_type="video/mp4",
+            headers={"Content-Disposition": f"attachment; filename={safe_name}_diaporama.mp4"}
+        )
+        
+    except subprocess.TimeoutExpired:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail="Génération trop longue (timeout)")
+    except Exception as e:
+        logging.error(f"Slideshow creation error: {e}")
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 app.include_router(api_router)
 
 # Mount static files for uploads
