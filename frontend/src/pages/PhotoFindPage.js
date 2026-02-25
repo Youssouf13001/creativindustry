@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { Camera, Search, ShoppingCart, Check, X, Loader, Image, Download, RefreshCw } from "lucide-react";
+import { Camera, ShoppingCart, Check, X, Loader, Image } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 
@@ -14,22 +14,10 @@ const PhotoFindPage = () => {
   const [selectedPhotos, setSelectedPhotos] = useState([]);
   const [showPurchase, setShowPurchase] = useState(false);
   const [purchaseForm, setPurchaseForm] = useState({ name: "", email: "" });
-  const [cameraActive, setCameraActive] = useState(false);
-  const [cameraError, setCameraError] = useState(null);
-  const [facingMode, setFacingMode] = useState("user");
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
-  const streamRef = useRef(null);
 
   useEffect(() => {
     fetchEvent();
-    // Cleanup camera on unmount
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-    };
   }, [eventId]);
 
   const fetchEvent = async () => {
@@ -43,134 +31,11 @@ const PhotoFindPage = () => {
     }
   };
 
-  const startCamera = async () => {
-    setCameraError(null);
-    
-    // Check if getUserMedia is supported
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setCameraError("Votre navigateur ne supporte pas l'accès à la caméra. Utilisez 'Importer une photo' à la place.");
-      toast.error("Caméra non supportée sur ce navigateur");
-      return;
-    }
-
-    // Check if we're on HTTPS (required for camera access on mobile)
-    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-      setCameraError("La caméra nécessite une connexion sécurisée (HTTPS).");
-      toast.error("HTTPS requis pour la caméra");
-      return;
-    }
-
-    try {
-      // Stop any existing stream
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-
-      const constraints = {
-        video: {
-          facingMode: facingMode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute('playsinline', 'true'); // Important for iOS
-        videoRef.current.setAttribute('autoplay', 'true');
-        videoRef.current.muted = true;
-        
-        // Wait for video to be ready
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play().then(() => {
-            setCameraActive(true);
-          }).catch(err => {
-            console.error("Error playing video:", err);
-            setCameraError("Erreur lors du démarrage de la vidéo");
-          });
-        };
-      }
-    } catch (e) {
-      console.error("Camera error:", e);
-      let errorMessage = "Impossible d'accéder à la caméra.";
-      
-      if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
-        errorMessage = "Accès à la caméra refusé. Veuillez autoriser l'accès dans les paramètres de votre navigateur.";
-      } else if (e.name === 'NotFoundError' || e.name === 'DevicesNotFoundError') {
-        errorMessage = "Aucune caméra trouvée sur cet appareil.";
-      } else if (e.name === 'NotReadableError' || e.name === 'TrackStartError') {
-        errorMessage = "La caméra est utilisée par une autre application.";
-      } else if (e.name === 'OverconstrainedError') {
-        errorMessage = "Configuration caméra non supportée.";
-      }
-      
-      setCameraError(errorMessage);
-      toast.error(errorMessage);
-    }
-  };
-
-  const switchCamera = async () => {
-    const newMode = facingMode === "user" ? "environment" : "user";
-    setFacingMode(newMode);
-    if (cameraActive) {
-      stopCamera();
-      setTimeout(() => startCamera(), 100);
-    }
-  };
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-    setCameraActive(false);
-    setCameraError(null);
-  };
-
-  const captureAndSearch = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    
-    // Set canvas size to video size
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    
-    // Draw the video frame to canvas
-    const ctx = canvas.getContext("2d");
-    
-    // Mirror the image if using front camera
-    if (facingMode === "user") {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-    }
-    
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    
-    // Reset transform
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    
-    canvas.toBlob(async (blob) => {
-      if (blob) {
-        stopCamera();
-        await searchWithImage(blob);
-      } else {
-        toast.error("Erreur lors de la capture");
-      }
-    }, "image/jpeg", 0.9);
-  };
-
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Reset the input so the same file can be selected again
+      e.target.value = '';
       await searchWithImage(file);
     }
   };
