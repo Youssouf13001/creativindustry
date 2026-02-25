@@ -7460,6 +7460,42 @@ async def get_public_gallery(gallery_id: str):
         "photo_count": len(gallery.get("photos", []))
     }
 
+# Public: Serve gallery image inline (for 3D gallery and public views)
+@api_router.get("/public/galleries/{gallery_id}/image/{photo_id}")
+async def serve_gallery_image(gallery_id: str, photo_id: str):
+    """Serve a gallery image inline - for 3D gallery viewer"""
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Galerie non trouvée")
+    
+    # Find the photo
+    photo = None
+    for p in gallery.get("photos", []):
+        if p.get("id") == photo_id:
+            photo = p
+            break
+    
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo non trouvée")
+    
+    # Get file path
+    photo_url = photo.get("url", "")
+    file_path = UPLOADS_DIR / "galleries" / Path(photo_url).name
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+    
+    # Determine media type
+    ext = file_path.suffix.lower()
+    media_types = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".gif": "image/gif", ".webp": "image/webp"}
+    media_type = media_types.get(ext, "image/jpeg")
+    
+    return FileResponse(
+        path=str(file_path),
+        media_type=media_type,
+        headers={"Cache-Control": "public, max-age=86400"}  # Cache for 24h
+    )
+
 # Client: Save/update selection
 @api_router.post("/client/galleries/{gallery_id}/selection", response_model=dict)
 async def save_selection(
