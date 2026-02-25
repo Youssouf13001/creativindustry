@@ -7496,6 +7496,82 @@ async def serve_gallery_image(gallery_id: str, photo_id: str):
         headers={"Cache-Control": "public, max-age=86400"}  # Cache for 24h
     )
 
+# Admin: Generate QR code for 3D Gallery
+@api_router.get("/admin/galleries/{gallery_id}/qrcode-3d")
+async def generate_gallery_3d_qrcode(
+    gallery_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Generate QR code for the 3D gallery view"""
+    verify_token(credentials.credentials)
+    
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Galerie non trouvée")
+    
+    # Get site URL from environment or use default
+    site_url = os.environ.get("SITE_URL", "https://creativindustry.com")
+    gallery_3d_url = f"{site_url}/galerie3d/{gallery_id}"
+    
+    # Generate QR code
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(gallery_3d_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    
+    # Save to buffer
+    buffer = BytesIO()
+    qr_img.save(buffer, format="PNG")
+    buffer.seek(0)
+    
+    # Return as downloadable image
+    gallery_name = gallery.get("name", "galerie").replace(" ", "_")
+    filename = f"qrcode_3d_{gallery_name}.png"
+    
+    return StreamingResponse(
+        buffer,
+        media_type="image/png",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+# Admin: Get 3D gallery URL and QR code as base64
+@api_router.get("/admin/galleries/{gallery_id}/3d-info")
+async def get_gallery_3d_info(
+    gallery_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """Get 3D gallery URL and QR code as base64 for display in admin"""
+    verify_token(credentials.credentials)
+    
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Galerie non trouvée")
+    
+    # Get site URL
+    site_url = os.environ.get("SITE_URL", "https://creativindustry.com")
+    gallery_3d_url = f"{site_url}/galerie3d/{gallery_id}"
+    gallery_classic_url = f"{site_url}/galerie/{gallery_id}"
+    
+    # Generate QR code as base64
+    qr = qrcode.QRCode(version=1, box_size=8, border=4)
+    qr.add_data(gallery_3d_url)
+    qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    
+    buffer = BytesIO()
+    qr_img.save(buffer, format="PNG")
+    buffer.seek(0)
+    qr_base64 = base64.b64encode(buffer.getvalue()).decode()
+    
+    return {
+        "gallery_id": gallery_id,
+        "gallery_name": gallery.get("name", "Galerie"),
+        "url_3d": gallery_3d_url,
+        "url_classic": gallery_classic_url,
+        "qr_code_base64": f"data:image/png;base64,{qr_base64}",
+        "photo_count": len(gallery.get("photos", []))
+    }
+
 # Client: Save/update selection
 @api_router.post("/client/galleries/{gallery_id}/selection", response_model=dict)
 async def save_selection(
