@@ -11825,6 +11825,157 @@ async def download_single_photo_hd(
         media_type="image/jpeg"
     )
 
+# Client: Generate and download video slideshow
+@api_router.get("/client/gallery/{gallery_id}/download-video")
+async def download_gallery_video(
+    gallery_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    background_tasks: BackgroundTasks = None
+):
+    """Generate and download video slideshow with music"""
+    payload = verify_client_token(credentials.credentials)
+    client_id = payload["sub"]
+    
+    # Check if client has purchased video option
+    purchases = await db.gallery_purchases.find({
+        "gallery_id": gallery_id,
+        "client_id": client_id,
+        "status": "completed",
+        "option": {"$in": ["video_slideshow", "pack_complete"]}
+    }).to_list(10)
+    
+    if not purchases:
+        raise HTTPException(status_code=403, detail="Vous devez acheter l'option Vidéo Diaporama")
+    
+    # Get gallery
+    gallery = await db.galleries.find_one({"id": gallery_id, "client_id": client_id}, {"_id": 0})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Galerie non trouvée")
+    
+    photos = gallery.get("photos", [])
+    if not photos:
+        raise HTTPException(status_code=404, detail="Aucune photo dans cette galerie")
+    
+    # Create temp directory for video generation
+    import tempfile
+    import subprocess
+    
+    temp_dir = Path(tempfile.mkdtemp())
+    output_video = temp_dir / "slideshow.mp4"
+    
+    try:
+        # Prepare images list file for ffmpeg
+        images_list = temp_dir / "images.txt"
+        valid_photos = []
+        
+        for i, photo in enumerate(photos):
+            photo_url = photo.get("url", "")
+            src_path = UPLOADS_DIR / "galleries" / Path(photo_url).name
+            
+            if src_path.exists():
+                # Copy and resize image for video (1920x1080)
+                resized_path = temp_dir / f"photo_{i:04d}.jpg"
+                
+                # Use ffmpeg to resize and pad image to 1920x1080
+                resize_cmd = [
+                    "ffmpeg", "-y", "-i", str(src_path),
+                    "-vf", "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:black",
+                    "-q:v", "2",
+                    str(resized_path)
+                ]
+                subprocess.run(resize_cmd, capture_output=True, timeout=30)
+                
+                if resized_path.exists():
+                    valid_photos.append(resized_path)
+                    # Each photo shown for 4 seconds
+                    with open(images_list, "a") as f:
+                        f.write(f"file '{resized_path}'\n")
+                        f.write("duration 4\n")
+        
+        if not valid_photos:
+            raise HTTPException(status_code=500, detail="Impossible de traiter les photos")
+        
+        # Add last image again (ffmpeg requirement)
+        with open(images_list, "a") as f:
+            f.write(f"file '{valid_photos[-1]}'\n")
+        
+        # Check if gallery has music
+        music_path = None
+        if gallery.get("music_url"):
+            music_url = gallery["music_url"]
+            potential_music = UPLOADS_DIR / "galleries" / Path(music_url).name
+            if potential_music.exists():
+                music_path = potential_music
+        
+        # Generate video with ffmpeg
+        if music_path:
+            # With music - loop audio if needed
+            video_duration = len(valid_photos) * 4
+            ffmpeg_cmd = [
+                "ffmpeg", "-y",
+                "-f", "concat", "-safe", "0", "-i", str(images_list),
+                "-stream_loop", "-1", "-i", str(music_path),
+                "-c:v", "libx264", "-preset", "medium", "-crf", "23",
+                "-c:a", "aac", "-b:a", "192k",
+                "-t", str(video_duration),
+                "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart",
+                str(output_video)
+            ]
+        else:
+            # Without music
+            ffmpeg_cmd = [
+                "ffmpeg", "-y",
+                "-f", "concat", "-safe", "0", "-i", str(images_list),
+                "-c:v", "libx264", "-preset", "medium", "-crf", "23",
+                "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart",
+                str(output_video)
+            ]
+        
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, timeout=300)
+        
+        if not output_video.exists():
+            logging.error(f"FFmpeg error: {result.stderr.decode()}")
+            raise HTTPException(status_code=500, detail="Erreur lors de la génération de la vidéo")
+        
+        # Read video into memory
+        video_buffer = BytesIO()
+        with open(output_video, "rb") as f:
+            video_buffer.write(f.read())
+        video_buffer.seek(0)
+        
+        gallery_name = gallery.get("name", "galerie").replace(" ", "_")
+        
+        # Clean up temp directory in background
+        def cleanup():
+            import shutil
+            try:
+                shutil.rmtree(temp_dir)
+            except:
+                pass
+        
+        if background_tasks:
+            background_tasks.add_task(cleanup)
+        
+        return StreamingResponse(
+            video_buffer,
+            media_type="video/mp4",
+            headers={"Content-Disposition": f"attachment; filename={gallery_name}_diaporama.mp4"}
+        )
+        
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail="La génération de la vidéo a pris trop de temps")
+    except Exception as e:
+        logging.error(f"Video generation error: {e}")
+        # Clean up on error
+        import shutil
+        try:
+            shutil.rmtree(temp_dir)
+        except:
+            pass
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
 # Public: Check if gallery has 3D access (for public 3D page)
 @api_router.get("/public/gallery/{gallery_id}/check-3d-access")
 async def check_gallery_3d_access(gallery_id: str, client_token: Optional[str] = None):
