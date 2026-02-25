@@ -5776,11 +5776,17 @@ async def get_all_stories_views(admin: dict = Depends(get_current_admin)):
 
 # ==================== BACKUP ROUTE ====================
 
+class BackupOptions(BaseModel):
+    include_code: bool = False  # Include source code for full migration
+
+
 @api_router.post("/admin/backup/create")
-async def create_backup(admin: dict = Depends(get_current_admin)):
+async def create_backup(options: BackupOptions = None, admin: dict = Depends(get_current_admin)):
     """Create a backup file and return its download URL (avoids timeout)"""
     import json
     from datetime import datetime
+    
+    include_code = options.include_code if options else False
     
     # Create a temporary directory for backup
     backup_dir = UPLOADS_DIR / "backup_temp"
