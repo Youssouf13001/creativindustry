@@ -78,19 +78,6 @@ function PhotoFrame({ position, rotation, imageUrl, title, onClick }) {
         <planeGeometry args={[frameWidth, frameHeight]} />
         <meshBasicMaterial map={textureRef.current} />
       </mesh>
-      
-      {/* Title plate */}
-      {title && (
-        <Text
-          position={[0, -frameHeight/2 - 0.3, 0]}
-          fontSize={0.15}
-          color="#ffffff"
-          anchorX="center"
-          anchorY="middle"
-        >
-          {title}
-        </Text>
-      )}
     </group>
   );
 }
