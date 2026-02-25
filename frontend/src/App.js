@@ -30,6 +30,7 @@ import PaymentConfirmPage from "./pages/PaymentConfirmPage";
 import SharedGalleryPage from "./pages/SharedGalleryPage";
 import GuestbookPage from "./pages/GuestbookPage";
 import PhotoFindPage from "./pages/PhotoFindPage";
+import PhotoFindDownloadPage from "./pages/PhotoFindDownloadPage";
 
 function App() {
   return (
