@@ -53,18 +53,23 @@ const PWAInstallPrompt = () => {
   const handleInstall = async () => {
     if (!deferredPrompt) return;
 
+    // Marquer qu'on a déjà proposé l'installation
+    localStorage.setItem('pwa-install-prompted', 'true');
+
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     
     if (outcome === 'accepted') {
       setIsInstalled(true);
-      setShowInstallBanner(false);
+      localStorage.setItem('pwa-installed', 'true');
     }
+    setShowInstallBanner(false);
     setDeferredPrompt(null);
   };
 
   const handleDismiss = () => {
     setShowInstallBanner(false);
+    // Ne plus afficher pendant 30 jours
     localStorage.setItem('pwa-install-dismissed', Date.now().toString());
   };
 
