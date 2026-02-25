@@ -591,6 +591,14 @@ const AdminDashboard = () => {
     }
   }, [activeTab]);
 
+  // Load PhotoFind data when switching to photofind tab
+  useEffect(() => {
+    if (activeTab === "photofind") {
+      fetchPhotofindEvents();
+      fetchPhotofindPurchases();
+    }
+  }, [activeTab]);
+
   // Fetch billing/invoices data
   const fetchBillingData = async () => {
     setLoadingBilling(true);
