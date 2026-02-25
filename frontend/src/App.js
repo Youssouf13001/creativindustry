@@ -29,6 +29,7 @@ import RenewalPage from "./pages/RenewalPage";
 import PaymentConfirmPage from "./pages/PaymentConfirmPage";
 import SharedGalleryPage from "./pages/SharedGalleryPage";
 import GuestbookPage from "./pages/GuestbookPage";
+import PhotoFindPage from "./pages/PhotoFindPage";
 
 function App() {
   return (
@@ -63,6 +64,8 @@ function App() {
             <Route path="/galerie/:galleryId" element={<SharedGalleryPage />} />
             {/* Guestbook (public access) */}
             <Route path="/livre-dor/:guestbookId" element={<GuestbookPage />} />
+            {/* PhotoFind - Facial Recognition Photo Booth */}
+            <Route path="/photofind/:eventId" element={<PhotoFindPage />} />
             {/* Aliases for different URLs */}
             <Route path="/mariages" element={<ServicePage category="wedding" />} />
             <Route path="/podcast" element={<ServicePage category="podcast" />} />
