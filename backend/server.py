@@ -11442,8 +11442,9 @@ async def update_gallery_pricing(
     
     pricing = {
         "gallery_3d": {"price": data.gallery_3d_price, "label": "Galerie 3D Immersive"},
+        "video_slideshow": {"price": data.video_slideshow_price, "label": "Vidéo Diaporama HD"},
         "hd_download": {"price": data.hd_download_price, "label": "Téléchargement HD"},
-        "pack_complete": {"price": data.pack_complete_price, "label": "Pack Complet (3D + HD)"}
+        "pack_complete": {"price": data.pack_complete_price, "label": "Pack Complet (3D + Vidéo + HD)"}
     }
     
     await db.settings.update_one(
