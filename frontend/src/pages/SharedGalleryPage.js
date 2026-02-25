@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Camera, Play, Share2, Download, Loader } from "lucide-react";
+import { Camera, Play, Share2, Download, Loader, Box } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 import GallerySlideshowModal from "../components/GallerySlideshowModal";
