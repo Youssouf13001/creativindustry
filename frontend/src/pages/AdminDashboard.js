@@ -2500,17 +2500,227 @@ const AdminDashboard = () => {
               <h2 className="font-primary font-bold text-xl">
                 📸 Galeries Photos - Sélection Client
               </h2>
-              <button 
-                onClick={() => setShowAddGallery(true)}
-                className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
-              >
-                <Plus size={16} /> Créer une galerie
-              </button>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowSlideshowCreator(true)}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-2 text-sm flex items-center gap-2 rounded"
+                >
+                  <Play size={16} /> Créer Diaporama
+                </button>
+                <button 
+                  onClick={() => setShowAddGallery(true)}
+                  className="btn-primary px-6 py-2 text-sm flex items-center gap-2"
+                >
+                  <Plus size={16} /> Créer une galerie
+                </button>
+              </div>
             </div>
 
             <p className="text-white/60 mb-6">
               Uploadez des photos pour vos clients. Ils pourront les voir et sélectionner celles qu'ils souhaitent pour la retouche.
             </p>
+
+            {/* Slideshow Creator Modal */}
+            {showSlideshowCreator && (
+              <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 overflow-y-auto">
+                <div className="bg-card border border-white/20 p-6 max-w-2xl w-full my-8">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="font-primary font-bold text-xl flex items-center gap-2">
+                      <Play className="text-pink-400" size={24} /> Créateur de Diaporama
+                    </h3>
+                    <button onClick={() => setShowSlideshowCreator(false)} className="text-white/60 hover:text-white">
+                      <X size={24} />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    {/* Name */}
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Nom du diaporama *</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Mariage Sophie & Thomas"
+                        value={slideshowConfig.name}
+                        onChange={(e) => setSlideshowConfig({ ...slideshowConfig, name: e.target.value })}
+                        className="w-full bg-background border border-white/20 px-4 py-3 rounded"
+                      />
+                    </div>
+                    
+                    {/* Effect Selection */}
+                    <div>
+                      <label className="block text-sm text-white/60 mb-3">Style / Effet *</label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {[
+                          { id: "vintage", name: "🎞️ Vintage/Ancien", color: "from-amber-600 to-orange-700" },
+                          { id: "bw", name: "⬛ Noir & Blanc", color: "from-gray-600 to-gray-800" },
+                          { id: "vivid", name: "🌈 Couleur Vive", color: "from-pink-500 to-purple-600" },
+                          { id: "warm", name: "🌅 Tons Chauds", color: "from-orange-500 to-red-600" },
+                          { id: "cold", name: "❄️ Tons Froids", color: "from-blue-400 to-cyan-600" },
+                          { id: "cinema", name: "🎥 Cinématique", color: "from-slate-600 to-zinc-800" },
+                          { id: "none", name: "📷 Original", color: "from-green-600 to-emerald-700" }
+                        ].map(effect => (
+                          <button
+                            key={effect.id}
+                            onClick={() => setSlideshowConfig({ ...slideshowConfig, effect: effect.id })}
+                            className={`p-3 rounded border-2 text-left text-sm transition-all ${
+                              slideshowConfig.effect === effect.id 
+                                ? 'border-primary bg-gradient-to-r ' + effect.color
+                                : 'border-white/20 hover:border-white/40'
+                            }`}
+                          >
+                            {effect.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Duration */}
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Durée par photo: {slideshowConfig.duration}s</label>
+                      <input
+                        type="range"
+                        min="2"
+                        max="10"
+                        value={slideshowConfig.duration}
+                        onChange={(e) => setSlideshowConfig({ ...slideshowConfig, duration: parseInt(e.target.value) })}
+                        className="w-full accent-primary"
+                      />
+                      <div className="flex justify-between text-xs text-white/40">
+                        <span>2s (rapide)</span>
+                        <span>10s (lent)</span>
+                      </div>
+                    </div>
+                    
+                    {/* Photos Upload */}
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Photos * (minimum 2)</label>
+                      <input
+                        ref={slideshowPhotosRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files || []);
+                          setSlideshowConfig({ ...slideshowConfig, photos: files });
+                        }}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => slideshowPhotosRef.current?.click()}
+                        className="w-full border-2 border-dashed border-white/30 hover:border-primary p-6 rounded text-center transition-colors"
+                      >
+                        <Upload className="mx-auto mb-2 text-white/60" size={32} />
+                        <p className="text-white/60">
+                          {slideshowConfig.photos.length > 0 
+                            ? `${slideshowConfig.photos.length} photos sélectionnées`
+                            : "Cliquer pour sélectionner des photos"
+                          }
+                        </p>
+                      </button>
+                    </div>
+                    
+                    {/* Music Upload */}
+                    <div>
+                      <label className="block text-sm text-white/60 mb-2">Musique de fond (optionnel)</label>
+                      <input
+                        ref={slideshowMusicRef}
+                        type="file"
+                        accept="audio/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setSlideshowConfig({ ...slideshowConfig, music: file });
+                        }}
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => slideshowMusicRef.current?.click()}
+                        className="w-full border border-white/20 hover:border-primary p-4 rounded flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <Music size={20} className="text-white/60" />
+                        <span className="text-white/60">
+                          {slideshowConfig.music 
+                            ? slideshowConfig.music.name
+                            : "Ajouter une musique (MP3, WAV...)"
+                          }
+                        </span>
+                      </button>
+                    </div>
+                    
+                    {/* Generate Button */}
+                    <button
+                      onClick={async () => {
+                        if (!slideshowConfig.name || slideshowConfig.photos.length < 2) {
+                          toast.error("Veuillez remplir le nom et ajouter au moins 2 photos");
+                          return;
+                        }
+                        
+                        setGeneratingSlideshow(true);
+                        try {
+                          const formData = new FormData();
+                          formData.append("name", slideshowConfig.name);
+                          formData.append("effect", slideshowConfig.effect);
+                          formData.append("duration", slideshowConfig.duration.toString());
+                          
+                          slideshowConfig.photos.forEach(photo => {
+                            formData.append("photos", photo);
+                          });
+                          
+                          if (slideshowConfig.music) {
+                            formData.append("music", slideshowConfig.music);
+                          }
+                          
+                          toast.info("Génération en cours... Cela peut prendre quelques minutes.");
+                          
+                          const response = await axios.post(
+                            `${API}/admin/slideshow/create`,
+                            formData,
+                            { 
+                              headers: { 
+                                ...headers,
+                                "Content-Type": "multipart/form-data"
+                              },
+                              responseType: 'blob',
+                              timeout: 600000 // 10 min timeout
+                            }
+                          );
+                          
+                          const url = window.URL.createObjectURL(new Blob([response.data]));
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${slideshowConfig.name.replace(/\s/g, '_')}_diaporama.mp4`;
+                          document.body.appendChild(a);
+                          a.click();
+                          a.remove();
+                          window.URL.revokeObjectURL(url);
+                          
+                          toast.success("Diaporama généré et téléchargé !");
+                          setShowSlideshowCreator(false);
+                          setSlideshowConfig({ name: "", effect: "vintage", duration: 4, music: null, photos: [] });
+                        } catch (e) {
+                          toast.error(e.response?.data?.detail || "Erreur lors de la génération");
+                        } finally {
+                          setGeneratingSlideshow(false);
+                        }
+                      }}
+                      disabled={generatingSlideshow || slideshowConfig.photos.length < 2}
+                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 rounded flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {generatingSlideshow ? (
+                        <>
+                          <Loader className="animate-spin" size={20} />
+                          Génération en cours...
+                        </>
+                      ) : (
+                        <>
+                          <Download size={20} />
+                          Générer & Télécharger le Diaporama
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Add Gallery Modal */}
             {showAddGallery && (
