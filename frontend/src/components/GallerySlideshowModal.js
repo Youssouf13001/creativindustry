@@ -124,7 +124,9 @@ const GallerySlideshowModal = ({
     if (!photo) return;
     
     try {
-      const response = await fetch(photo.url);
+      // Try fetch with CORS mode
+      const response = await fetch(photo.url, { mode: 'cors' });
+      if (!response.ok) throw new Error('Fetch failed');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -134,8 +136,15 @@ const GallerySlideshowModal = ({
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+      toast.success("Photo téléchargée !");
     } catch {
-      toast.error("Erreur lors du téléchargement");
+      // Fallback: open in new tab for manual download
+      try {
+        window.open(photo.url, '_blank');
+        toast.info("Faites clic droit → Enregistrer l'image");
+      } catch {
+        toast.error("Erreur lors du téléchargement");
+      }
     }
   };
 
