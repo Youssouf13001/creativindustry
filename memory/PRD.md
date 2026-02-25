@@ -88,8 +88,9 @@ French
 ## New Pages Created
 - `/livre-dor/:guestbookId` - Page publique pour laisser des messages
 - `/galerie/:galleryId` - Page publique pour voir une galerie
+- `/galerie3d/:galleryId` - Galerie interactive avec carrousel 3D et vue grille
 
-## 3rd Party Integrations
+## Key API Endpoints (PhotoFind)
 - IONOS SMTP (emails)
 - PayPal REST API (paiements)
 - openpyxl (export Excel)
