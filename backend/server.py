@@ -1825,14 +1825,14 @@ async def delete_admin_account(admin_id: str, admin: dict = Depends(get_current_
 @api_router.post("/auth/login", response_model=dict)
 async def login_admin(data: AdminLogin):
     admin = await db.admins.find_one({"email": data.email}, {"_id": 0})
-    logging.info(f"Login attempt for: {data.email}, admin found: {admin is not None}")
+    print(f"[DEBUG LOGIN] Email: {data.email}, Admin found: {admin is not None}")
     if admin:
-        logging.info(f"Admin password hash prefix: {admin.get('password', '')[:20]}...")
+        print(f"[DEBUG LOGIN] Password hash prefix: {admin.get('password', '')[:20]}...")
         try:
             password_valid = verify_password(data.password, admin["password"])
-            logging.info(f"Password verification result: {password_valid}")
+            print(f"[DEBUG LOGIN] Password valid: {password_valid}")
         except Exception as e:
-            logging.error(f"Password verification error: {e}")
+            print(f"[DEBUG LOGIN] Error: {e}")
             password_valid = False
     else:
         password_valid = False
