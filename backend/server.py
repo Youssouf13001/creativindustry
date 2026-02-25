@@ -6484,6 +6484,42 @@ async def get_gallery_selection_admin(gallery_id: str, credentials: HTTPAuthoriz
     
     return selection
 
+
+# Public: Download a single photo from gallery
+@api_router.get("/public/galleries/{gallery_id}/photos/{photo_id}/download")
+async def download_gallery_photo(gallery_id: str, photo_id: str):
+    """Download a single photo from a gallery - public access"""
+    gallery = await db.galleries.find_one({"id": gallery_id})
+    if not gallery:
+        raise HTTPException(status_code=404, detail="Galerie non trouvée")
+    
+    # Find the photo
+    photo = None
+    for p in gallery.get("photos", []):
+        if p.get("id") == photo_id:
+            photo = p
+            break
+    
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo non trouvée")
+    
+    # Get file path
+    photo_url = photo.get("url", "")
+    file_path = UPLOADS_DIR / "galleries" / Path(photo_url).name
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+    
+    filename = photo.get("filename", f"photo_{photo_id[:8]}.jpg")
+    
+    return FileResponse(
+        path=str(file_path),
+        filename=filename,
+        media_type="image/jpeg",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
 # Admin: Download selected photos as ZIP
 @api_router.get("/admin/galleries/{gallery_id}/download-selection")
 async def download_gallery_selection(gallery_id: str, credentials: HTTPAuthorizationCredentials = Depends(security)):
