@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { 
   OrbitControls, 
-  Text,
   PerspectiveCamera,
   PointerLockControls
 } from "@react-three/drei";
