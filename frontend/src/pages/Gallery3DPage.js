@@ -241,12 +241,12 @@ const Gallery3DPage = () => {
       const res = await axios.get(`${API}/public/galleries/${galleryId}`);
       setGallery(res.data);
       
-      // Prepare photos with full URLs
+      // Prepare photos with full URLs using the public image endpoint
       const preparedPhotos = (res.data.photos || []).slice(0, 20).map((photo, index) => ({
         ...photo,
         id: photo.id || index,
-        fullUrl: photo.url.startsWith('http') ? photo.url : `${BACKEND_URL}${photo.url}`,
-        title: photo.title || `Photo ${index + 1}`
+        fullUrl: `${API}/public/galleries/${galleryId}/image/${photo.id}`,
+        title: photo.title || photo.filename || `Photo ${index + 1}`
       }));
       
       setPhotos(preparedPhotos);
