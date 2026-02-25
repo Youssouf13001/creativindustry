@@ -43,6 +43,7 @@ French
 - [x] **Galerie améliorée** - Diaporama, musique, partage social, QR code
 - [x] **Livre d'or digital** - Messages texte/audio/vidéo des invités via QR code
 - [x] **Graphique espace disque** - Camembert d'utilisation stockage dans admin (25 Fév 2026)
+- [x] **Galerie Interactive** - Expérience immersive avec carrousel 3D CSS et vue grille (25 Fév 2026)
 
 ### 🔴 Known Issues (P0 - BLOCKER)
 1. **Erreur `[object Object]`** - Soumission de témoignage en production (IONOS)
