@@ -6265,12 +6265,12 @@ const AdminDashboard = () => {
             <div className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border border-purple-500/30 rounded-lg p-6">
               <h3 className="font-bold mb-4 flex items-center gap-2">
                 <Settings size={20} className="text-purple-400" />
-                Tarifs Options Galeries (3D + HD)
+                Tarifs Options Galeries (3D + Vidéo + HD)
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div>
-                  <label className="text-white/60 text-sm block mb-2">Galerie 3D Immersive</label>
+                  <label className="text-white/60 text-sm block mb-2">Galerie 3D</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
@@ -6278,6 +6278,21 @@ const AdminDashboard = () => {
                       onChange={(e) => setGalleryPricing({
                         ...galleryPricing,
                         gallery_3d: { ...galleryPricing.gallery_3d, price: e.target.value }
+                      })}
+                      className="bg-black/50 border border-white/20 px-3 py-2 rounded w-24 text-right"
+                    />
+                    <span className="text-white/60">€</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-white/60 text-sm block mb-2">Vidéo Diaporama</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={galleryPricing.video_slideshow?.price || 79}
+                      onChange={(e) => setGalleryPricing({
+                        ...galleryPricing,
+                        video_slideshow: { ...galleryPricing.video_slideshow, price: e.target.value }
                       })}
                       className="bg-black/50 border border-white/20 px-3 py-2 rounded w-24 text-right"
                     />
@@ -6300,11 +6315,11 @@ const AdminDashboard = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-white/60 text-sm block mb-2">Pack Complet (3D + HD)</label>
+                  <label className="text-white/60 text-sm block mb-2">Pack Complet</label>
                   <div className="flex items-center gap-2">
                     <input
                       type="number"
-                      value={galleryPricing.pack_complete?.price || 129}
+                      value={galleryPricing.pack_complete?.price || 199}
                       onChange={(e) => setGalleryPricing({
                         ...galleryPricing,
                         pack_complete: { ...galleryPricing.pack_complete, price: e.target.value }
