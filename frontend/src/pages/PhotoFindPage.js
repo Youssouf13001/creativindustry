@@ -291,15 +291,26 @@ const PhotoFindPage = () => {
             {/* Camera View */}
             {cameraActive && (
               <div className="mb-6">
-                <video 
-                  ref={videoRef} 
-                  autoPlay 
-                  playsInline 
-                  className="mx-auto rounded-lg max-w-full"
-                  style={{ transform: "scaleX(-1)" }}
-                />
+                <div className="relative inline-block">
+                  <video 
+                    ref={videoRef} 
+                    autoPlay 
+                    playsInline
+                    muted
+                    className="mx-auto rounded-lg max-w-full max-h-[400px]"
+                    style={{ transform: facingMode === "user" ? "scaleX(-1)" : "none" }}
+                  />
+                  {/* Switch camera button */}
+                  <button
+                    onClick={switchCamera}
+                    className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70"
+                    title="Changer de caméra"
+                  >
+                    <RefreshCw size={20} />
+                  </button>
+                </div>
                 <canvas ref={canvasRef} className="hidden" />
-                <div className="mt-4 flex gap-4 justify-center">
+                <div className="mt-4 flex gap-4 justify-center flex-wrap">
                   <button
                     onClick={captureAndSearch}
                     className="px-6 py-3 bg-primary text-black font-bold rounded-lg flex items-center gap-2"
@@ -313,6 +324,19 @@ const PhotoFindPage = () => {
                     Annuler
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Camera Error Message */}
+            {cameraError && !cameraActive && (
+              <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-center">
+                <p className="text-red-400 mb-2">{cameraError}</p>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 bg-primary text-black font-bold rounded-lg text-sm"
+                >
+                  Importer une photo à la place
+                </button>
               </div>
             )}
 
@@ -335,6 +359,7 @@ const PhotoFindPage = () => {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  capture="user"
                   className="hidden"
                   onChange={handleFileSelect}
                 />
