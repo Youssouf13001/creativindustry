@@ -342,24 +342,35 @@ const PhotoFindPage = () => {
 
             {/* Action Buttons */}
             {!cameraActive && !searching && (
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <button
-                  onClick={startCamera}
-                  className="px-8 py-4 bg-primary text-black font-bold rounded-lg flex items-center justify-center gap-2 text-lg"
+              <div className="flex flex-col gap-4">
+                {/* Selfie button - uses native camera on mobile */}
+                <label 
+                  htmlFor="selfie-input"
+                  className="px-8 py-4 bg-primary text-black font-bold rounded-lg flex items-center justify-center gap-2 text-lg cursor-pointer hover:bg-primary/90 transition-colors"
                 >
                   <Camera size={24} /> Prendre un selfie
-                </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-8 py-4 bg-white/10 text-white rounded-lg flex items-center justify-center gap-2 text-lg"
-                >
-                  <Image size={24} /> Importer une photo
-                </button>
+                </label>
                 <input
-                  ref={fileInputRef}
+                  id="selfie-input"
                   type="file"
                   accept="image/*"
                   capture="user"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                
+                {/* Import from gallery */}
+                <label 
+                  htmlFor="gallery-input"
+                  className="px-8 py-4 bg-white/10 text-white rounded-lg flex items-center justify-center gap-2 text-lg cursor-pointer hover:bg-white/20 transition-colors"
+                >
+                  <Image size={24} /> Importer depuis la galerie
+                </label>
+                <input
+                  id="gallery-input"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
                   className="hidden"
                   onChange={handleFileSelect}
                 />
