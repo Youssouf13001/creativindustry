@@ -185,15 +185,14 @@ function GalleryRoom({ photos, onPhotoClick }) {
       {/* Photos on walls */}
       {photos.map((photo, index) => (
         photoPositions[index] && (
-          <Suspense key={photo.id} fallback={null}>
-            <PhotoFrame
-              position={photoPositions[index].position}
-              rotation={photoPositions[index].rotation}
-              imageUrl={photo.fullUrl}
-              title={photo.title || `Photo ${index + 1}`}
-              onClick={() => onPhotoClick(photo)}
-            />
-          </Suspense>
+          <PhotoFrame
+            key={photo.id}
+            position={photoPositions[index].position}
+            rotation={photoPositions[index].rotation}
+            imageUrl={photo.fullUrl}
+            title={photo.title || `Photo ${index + 1}`}
+            onClick={() => onPhotoClick(photo)}
+          />
         )
       ))}
       
