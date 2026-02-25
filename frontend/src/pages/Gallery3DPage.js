@@ -230,8 +230,6 @@ function GalleryScene({ photos, onPhotoClick, enabled }) {
       ))}
       
       <CameraControls enabled={enabled} />
-      
-      <fog attach="fog" args={['#000', 5, 20]} />
     </>
   );
 }
