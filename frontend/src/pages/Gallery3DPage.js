@@ -1,10 +1,8 @@
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
 import { 
   OrbitControls, 
-  useTexture, 
-  Environment, 
   Text,
   PerspectiveCamera,
   PointerLockControls
@@ -13,17 +11,55 @@ import * as THREE from "three";
 import axios from "axios";
 import { Loader, Move, Mouse, Maximize, Info, X } from "lucide-react";
 import { toast } from "sonner";
-import { API, BACKEND_URL } from "../config/api";
+import { API } from "../config/api";
 
-// Photo Frame Component
+// Photo Frame Component - uses TextureLoader with error handling
 function PhotoFrame({ position, rotation, imageUrl, title, onClick }) {
-  const texture = useTexture(imageUrl);
   const [hovered, setHovered] = useState(false);
+  const [textureLoaded, setTextureLoaded] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState(1);
+  const textureRef = useRef(null);
   
-  // Calculate aspect ratio
-  const aspectRatio = texture.image ? texture.image.width / texture.image.height : 1;
+  // Load texture manually with error handling
+  useEffect(() => {
+    const loader = new THREE.TextureLoader();
+    loader.load(
+      imageUrl,
+      (texture) => {
+        textureRef.current = texture;
+        if (texture.image) {
+          setAspectRatio(texture.image.width / texture.image.height);
+        }
+        setTextureLoaded(true);
+      },
+      undefined,
+      (error) => {
+        console.error("Error loading texture:", imageUrl, error);
+        setTextureLoaded(false);
+      }
+    );
+    
+    return () => {
+      if (textureRef.current) {
+        textureRef.current.dispose();
+      }
+    };
+  }, [imageUrl]);
+  
   const frameWidth = 2;
   const frameHeight = frameWidth / aspectRatio;
+  
+  if (!textureLoaded || !textureRef.current) {
+    // Placeholder while loading
+    return (
+      <group position={position} rotation={rotation}>
+        <mesh>
+          <planeGeometry args={[frameWidth, frameWidth]} />
+          <meshBasicMaterial color="#333333" />
+        </mesh>
+      </group>
+    );
+  }
   
   return (
     <group position={position} rotation={rotation}>
@@ -40,7 +76,7 @@ function PhotoFrame({ position, rotation, imageUrl, title, onClick }) {
         onClick={onClick}
       >
         <planeGeometry args={[frameWidth, frameHeight]} />
-        <meshBasicMaterial map={texture} />
+        <meshBasicMaterial map={textureRef.current} />
       </mesh>
       
       {/* Title plate */}
