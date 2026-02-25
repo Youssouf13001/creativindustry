@@ -6282,6 +6282,14 @@ class PhotoFindEventUpdate(BaseModel):
 @api_router.post("/admin/photofind/events")
 async def create_photofind_event(data: PhotoFindEventCreate, admin: dict = Depends(get_current_admin)):
     """Create a new PhotoFind event with its own face collection"""
+    
+    # Check if AWS is configured
+    if not AWS_ACCESS_KEY or not AWS_SECRET_KEY:
+        raise HTTPException(
+            status_code=500, 
+            detail="AWS non configuré. Ajoutez AWS_ACCESS_KEY_ID et AWS_SECRET_ACCESS_KEY dans le fichier .env du serveur."
+        )
+    
     event_id = str(uuid.uuid4())
     collection_id = f"photofind-{event_id[:8]}"
     
@@ -6291,8 +6299,18 @@ async def create_photofind_event(data: PhotoFindEventCreate, admin: dict = Depen
         rekognition.create_collection(CollectionId=collection_id)
         logging.info(f"Created Rekognition collection: {collection_id}")
     except ClientError as e:
-        if e.response['Error']['Code'] != 'ResourceAlreadyExistsException':
-            raise HTTPException(status_code=500, detail=f"Erreur AWS: {str(e)}")
+        error_code = e.response['Error']['Code']
+        if error_code == 'ResourceAlreadyExistsException':
+            pass  # Collection already exists, continue
+        elif error_code == 'AccessDeniedException':
+            raise HTTPException(status_code=500, detail="Accès AWS refusé. Vérifiez vos clés AWS et les permissions Rekognition.")
+        elif error_code == 'InvalidParameterException':
+            raise HTTPException(status_code=500, detail="Erreur de configuration AWS Rekognition.")
+        else:
+            raise HTTPException(status_code=500, detail=f"Erreur AWS Rekognition: {error_code}")
+    except Exception as e:
+        logging.error(f"AWS Error: {e}")
+        raise HTTPException(status_code=500, detail="Impossible de se connecter à AWS. Vérifiez votre connexion et vos clés.")
     
     # Create event folder
     event_folder = PHOTOFIND_DIR / event_id
