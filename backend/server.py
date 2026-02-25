@@ -5913,37 +5913,51 @@ INSTALLATION SUR NOUVEAU SERVEUR :
    sudo systemctl restart creativindustry
 """
                 
+                # Get the base path dynamically (works for both /app and /var/www/creativindustry)
+                backend_base = Path(__file__).parent
+                base_path = backend_base.parent
+                
                 # Add backend code (excluding venv, __pycache__, uploads)
-                backend_path = Path("/app/backend")
-                if backend_path.exists():
-                    for file in backend_path.rglob("*"):
+                if backend_base.exists():
+                    for file in backend_base.rglob("*"):
                         if file.is_file():
-                            rel_path = file.relative_to(backend_path)
-                            # Skip venv, __pycache__, uploads, .env (sensitive)
-                            skip_dirs = ["venv", "__pycache__", "uploads", ".git"]
-                            if not any(part in str(rel_path) for part in skip_dirs):
-                                if file.name != ".env":  # Don't include .env (contains secrets)
-                                    zipf.write(file, f"backend/{rel_path}")
+                            try:
+                                rel_path = file.relative_to(backend_base)
+                                # Skip venv, __pycache__, uploads, .env (sensitive)
+                                skip_dirs = ["venv", "__pycache__", "uploads", ".git", "backup"]
+                                if not any(part in str(rel_path) for part in skip_dirs):
+                                    if file.name != ".env":  # Don't include .env (contains secrets)
+                                        zipf.write(file, f"backend/{rel_path}")
+                            except Exception as e:
+                                logging.warning(f"Skipping file {file}: {e}")
                 
                 # Add frontend build (not source, just the build)
-                frontend_build = Path("/app/frontend/build")
+                frontend_build = base_path / "frontend" / "build"
                 if frontend_build.exists():
                     for file in frontend_build.rglob("*"):
                         if file.is_file():
-                            rel_path = file.relative_to(frontend_build)
-                            zipf.write(file, f"frontend/build/{rel_path}")
+                            try:
+                                rel_path = file.relative_to(frontend_build)
+                                zipf.write(file, f"frontend/build/{rel_path}")
+                            except Exception as e:
+                                logging.warning(f"Skipping file {file}: {e}")
                 
                 # Add important config files
-                config_files = [
-                    "/app/frontend/package.json",
-                    "/app/frontend/tailwind.config.js",
-                    "/app/GUIDE_IONOS.md",
-                    "/app/README.md"
-                ]
-                for config_file in config_files:
-                    config_path = Path(config_file)
+                for config_name in ["package.json", "tailwind.config.js"]:
+                    config_path = base_path / "frontend" / config_name
                     if config_path.exists():
-                        zipf.write(config_path, config_path.name)
+                        try:
+                            zipf.write(config_path, config_name)
+                        except:
+                            pass
+                
+                for doc_name in ["GUIDE_IONOS.md", "README.md"]:
+                    doc_path = base_path / doc_name
+                    if doc_path.exists():
+                        try:
+                            zipf.write(doc_path, doc_name)
+                        except:
+                            pass
                 
                 # Create .env.example template
                 env_example = """# CREATIVINDUSTRY - Configuration
