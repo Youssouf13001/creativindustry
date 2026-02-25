@@ -6604,6 +6604,7 @@ async def create_photofind_purchase(
     purchase = {
         "id": purchase_id,
         "event_id": event_id,
+        "event_name": event.get("name", ""),
         "photo_ids": photo_ids,
         "customer_email": email,
         "customer_name": name,
@@ -6617,6 +6618,26 @@ async def create_photofind_purchase(
     
     # Generate PayPal payment link
     paypal_link = f"https://paypal.me/creativindustryfranc/{price}"
+    
+    # Send notification email to admin
+    try:
+        admin_notification = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: white; padding: 30px; border-radius: 10px;">
+            <h2 style="color: #D4AF37; margin-bottom: 20px;">📸 Nouvelle commande PhotoFind !</h2>
+            <div style="background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <p><strong>Événement :</strong> {event.get('name', 'N/A')}</p>
+                <p><strong>Client :</strong> {name}</p>
+                <p><strong>Email :</strong> {email}</p>
+                <p><strong>Nombre de photos :</strong> {num_photos}</p>
+                <p style="font-size: 24px; color: #D4AF37;"><strong>Montant :</strong> {price}€</p>
+            </div>
+            <p style="color: #888;">Vérifiez le paiement sur PayPal, puis confirmez la commande dans votre espace admin pour envoyer automatiquement les photos au client.</p>
+            <a href="https://creativindustry.com/admin/dashboard" style="display: inline-block; background: #D4AF37; color: black; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px;">Voir les commandes</a>
+        </div>
+        """
+        send_email(SMTP_EMAIL, f"📸 Nouvelle commande PhotoFind - {name} ({price}€)", admin_notification)
+    except Exception as e:
+        logging.error(f"Error sending admin notification: {e}")
     
     return {
         "purchase_id": purchase_id,
