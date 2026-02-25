@@ -152,6 +152,14 @@ const AdminDashboard = () => {
   const [renewalInvoices, setRenewalInvoices] = useState([]);
   const [billingStats, setBillingStats] = useState({ total_revenue: 0, total_invoices: 0 });
   const [loadingBilling, setLoadingBilling] = useState(false);
+  // Gallery pricing state
+  const [galleryPricing, setGalleryPricing] = useState({
+    gallery_3d: { price: 49 },
+    hd_download: { price: 99 },
+    pack_complete: { price: 129 }
+  });
+  const [galleryPurchases, setGalleryPurchases] = useState([]);
+  const [savingPricing, setSavingPricing] = useState(false);
   // Client expiration modal state
   const [showExpirationModal, setShowExpirationModal] = useState(false);
   const [expirationClient, setExpirationClient] = useState(null);
