@@ -6591,8 +6591,17 @@ async def create_photofind_purchase(
     if not event:
         raise HTTPException(status_code=404, detail="Événement non trouvé")
     
+    # Handle comma-separated photo_ids (from form data)
+    processed_photo_ids = []
+    for pid in photo_ids:
+        if ',' in pid:
+            processed_photo_ids.extend(pid.split(','))
+        else:
+            processed_photo_ids.append(pid)
+    processed_photo_ids = [p.strip() for p in processed_photo_ids if p.strip()]
+    
     # Calculate price based on number of photos
-    num_photos = len(photo_ids)
+    num_photos = len(processed_photo_ids)
     if num_photos >= 10:
         price = event.get("price_pack_10", 35)
     elif num_photos >= 5:
@@ -6605,7 +6614,7 @@ async def create_photofind_purchase(
         "id": purchase_id,
         "event_id": event_id,
         "event_name": event.get("name", ""),
-        "photo_ids": photo_ids,
+        "photo_ids": processed_photo_ids,
         "customer_email": email,
         "customer_name": name,
         "num_photos": num_photos,
