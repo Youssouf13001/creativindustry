@@ -6252,7 +6252,7 @@ const AdminDashboard = () => {
         {activeTab === "billing" && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="font-primary font-bold text-xl">🧾 Facturation - Renouvellements PayPal</h2>
+              <h2 className="font-primary font-bold text-xl">🧾 Facturation</h2>
               <button
                 onClick={fetchBillingData}
                 className="btn-outline px-4 py-2 text-sm"
@@ -6261,7 +6261,130 @@ const AdminDashboard = () => {
               </button>
             </div>
 
+            {/* Gallery Pricing Settings */}
+            <div className="bg-gradient-to-r from-purple-900/30 to-indigo-900/30 border border-purple-500/30 rounded-lg p-6">
+              <h3 className="font-bold mb-4 flex items-center gap-2">
+                <Settings size={20} className="text-purple-400" />
+                Tarifs Options Galeries (3D + HD)
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="text-white/60 text-sm block mb-2">Galerie 3D Immersive</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={galleryPricing.gallery_3d?.price || 49}
+                      onChange={(e) => setGalleryPricing({
+                        ...galleryPricing,
+                        gallery_3d: { ...galleryPricing.gallery_3d, price: e.target.value }
+                      })}
+                      className="bg-black/50 border border-white/20 px-3 py-2 rounded w-24 text-right"
+                    />
+                    <span className="text-white/60">€</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-white/60 text-sm block mb-2">Téléchargement HD</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={galleryPricing.hd_download?.price || 99}
+                      onChange={(e) => setGalleryPricing({
+                        ...galleryPricing,
+                        hd_download: { ...galleryPricing.hd_download, price: e.target.value }
+                      })}
+                      className="bg-black/50 border border-white/20 px-3 py-2 rounded w-24 text-right"
+                    />
+                    <span className="text-white/60">€</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-white/60 text-sm block mb-2">Pack Complet (3D + HD)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={galleryPricing.pack_complete?.price || 129}
+                      onChange={(e) => setGalleryPricing({
+                        ...galleryPricing,
+                        pack_complete: { ...galleryPricing.pack_complete, price: e.target.value }
+                      })}
+                      className="bg-black/50 border border-white/20 px-3 py-2 rounded w-24 text-right"
+                    />
+                    <span className="text-white/60">€</span>
+                  </div>
+                </div>
+              </div>
+              
+              <button
+                onClick={saveGalleryPricing}
+                disabled={savingPricing}
+                className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+              >
+                {savingPricing ? <Loader className="animate-spin" size={16} /> : <Check size={16} />}
+                Enregistrer les tarifs
+              </button>
+            </div>
+
+            {/* Gallery Purchases */}
+            {galleryPurchases.length > 0 && (
+              <div className="bg-card border border-white/10 p-6">
+                <h3 className="font-bold mb-4">💎 Ventes Options Galeries</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="bg-purple-500/10 border border-purple-500/30 p-4 rounded">
+                    <p className="text-white/60 text-sm">Nombre de ventes</p>
+                    <p className="text-2xl font-bold text-purple-400">{galleryPurchases.length}</p>
+                  </div>
+                  <div className="bg-green-500/10 border border-green-500/30 p-4 rounded">
+                    <p className="text-white/60 text-sm">CA Options Galeries</p>
+                    <p className="text-2xl font-bold text-green-400">
+                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' })
+                        .format(galleryPurchases.reduce((sum, p) => sum + (p.amount || 0), 0))}
+                    </p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto max-h-64 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-card">
+                      <tr className="border-b border-white/10">
+                        <th className="text-left py-2 px-2 text-white/60">Client</th>
+                        <th className="text-left py-2 px-2 text-white/60">Galerie</th>
+                        <th className="text-left py-2 px-2 text-white/60">Option</th>
+                        <th className="text-right py-2 px-2 text-white/60">Montant</th>
+                        <th className="text-left py-2 px-2 text-white/60">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {galleryPurchases.map((purchase) => (
+                        <tr key={purchase.id} className="border-b border-white/5">
+                          <td className="py-2 px-2">
+                            <p className="font-medium">{purchase.client_name}</p>
+                            <p className="text-white/50 text-xs">{purchase.client_email}</p>
+                          </td>
+                          <td className="py-2 px-2">{purchase.gallery_name}</td>
+                          <td className="py-2 px-2">
+                            <span className={`px-2 py-1 text-xs rounded ${
+                              purchase.option === 'pack_complete' ? 'bg-primary/20 text-primary' :
+                              purchase.option === 'gallery_3d' ? 'bg-purple-500/20 text-purple-400' :
+                              'bg-indigo-500/20 text-indigo-400'
+                            }`}>
+                              {purchase.option_label}
+                            </span>
+                          </td>
+                          <td className="py-2 px-2 text-right font-bold text-green-400">{purchase.amount}€</td>
+                          <td className="py-2 px-2 text-white/60">
+                            {new Date(purchase.completed_at).toLocaleDateString('fr-FR')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {/* Stats Cards */}
+            <h3 className="font-bold mt-6">📊 Renouvellements Comptes Clients</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-card border border-white/10 p-6">
                 <p className="text-white/60 text-sm mb-1">Chiffre d'affaires total</p>
