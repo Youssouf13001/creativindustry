@@ -84,6 +84,18 @@ const AdminDashboard = () => {
   const [gallerySelection, setGallerySelection] = useState(null);
   const galleryFileRef = useRef(null);
   const galleryMusicRef = useRef(null);
+  // Slideshow Creator states
+  const [showSlideshowCreator, setShowSlideshowCreator] = useState(false);
+  const [slideshowConfig, setSlideshowConfig] = useState({
+    name: "",
+    effect: "vintage",
+    duration: 4,
+    music: null,
+    photos: []
+  });
+  const [generatingSlideshow, setGeneratingSlideshow] = useState(false);
+  const slideshowPhotosRef = useRef(null);
+  const slideshowMusicRef = useRef(null);
   // MFA states
   const [mfaStatus, setMfaStatus] = useState({ mfa_enabled: false, backup_codes_remaining: 0 });
   const [mfaSetupData, setMfaSetupData] = useState(null);
