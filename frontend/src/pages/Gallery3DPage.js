@@ -1,81 +1,70 @@
-import { useState, useEffect, useRef, Suspense, useMemo } from "react";
-import { useParams } from "react-router-dom";
-import { Canvas, useFrame, useThree, useLoader } from "@react-three/fiber";
-import { 
-  OrbitControls, 
-  PerspectiveCamera,
-  PointerLockControls
-} from "@react-three/drei";
+import { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import axios from "axios";
-import { Loader, Move, Mouse, Maximize, Info, X } from "lucide-react";
+import { Loader, Move, Mouse, Maximize, Info, X, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { API } from "../config/api";
 
-// Photo Frame Component - uses TextureLoader with error handling
-function PhotoFrame({ position, rotation, imageUrl, title, onClick }) {
+// Photo Frame Component with manual texture loading
+function PhotoFrame({ position, rotation, imageUrl, onClick }) {
   const [hovered, setHovered] = useState(false);
-  const [textureLoaded, setTextureLoaded] = useState(false);
+  const [texture, setTexture] = useState(null);
   const [aspectRatio, setAspectRatio] = useState(1);
-  const textureRef = useRef(null);
+  const meshRef = useRef();
   
-  // Load texture manually with error handling
   useEffect(() => {
+    if (!imageUrl) return;
+    
     const loader = new THREE.TextureLoader();
+    loader.crossOrigin = "anonymous";
+    
     loader.load(
       imageUrl,
-      (texture) => {
-        textureRef.current = texture;
-        if (texture.image) {
-          setAspectRatio(texture.image.width / texture.image.height);
+      (loadedTexture) => {
+        loadedTexture.colorSpace = THREE.SRGBColorSpace;
+        setTexture(loadedTexture);
+        if (loadedTexture.image) {
+          setAspectRatio(loadedTexture.image.width / loadedTexture.image.height);
         }
-        setTextureLoaded(true);
       },
       undefined,
       (error) => {
-        console.error("Error loading texture:", imageUrl, error);
-        setTextureLoaded(false);
+        console.error("Failed to load texture:", imageUrl, error);
       }
     );
     
     return () => {
-      if (textureRef.current) {
-        textureRef.current.dispose();
-      }
+      if (texture) texture.dispose();
     };
   }, [imageUrl]);
   
   const frameWidth = 2;
   const frameHeight = frameWidth / aspectRatio;
   
-  if (!textureLoaded || !textureRef.current) {
-    // Placeholder while loading
-    return (
-      <group position={position} rotation={rotation}>
-        <mesh>
-          <planeGeometry args={[frameWidth, frameWidth]} />
-          <meshBasicMaterial color="#333333" />
-        </mesh>
-      </group>
-    );
-  }
-  
   return (
     <group position={position} rotation={rotation}>
-      {/* Frame */}
-      <mesh position={[0, 0, -0.05]}>
-        <boxGeometry args={[frameWidth + 0.2, frameHeight + 0.2, 0.1]} />
-        <meshStandardMaterial color={hovered ? "#D4AF37" : "#1a1a1a"} />
+      {/* Frame background */}
+      <mesh position={[0, 0, -0.06]}>
+        <boxGeometry args={[frameWidth + 0.3, frameHeight + 0.3, 0.1]} />
+        <meshStandardMaterial color={hovered ? "#D4AF37" : "#222222"} />
       </mesh>
       
       {/* Photo */}
       <mesh 
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
-        onClick={onClick}
+        ref={meshRef}
+        onPointerOver={(e) => { e.stopPropagation(); setHovered(true); }}
+        onPointerOut={(e) => { e.stopPropagation(); setHovered(false); }}
+        onClick={(e) => { e.stopPropagation(); onClick && onClick(); }}
       >
         <planeGeometry args={[frameWidth, frameHeight]} />
-        <meshBasicMaterial map={textureRef.current} />
+        {texture ? (
+          <meshBasicMaterial map={texture} />
+        ) : (
+          <meshBasicMaterial color="#444444" />
+        )}
       </mesh>
     </group>
   );
@@ -84,31 +73,30 @@ function PhotoFrame({ position, rotation, imageUrl, title, onClick }) {
 // Gallery Room Component
 function GalleryRoom({ photos, onPhotoClick }) {
   const roomWidth = 20;
-  const roomDepth = 30;
-  const roomHeight = 6;
-  const wallColor = "#1a1a1a";
-  const floorColor = "#2a2a2a";
+  const roomDepth = 24;
+  const roomHeight = 5;
   
-  // Calculate photo positions along walls
+  // Calculate positions for photos on left and right walls
   const getPhotoPositions = () => {
     const positions = [];
     const photosPerWall = Math.ceil(photos.length / 2);
-    const spacing = roomDepth / (photosPerWall + 1);
+    const spacing = (roomDepth - 4) / Math.max(photosPerWall, 1);
     
     photos.forEach((photo, index) => {
-      const wallIndex = Math.floor(index / photosPerWall);
-      const posInWall = index % photosPerWall;
+      const wallIndex = index < photosPerWall ? 0 : 1;
+      const posInWall = wallIndex === 0 ? index : index - photosPerWall;
+      const zPos = -roomDepth/2 + 2 + spacing * posInWall + spacing/2;
       
       if (wallIndex === 0) {
         // Left wall
         positions.push({
-          position: [-roomWidth/2 + 0.1, 2, -roomDepth/2 + spacing * (posInWall + 1)],
+          position: [-roomWidth/2 + 0.15, 2, zPos],
           rotation: [0, Math.PI/2, 0]
         });
       } else {
         // Right wall
         positions.push({
-          position: [roomWidth/2 - 0.1, 2, -roomDepth/2 + spacing * (posInWall + 1)],
+          position: [roomWidth/2 - 0.15, 2, zPos],
           rotation: [0, -Math.PI/2, 0]
         });
       }
@@ -121,92 +109,98 @@ function GalleryRoom({ photos, onPhotoClick }) {
   
   return (
     <group>
-      {/* Floor */}
+      {/* Floor - dark wood style */}
       <mesh rotation={[-Math.PI/2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[roomWidth, roomDepth]} />
-        <meshStandardMaterial color={floorColor} />
+        <meshStandardMaterial color="#1a1815" roughness={0.8} />
       </mesh>
       
       {/* Ceiling */}
       <mesh rotation={[Math.PI/2, 0, 0]} position={[0, roomHeight, 0]}>
         <planeGeometry args={[roomWidth, roomDepth]} />
-        <meshStandardMaterial color="#111111" />
+        <meshStandardMaterial color="#0f0f0f" />
       </mesh>
       
       {/* Back wall */}
       <mesh position={[0, roomHeight/2, -roomDepth/2]}>
         <planeGeometry args={[roomWidth, roomHeight]} />
-        <meshStandardMaterial color={wallColor} />
+        <meshStandardMaterial color="#1a1a1a" />
       </mesh>
       
-      {/* Front wall (with opening) */}
+      {/* Front wall */}
       <mesh position={[0, roomHeight/2, roomDepth/2]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[roomWidth, roomHeight]} />
-        <meshStandardMaterial color={wallColor} />
+        <meshStandardMaterial color="#1a1a1a" />
       </mesh>
       
       {/* Left wall */}
       <mesh position={[-roomWidth/2, roomHeight/2, 0]} rotation={[0, Math.PI/2, 0]}>
         <planeGeometry args={[roomDepth, roomHeight]} />
-        <meshStandardMaterial color="#252525" />
+        <meshStandardMaterial color="#222222" />
       </mesh>
       
       {/* Right wall */}
       <mesh position={[roomWidth/2, roomHeight/2, 0]} rotation={[0, -Math.PI/2, 0]}>
         <planeGeometry args={[roomDepth, roomHeight]} />
-        <meshStandardMaterial color="#252525" />
+        <meshStandardMaterial color="#222222" />
       </mesh>
       
       {/* Ceiling lights */}
-      {[-8, 0, 8].map((z, i) => (
-        <pointLight 
-          key={i}
-          position={[0, roomHeight - 0.5, z]} 
-          intensity={50} 
-          color="#fff5e6"
-          castShadow
-        />
+      {[-6, 0, 6].map((z, i) => (
+        <group key={i}>
+          <pointLight 
+            position={[0, roomHeight - 0.3, z]} 
+            intensity={30} 
+            color="#fff5e6"
+            distance={12}
+            decay={2}
+          />
+          {/* Light fixture */}
+          <mesh position={[0, roomHeight - 0.1, z]}>
+            <cylinderGeometry args={[0.3, 0.3, 0.1, 16]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+        </group>
       ))}
       
       {/* Photos on walls */}
       {photos.map((photo, index) => (
         photoPositions[index] && (
           <PhotoFrame
-            key={photo.id}
+            key={photo.id || index}
             position={photoPositions[index].position}
             rotation={photoPositions[index].rotation}
             imageUrl={photo.fullUrl}
-            title={photo.title || `Photo ${index + 1}`}
             onClick={() => onPhotoClick(photo)}
           />
         )
       ))}
       
       {/* Ambient light */}
-      <ambientLight intensity={0.3} />
+      <ambientLight intensity={0.4} />
     </group>
   );
 }
 
-// First Person Controls
-function FirstPersonControls() {
-  const { camera, gl } = useThree();
-  const moveSpeed = 0.1;
-  const keys = useRef({ w: false, a: false, s: false, d: false });
+// Camera Controller with keyboard movement
+function CameraController({ enabled }) {
+  const { camera } = useThree();
+  const moveSpeed = 0.08;
+  const keys = useRef({ w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false });
   
   useEffect(() => {
+    if (!enabled) return;
+    
     const handleKeyDown = (e) => {
       const key = e.key.toLowerCase();
-      if (keys.current.hasOwnProperty(key)) {
-        keys.current[key] = true;
-      }
+      if (key in keys.current) keys.current[key] = true;
+      if (e.key.startsWith('Arrow')) keys.current[e.key] = true;
     };
     
     const handleKeyUp = (e) => {
       const key = e.key.toLowerCase();
-      if (keys.current.hasOwnProperty(key)) {
-        keys.current[key] = false;
-      }
+      if (key in keys.current) keys.current[key] = false;
+      if (e.key.startsWith('Arrow')) keys.current[e.key] = false;
     };
     
     window.addEventListener('keydown', handleKeyDown);
@@ -216,9 +210,11 @@ function FirstPersonControls() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [enabled]);
   
   useFrame(() => {
+    if (!enabled) return;
+    
     const direction = new THREE.Vector3();
     camera.getWorldDirection(direction);
     direction.y = 0;
@@ -227,34 +223,36 @@ function FirstPersonControls() {
     const right = new THREE.Vector3();
     right.crossVectors(direction, new THREE.Vector3(0, 1, 0));
     
-    if (keys.current.w) camera.position.addScaledVector(direction, moveSpeed);
-    if (keys.current.s) camera.position.addScaledVector(direction, -moveSpeed);
-    if (keys.current.a) camera.position.addScaledVector(right, -moveSpeed);
-    if (keys.current.d) camera.position.addScaledVector(right, moveSpeed);
+    // WASD and Arrow keys
+    if (keys.current.w || keys.current.ArrowUp) camera.position.addScaledVector(direction, moveSpeed);
+    if (keys.current.s || keys.current.ArrowDown) camera.position.addScaledVector(direction, -moveSpeed);
+    if (keys.current.a || keys.current.ArrowLeft) camera.position.addScaledVector(right, -moveSpeed);
+    if (keys.current.d || keys.current.ArrowRight) camera.position.addScaledVector(right, moveSpeed);
     
-    // Keep camera at eye level
+    // Keep at eye level
     camera.position.y = 1.7;
     
-    // Boundary limits
+    // Room boundaries
     camera.position.x = Math.max(-9, Math.min(9, camera.position.x));
-    camera.position.z = Math.max(-14, Math.min(14, camera.position.z));
+    camera.position.z = Math.max(-11, Math.min(11, camera.position.z));
   });
   
-  return <PointerLockControls args={[camera, gl.domElement]} />;
+  return null;
 }
 
 // Main Gallery3D Page Component
 const Gallery3DPage = () => {
   const { galleryId } = useParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [gallery, setGallery] = useState(null);
   const [photos, setPhotos] = useState([]);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [controlsLocked, setControlsLocked] = useState(false);
   const [showHelp, setShowHelp] = useState(true);
 
   useEffect(() => {
     fetchGallery();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [galleryId]);
 
   const fetchGallery = async () => {
@@ -262,7 +260,7 @@ const Gallery3DPage = () => {
       const res = await axios.get(`${API}/public/galleries/${galleryId}`);
       setGallery(res.data);
       
-      // Prepare photos with full URLs using the public image endpoint
+      // Prepare photos with full URLs using public API endpoint
       const preparedPhotos = (res.data.photos || []).slice(0, 20).map((photo, index) => ({
         ...photo,
         id: photo.id || index,
@@ -281,12 +279,10 @@ const Gallery3DPage = () => {
 
   const handlePhotoClick = (photo) => {
     setSelectedPhoto(photo);
-    document.exitPointerLock();
   };
 
   const enterGallery = () => {
     setShowHelp(false);
-    setControlsLocked(true);
   };
 
   if (loading) {
@@ -306,7 +302,13 @@ const Gallery3DPage = () => {
         <div className="text-center">
           <X className="text-red-500 mx-auto mb-4" size={64} />
           <h1 className="text-2xl text-white mb-2">Galerie non trouvée</h1>
-          <p className="text-white/60">Cette galerie n'existe pas ou n'est plus disponible.</p>
+          <p className="text-white/60 mb-4">Cette galerie n'existe pas ou n'est plus disponible.</p>
+          <button 
+            onClick={() => navigate('/')}
+            className="px-4 py-2 bg-primary text-black rounded-lg"
+          >
+            Retour à l'accueil
+          </button>
         </div>
       </div>
     );
@@ -323,21 +325,21 @@ const Gallery3DPage = () => {
             
             <div className="space-y-4 mb-8 text-left">
               <div className="flex items-center gap-4 bg-white/5 p-3 rounded-lg">
-                <Mouse className="text-primary" size={24} />
+                <Mouse className="text-primary flex-shrink-0" size={24} />
                 <div>
                   <p className="text-white font-medium">Souris</p>
-                  <p className="text-white/60 text-sm">Regarder autour de vous</p>
+                  <p className="text-white/60 text-sm">Cliquer-glisser pour regarder autour</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 bg-white/5 p-3 rounded-lg">
-                <Move className="text-primary" size={24} />
+                <Move className="text-primary flex-shrink-0" size={24} />
                 <div>
-                  <p className="text-white font-medium">ZQSD / WASD</p>
+                  <p className="text-white font-medium">ZQSD / Flèches</p>
                   <p className="text-white/60 text-sm">Se déplacer dans la galerie</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 bg-white/5 p-3 rounded-lg">
-                <Maximize className="text-primary" size={24} />
+                <Maximize className="text-primary flex-shrink-0" size={24} />
                 <div>
                   <p className="text-white font-medium">Clic sur photo</p>
                   <p className="text-white/60 text-sm">Voir en grand</p>
@@ -347,6 +349,7 @@ const Gallery3DPage = () => {
             
             <button
               onClick={enterGallery}
+              data-testid="enter-gallery-btn"
               className="px-8 py-4 bg-primary text-black font-bold rounded-lg text-lg hover:bg-primary/90 transition-colors"
             >
               Entrer dans la galerie
@@ -361,49 +364,51 @@ const Gallery3DPage = () => {
 
       {/* Controls Help (in-gallery) */}
       {!showHelp && (
-        <div className="absolute bottom-4 left-4 z-10 bg-black/50 backdrop-blur-sm rounded-lg p-3 text-white/60 text-sm">
-          <p><span className="text-primary">ZQSD</span> Déplacer • <span className="text-primary">Souris</span> Regarder • <span className="text-primary">ESC</span> Menu</p>
+        <div className="absolute bottom-4 left-4 z-10 bg-black/70 backdrop-blur-sm rounded-lg p-3 text-white/80 text-sm">
+          <p><span className="text-primary font-medium">ZQSD/Flèches</span> Déplacer • <span className="text-primary font-medium">Souris</span> Regarder</p>
         </div>
       )}
 
       {/* Gallery Info */}
       {!showHelp && (
-        <div className="absolute top-4 left-4 z-10 bg-black/50 backdrop-blur-sm rounded-lg p-3">
+        <div className="absolute top-4 left-4 z-10 bg-black/70 backdrop-blur-sm rounded-lg p-3">
           <h2 className="text-white font-medium">{gallery.name}</h2>
           <p className="text-white/60 text-sm">{photos.length} photos</p>
         </div>
       )}
 
-      {/* Back to help button */}
+      {/* Back button */}
       {!showHelp && (
         <button
           onClick={() => setShowHelp(true)}
-          className="absolute top-4 right-4 z-10 bg-black/50 backdrop-blur-sm rounded-lg p-3 text-white hover:bg-black/70 transition-colors"
+          className="absolute top-4 right-4 z-10 bg-black/70 backdrop-blur-sm rounded-lg p-3 text-white hover:bg-black/90 transition-colors flex items-center gap-2"
         >
           <Info size={20} />
+          <span className="text-sm">Aide</span>
         </button>
       )}
 
       {/* 3D Canvas */}
-      <Canvas shadows>
-        <PerspectiveCamera makeDefault position={[0, 1.7, 10]} fov={75} />
+      <Canvas 
+        shadows 
+        gl={{ antialias: true, alpha: false }}
+        camera={{ position: [0, 1.7, 8], fov: 60 }}
+      >
+        <color attach="background" args={['#000000']} />
         
-        <Suspense fallback={null}>
-          <GalleryRoom photos={photos} onPhotoClick={handlePhotoClick} />
-        </Suspense>
+        <GalleryRoom photos={photos} onPhotoClick={handlePhotoClick} />
         
-        {controlsLocked ? (
-          <FirstPersonControls />
-        ) : (
-          <OrbitControls 
-            target={[0, 1.5, 0]} 
-            maxPolarAngle={Math.PI / 2}
-            minDistance={2}
-            maxDistance={15}
-          />
-        )}
+        <CameraController enabled={!showHelp && !selectedPhoto} />
         
-        <fog attach="fog" args={['#000000', 10, 30]} />
+        <OrbitControls 
+          enablePan={false}
+          enableZoom={false}
+          minPolarAngle={Math.PI / 4}
+          maxPolarAngle={Math.PI / 2}
+          rotateSpeed={0.5}
+        />
+        
+        <fog attach="fog" args={['#000000', 8, 25]} />
       </Canvas>
 
       {/* Photo Modal */}
@@ -412,16 +417,16 @@ const Gallery3DPage = () => {
           className="absolute inset-0 z-30 bg-black/95 flex items-center justify-center p-4"
           onClick={() => setSelectedPhoto(null)}
         >
-          <div className="relative max-w-4xl max-h-[90vh]">
+          <div className="relative max-w-4xl max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <img
               src={selectedPhoto.fullUrl}
               alt={selectedPhoto.title}
-              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
             />
-            <p className="text-center text-white mt-4">{selectedPhoto.title}</p>
+            <p className="text-center text-white mt-4 text-lg">{selectedPhoto.title}</p>
             <button
               onClick={() => setSelectedPhoto(null)}
-              className="absolute -top-4 -right-4 bg-white/20 hover:bg-white/30 rounded-full p-2"
+              className="absolute -top-3 -right-3 bg-white/20 hover:bg-white/40 rounded-full p-2 transition-colors"
             >
               <X size={24} className="text-white" />
             </button>
