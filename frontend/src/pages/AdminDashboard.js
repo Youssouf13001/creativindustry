@@ -588,6 +588,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (activeTab === "billing") {
       fetchBillingData();
+      fetchPhotofindPurchases(); // Also load PhotoFind sales
     }
   }, [activeTab]);
 
