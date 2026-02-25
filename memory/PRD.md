@@ -93,6 +93,8 @@ French
 ## Key API Endpoints (Gallery 3D)
 - `GET /api/public/galleries/{gallery_id}` - Données publiques d'une galerie
 - `GET /api/public/galleries/{gallery_id}/image/{photo_id}` - Servir une image inline
+- `GET /api/admin/galleries/{gallery_id}/3d-info` - Infos galerie 3D + QR code base64
+- `GET /api/admin/galleries/{gallery_id}/qrcode-3d` - Télécharger QR code PNG
 
 ## 3rd Party Integrations
 - IONOS SMTP (emails)
