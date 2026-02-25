@@ -12,6 +12,7 @@ import AdminChat from "../components/AdminChat";
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
+  const [storageStats, setStorageStats] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [quotes, setQuotes] = useState([]);
   const [services, setServices] = useState([]);
