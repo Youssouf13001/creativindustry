@@ -642,8 +642,9 @@ const AdminDashboard = () => {
     try {
       await axios.put(`${API}/admin/gallery-pricing`, {
         gallery_3d_price: parseFloat(galleryPricing.gallery_3d?.price || 49),
+        video_slideshow_price: parseFloat(galleryPricing.video_slideshow?.price || 79),
         hd_download_price: parseFloat(galleryPricing.hd_download?.price || 99),
-        pack_complete_price: parseFloat(galleryPricing.pack_complete?.price || 129)
+        pack_complete_price: parseFloat(galleryPricing.pack_complete?.price || 199)
       }, { headers });
       toast.success("Tarifs enregistrés !");
     } catch (e) {
