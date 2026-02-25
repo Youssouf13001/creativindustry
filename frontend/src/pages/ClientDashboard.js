@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight, FileArchive, User, Settings, Lock, Upload, Loader, Bell, Music, File, CreditCard, Receipt, Euro, Trash2, UploadCloud, FileDown, Clock, AlertTriangle, CreditCard as CardIcon, Eye, ClipboardList, Play, Share2, QrCode, BookOpen, Mic, MessageCircle, Copy } from "lucide-react";
+import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight, FileArchive, User, Settings, Lock, Upload, Loader, Bell, Music, File, CreditCard, Receipt, Euro, Trash2, UploadCloud, FileDown, Clock, AlertTriangle, CreditCard as CardIcon, Eye, ClipboardList, Play, Share2, QrCode, BookOpen, Mic, MessageCircle, Copy, Box, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 import ClientChat from "../components/ClientChat";
@@ -23,6 +23,11 @@ const ClientDashboard = () => {
   
   // Slideshow state
   const [showSlideshow, setShowSlideshow] = useState(false);
+  
+  // Gallery premium options state
+  const [galleryOptions, setGalleryOptions] = useState(null);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [purchasingOption, setPurchasingOption] = useState(null);
   
   // Profile states
   const [editingProfile, setEditingProfile] = useState(false);
