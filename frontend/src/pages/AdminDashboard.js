@@ -2073,6 +2073,7 @@ const AdminDashboard = () => {
             { id: "calendar", label: "📅 Calendrier" },
             { id: "galleries", label: "📸 Galeries" },
             { id: "guestbooks", label: "📖 Livres d'or" },
+            { id: "photofind", label: "📷 PhotoFind" },
             { id: "content", label: "Contenu Site" },
             { id: "portfolio", label: "Portfolio" },
             { id: "news", label: "📰 Actualités" },
