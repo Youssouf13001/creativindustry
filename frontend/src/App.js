@@ -67,6 +67,7 @@ function App() {
             <Route path="/livre-dor/:guestbookId" element={<GuestbookPage />} />
             {/* PhotoFind - Facial Recognition Photo Booth */}
             <Route path="/photofind/:eventId" element={<PhotoFindPage />} />
+            <Route path="/photofind/download/:purchaseId" element={<PhotoFindDownloadPage />} />
             {/* Aliases for different URLs */}
             <Route path="/mariages" element={<ServicePage category="wedding" />} />
             <Route path="/podcast" element={<ServicePage category="podcast" />} />
