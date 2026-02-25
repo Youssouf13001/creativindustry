@@ -2020,7 +2020,7 @@ const ClientDashboard = () => {
                       </div>
 
                       {/* HD Download Option */}
-                      <div className={`bg-black/30 rounded-lg p-4 border ${galleryOptions.options.hd_download.unlocked ? 'border-green-500/50' : 'border-white/10'}`}>
+                      <div className={`bg-black/30 rounded-lg p-4 border ${galleryOptions.options.hd_download?.unlocked ? 'border-green-500/50' : 'border-white/10'}`}>
                         <div className="flex items-center gap-3 mb-3">
                           <Download className="text-indigo-400" size={24} />
                           <div>
@@ -2028,7 +2028,7 @@ const ClientDashboard = () => {
                             <p className="text-white/60 text-sm">Toutes les photos</p>
                           </div>
                         </div>
-                        {galleryOptions.options.hd_download.unlocked ? (
+                        {galleryOptions.options.hd_download?.unlocked ? (
                           <button
                             onClick={downloadHDPhotos}
                             className="w-full bg-green-500/20 text-green-400 py-2 rounded flex items-center justify-center gap-2 hover:bg-green-500/30 transition-colors"
@@ -2045,23 +2045,58 @@ const ClientDashboard = () => {
                               <Loader className="animate-spin" size={16} />
                             ) : (
                               <>
-                                <Lock size={16} /> Débloquer {galleryOptions.options.hd_download.price}€
+                                <Lock size={16} /> Débloquer {galleryOptions.options.hd_download?.price}€
                               </>
                             )}
                           </button>
                         )}
                       </div>
 
+                      {/* Video Slideshow Option */}
+                      {galleryOptions.options.video_slideshow && (
+                        <div className={`bg-black/30 rounded-lg p-4 border ${galleryOptions.options.video_slideshow?.unlocked ? 'border-green-500/50' : 'border-white/10'}`}>
+                          <div className="flex items-center gap-3 mb-3">
+                            <Play className="text-pink-400" size={24} />
+                            <div>
+                              <h4 className="font-semibold">Vidéo Diaporama</h4>
+                              <p className="text-white/60 text-sm">MP4 avec musique</p>
+                            </div>
+                          </div>
+                          {galleryOptions.options.video_slideshow?.unlocked ? (
+                            <button
+                              onClick={downloadVideoSlideshow}
+                              className="w-full bg-green-500/20 text-green-400 py-2 rounded flex items-center justify-center gap-2 hover:bg-green-500/30 transition-colors"
+                            >
+                              <Download size={16} /> Télécharger MP4
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => purchaseGalleryOption('video_slideshow')}
+                              disabled={purchasingOption === 'video_slideshow'}
+                              className="w-full bg-pink-500 hover:bg-pink-600 text-white py-2 rounded flex items-center justify-center gap-2 disabled:opacity-50 transition-colors"
+                            >
+                              {purchasingOption === 'video_slideshow' ? (
+                                <Loader className="animate-spin" size={16} />
+                              ) : (
+                                <>
+                                  <Lock size={16} /> Débloquer {galleryOptions.options.video_slideshow?.price}€
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
                       {/* Pack Complete Option */}
-                      <div className={`bg-black/30 rounded-lg p-4 border-2 ${galleryOptions.options.pack_complete.unlocked ? 'border-green-500/50' : 'border-primary/50'}`}>
+                      <div className={`bg-black/30 rounded-lg p-4 border-2 ${galleryOptions.options.pack_complete?.unlocked ? 'border-green-500/50' : 'border-primary/50'}`}>
                         <div className="flex items-center gap-3 mb-3">
                           <Sparkles className="text-primary" size={24} />
                           <div>
                             <h4 className="font-semibold text-primary">Pack Complet</h4>
-                            <p className="text-white/60 text-sm">3D + HD (économisez !)</p>
+                            <p className="text-white/60 text-sm">3D + Vidéo + HD</p>
                           </div>
                         </div>
-                        {galleryOptions.options.pack_complete.unlocked ? (
+                        {galleryOptions.options.pack_complete?.unlocked ? (
                           <div className="w-full bg-green-500/20 text-green-400 py-2 rounded flex items-center justify-center gap-2">
                             <Check size={16} /> Tout débloqué !
                           </div>
@@ -2075,7 +2110,7 @@ const ClientDashboard = () => {
                               <Loader className="animate-spin" size={16} />
                             ) : (
                               <>
-                                <Lock size={16} /> Débloquer {galleryOptions.options.pack_complete.price}€
+                                <Lock size={16} /> Débloquer {galleryOptions.options.pack_complete?.price}€
                               </>
                             )}
                           </button>
