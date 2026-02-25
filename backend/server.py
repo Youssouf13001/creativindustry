@@ -1825,7 +1825,19 @@ async def delete_admin_account(admin_id: str, admin: dict = Depends(get_current_
 @api_router.post("/auth/login", response_model=dict)
 async def login_admin(data: AdminLogin):
     admin = await db.admins.find_one({"email": data.email}, {"_id": 0})
-    if not admin or not verify_password(data.password, admin["password"]):
+    logging.info(f"Login attempt for: {data.email}, admin found: {admin is not None}")
+    if admin:
+        logging.info(f"Admin password hash prefix: {admin.get('password', '')[:20]}...")
+        try:
+            password_valid = verify_password(data.password, admin["password"])
+            logging.info(f"Password verification result: {password_valid}")
+        except Exception as e:
+            logging.error(f"Password verification error: {e}")
+            password_valid = False
+    else:
+        password_valid = False
+    
+    if not admin or not password_valid:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Check if account is active
