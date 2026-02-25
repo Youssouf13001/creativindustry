@@ -3080,7 +3080,7 @@ const AdminDashboard = () => {
                           <p className="font-bold text-blue-400">{event.faces_indexed || 0}</p>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
                         <button 
                           onClick={() => fetchPhotofindEventDetail(event.id)}
                           className="flex-1 px-3 py-2 bg-primary/20 text-primary text-sm rounded flex items-center justify-center gap-1"
@@ -3094,6 +3094,14 @@ const AdminDashboard = () => {
                         >
                           <Copy size={14} />
                         </button>
+                        <a 
+                          href={`${BACKEND_URL}/uploads/photofind/${event.id}/qr_code.png`}
+                          download={`QRCode_${event.name.replace(/\s+/g, '_')}.png`}
+                          className="px-3 py-2 bg-green-500/20 text-green-400 text-sm rounded"
+                          title="Télécharger QR Code"
+                        >
+                          <QrCode size={14} />
+                        </a>
                         <button 
                           onClick={() => deletePhotofindEvent(event.id)}
                           className="px-3 py-2 bg-red-500/20 text-red-500 text-sm rounded"
