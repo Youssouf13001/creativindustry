@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, User, LogOut, Settings } from "lucide-react";
+import { Menu, X, User, LogOut, Settings, ChevronDown } from "lucide-react";
 import axios from "axios";
 import { API, BACKEND_URL } from "../config/api";
 
@@ -10,13 +10,31 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [clientUser, setClientUser] = useState(null);
   const [showClientMenu, setShowClientMenu] = useState(false);
+  const [showServicesMenu, setShowServicesMenu] = useState(false);
+  const [showContactMenu, setShowContactMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const servicesRef = useRef(null);
+  const contactRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (servicesRef.current && !servicesRef.current.contains(event.target)) {
+        setShowServicesMenu(false);
+      }
+      if (contactRef.current && !contactRef.current.contains(event.target)) {
+        setShowContactMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Check if client is logged in and fetch profile
@@ -50,18 +68,6 @@ const Header = () => {
     navigate("/client");
   };
 
-  const navLinks = [
-    { name: "Accueil", path: "/" },
-    { name: "Mariages", path: "/services/wedding" },
-    { name: "Podcast", path: "/services/podcast" },
-    { name: "Plateau TV", path: "/services/tv_set" },
-    { name: "Portfolio", path: "/portfolio" },
-    { name: "Actualités", path: "/actualites" },
-    { name: "Témoignages", path: "/temoignages" },
-    { name: "Rendez-vous", path: "/rendez-vous" },
-    { name: "Contact", path: "/contact" },
-  ];
-
   const profilePhotoUrl = clientUser?.profile_photo
     ? (clientUser.profile_photo.startsWith('http') ? clientUser.profile_photo : `${BACKEND_URL}${clientUser.profile_photo}`)
     : null;
@@ -77,22 +83,133 @@ const Header = () => {
         <div className="flex items-center justify-between h-20">
           <Link to="/" className="font-primary font-black text-xl tracking-tighter" data-testid="logo-link">
             <span className="text-gold-gradient">CREATIVINDUSTRY</span>
-            <span className="text-white/60 font-light ml-2">France</span>
+            <span className="text-white/60 font-light ml-1">France</span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                data-testid={`nav-${link.name.toLowerCase()}`}
-                className={`font-primary text-sm tracking-wide transition-colors ${
-                  location.pathname === link.path ? "text-primary" : "text-white/70 hover:text-white"
+          <nav className="hidden md:flex items-center gap-5">
+            <Link
+              to="/"
+              data-testid="nav-accueil"
+              className={`font-primary text-sm tracking-wide transition-colors ${
+                location.pathname === "/" ? "text-primary" : "text-white/70 hover:text-white"
+              }`}
+            >
+              Accueil
+            </Link>
+            
+            <Link
+              to="/services/wedding"
+              data-testid="nav-mariages"
+              className={`font-primary text-sm tracking-wide transition-colors ${
+                location.pathname === "/services/wedding" ? "text-primary" : "text-white/70 hover:text-white"
+              }`}
+            >
+              Mariages
+            </Link>
+
+            {/* Services Dropdown (Podcast + Plateau TV) */}
+            <div className="relative" ref={servicesRef}>
+              <button
+                onClick={() => setShowServicesMenu(!showServicesMenu)}
+                className={`font-primary text-sm tracking-wide transition-colors flex items-center gap-1 ${
+                  ["/services/podcast", "/services/tv_set"].includes(location.pathname) ? "text-primary" : "text-white/70 hover:text-white"
                 }`}
               >
-                {link.name}
-              </Link>
-            ))}
+                Services <ChevronDown size={14} className={`transition-transform ${showServicesMenu ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence>
+                {showServicesMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute left-0 top-full mt-2 w-40 bg-card border border-white/20 shadow-xl rounded-lg overflow-hidden"
+                  >
+                    <Link
+                      to="/services/podcast"
+                      onClick={() => setShowServicesMenu(false)}
+                      className="block px-4 py-3 text-sm text-white/80 hover:bg-white/10 hover:text-primary transition-colors"
+                    >
+                      Podcast
+                    </Link>
+                    <Link
+                      to="/services/tv_set"
+                      onClick={() => setShowServicesMenu(false)}
+                      className="block px-4 py-3 text-sm text-white/80 hover:bg-white/10 hover:text-primary transition-colors"
+                    >
+                      Plateau TV
+                    </Link>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <Link
+              to="/portfolio"
+              data-testid="nav-portfolio"
+              className={`font-primary text-sm tracking-wide transition-colors ${
+                location.pathname === "/portfolio" ? "text-primary" : "text-white/70 hover:text-white"
+              }`}
+            >
+              Portfolio
+            </Link>
+
+            <Link
+              to="/actualites"
+              data-testid="nav-actualites"
+              className={`font-primary text-sm tracking-wide transition-colors ${
+                location.pathname === "/actualites" ? "text-primary" : "text-white/70 hover:text-white"
+              }`}
+            >
+              Actualités
+            </Link>
+
+            <Link
+              to="/temoignages"
+              data-testid="nav-temoignages"
+              className={`font-primary text-sm tracking-wide transition-colors ${
+                location.pathname === "/temoignages" ? "text-primary" : "text-white/70 hover:text-white"
+              }`}
+            >
+              Témoignages
+            </Link>
+
+            {/* Contact Dropdown (Rendez-vous + Contact) */}
+            <div className="relative" ref={contactRef}>
+              <button
+                onClick={() => setShowContactMenu(!showContactMenu)}
+                className={`font-primary text-sm tracking-wide transition-colors flex items-center gap-1 ${
+                  ["/rendez-vous", "/contact"].includes(location.pathname) ? "text-primary" : "text-white/70 hover:text-white"
+                }`}
+              >
+                Contact <ChevronDown size={14} className={`transition-transform ${showContactMenu ? 'rotate-180' : ''}`} />
+              </button>
+              <AnimatePresence>
+                {showContactMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute left-0 top-full mt-2 w-40 bg-card border border-white/20 shadow-xl rounded-lg overflow-hidden"
+                  >
+                    <Link
+                      to="/rendez-vous"
+                      onClick={() => setShowContactMenu(false)}
+                      className="block px-4 py-3 text-sm text-white/80 hover:bg-white/10 hover:text-primary transition-colors"
+                    >
+                      Rendez-vous
+                    </Link>
+                    <Link
+                      to="/contact"
+                      onClick={() => setShowContactMenu(false)}
+                      className="block px-4 py-3 text-sm text-white/80 hover:bg-white/10 hover:text-primary transition-colors"
+                    >
+                      Contact
+                    </Link>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             
             <Link
               to="/devis-mariage"
@@ -209,16 +326,33 @@ const Header = () => {
                 </div>
               )}
 
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setIsMenuOpen(false)}
-                  className="font-primary text-lg text-white/80 hover:text-primary transition-colors"
-                >
-                  {link.name}
-                </Link>
-              ))}
+              <Link to="/" onClick={() => setIsMenuOpen(false)} className="font-primary text-lg text-white/80 hover:text-primary transition-colors">
+                Accueil
+              </Link>
+              <Link to="/services/wedding" onClick={() => setIsMenuOpen(false)} className="font-primary text-lg text-white/80 hover:text-primary transition-colors">
+                Mariages
+              </Link>
+              <Link to="/services/podcast" onClick={() => setIsMenuOpen(false)} className="font-primary text-lg text-white/80 hover:text-primary transition-colors">
+                Podcast
+              </Link>
+              <Link to="/services/tv_set" onClick={() => setIsMenuOpen(false)} className="font-primary text-lg text-white/80 hover:text-primary transition-colors">
+                Plateau TV
+              </Link>
+              <Link to="/portfolio" onClick={() => setIsMenuOpen(false)} className="font-primary text-lg text-white/80 hover:text-primary transition-colors">
+                Portfolio
+              </Link>
+              <Link to="/actualites" onClick={() => setIsMenuOpen(false)} className="font-primary text-lg text-white/80 hover:text-primary transition-colors">
+                Actualités
+              </Link>
+              <Link to="/temoignages" onClick={() => setIsMenuOpen(false)} className="font-primary text-lg text-white/80 hover:text-primary transition-colors">
+                Témoignages
+              </Link>
+              <Link to="/rendez-vous" onClick={() => setIsMenuOpen(false)} className="font-primary text-lg text-white/80 hover:text-primary transition-colors">
+                Rendez-vous
+              </Link>
+              <Link to="/contact" onClick={() => setIsMenuOpen(false)} className="font-primary text-lg text-white/80 hover:text-primary transition-colors">
+                Contact
+              </Link>
               
               {clientUser ? (
                 <>
