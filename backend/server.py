@@ -5872,6 +5872,106 @@ RESTAURATION :
 
 Pour toute question : infos@creativindustry.com
 """
+            
+            # Add code source if requested (for full migration)
+            if include_code:
+                readme_content += """
+
+CODE SOURCE INCLUS :
+====================
+
+📁 backend/ : Code Python (FastAPI)
+📁 frontend/ : Code React (après build)
+
+INSTALLATION SUR NOUVEAU SERVEUR :
+===================================
+
+1. Copier tout le contenu sur le nouveau serveur :
+   scp -r creativindustry_backup_*.zip user@nouveau-serveur:/var/www/
+
+2. Dézipper :
+   unzip creativindustry_backup_*.zip -d /var/www/creativindustry
+
+3. Installer les dépendances Python :
+   cd /var/www/creativindustry/backend
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/
+
+4. Configurer le fichier .env :
+   cp backend/.env.example backend/.env
+   nano backend/.env  # Remplir avec vos credentials
+
+5. Importer la base de données :
+   for f in database/*.json; do
+     mongoimport --db creativindustry --collection $(basename $f .json) --file $f --jsonArray
+   done
+
+6. Configurer le service systemd (voir GUIDE_IONOS.md)
+
+7. Redémarrer :
+   sudo systemctl restart creativindustry
+"""
+                
+                # Add backend code (excluding venv, __pycache__, uploads)
+                backend_path = Path("/app/backend")
+                if backend_path.exists():
+                    for file in backend_path.rglob("*"):
+                        if file.is_file():
+                            rel_path = file.relative_to(backend_path)
+                            # Skip venv, __pycache__, uploads, .env (sensitive)
+                            skip_dirs = ["venv", "__pycache__", "uploads", ".git"]
+                            if not any(part in str(rel_path) for part in skip_dirs):
+                                if file.name != ".env":  # Don't include .env (contains secrets)
+                                    zipf.write(file, f"backend/{rel_path}")
+                
+                # Add frontend build (not source, just the build)
+                frontend_build = Path("/app/frontend/build")
+                if frontend_build.exists():
+                    for file in frontend_build.rglob("*"):
+                        if file.is_file():
+                            rel_path = file.relative_to(frontend_build)
+                            zipf.write(file, f"frontend/build/{rel_path}")
+                
+                # Add important config files
+                config_files = [
+                    "/app/frontend/package.json",
+                    "/app/frontend/tailwind.config.js",
+                    "/app/GUIDE_IONOS.md",
+                    "/app/README.md"
+                ]
+                for config_file in config_files:
+                    config_path = Path(config_file)
+                    if config_path.exists():
+                        zipf.write(config_path, config_path.name)
+                
+                # Create .env.example template
+                env_example = """# CREATIVINDUSTRY - Configuration
+# Copier ce fichier vers .env et remplir les valeurs
+
+# MongoDB
+MONGO_URL=mongodb://localhost:27017
+DB_NAME=creativindustry
+
+# JWT Secret (générer avec: openssl rand -hex 32)
+JWT_SECRET=votre-secret-ici
+
+# SMTP pour les emails
+SMTP_HOST=smtp.ionos.fr
+SMTP_PORT=587
+SMTP_EMAIL=votre-email@votredomaine.com
+SMTP_PASSWORD=votre-mot-de-passe
+
+# PayPal (optionnel)
+PAYPAL_CLIENT_ID=
+PAYPAL_SECRET=
+PAYPAL_MODE=sandbox
+
+# URL du site
+SITE_URL=https://votredomaine.com
+"""
+                zipf.writestr("backend/.env.example", env_example)
+            
             zipf.writestr("README.txt", readme_content)
         
         # Clean up temp directory
@@ -5881,12 +5981,16 @@ Pour toute question : infos@creativindustry.com
         file_size = zip_path.stat().st_size
         file_size_mb = round(file_size / (1024 * 1024), 2)
         
+        backup_type = "complète (code + données)" if include_code else "données uniquement"
+        
         # Return download URL instead of file (to avoid timeout)
         return {
             "success": True,
             "filename": zip_filename,
             "download_url": f"/api/admin/backup/download/{zip_filename}",
             "size_mb": file_size_mb,
+            "backup_type": backup_type,
+            "include_code": include_code,
             "created_at": datetime.now().isoformat()
         }
         
