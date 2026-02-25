@@ -2963,6 +2963,312 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* PhotoFind Tab */}
+        {activeTab === "photofind" && (
+          <div>
+            {!selectedPhotofindEvent ? (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="font-primary font-bold text-xl">PhotoFind - Reconnaissance faciale ({photofindEvents.length})</h2>
+                  <button 
+                    onClick={() => setShowAddPhotofindEvent(true)}
+                    className="btn-primary px-4 py-2 text-sm flex items-center gap-2"
+                    data-testid="add-photofind-btn"
+                  >
+                    <Plus size={16} /> Nouvel événement
+                  </button>
+                </div>
+
+                {/* Add PhotoFind Event Modal */}
+                {showAddPhotofindEvent && (
+                  <div className="bg-card border border-white/10 p-6 mb-6 rounded-lg">
+                    <h3 className="font-bold mb-4">Créer un événement PhotoFind</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-white/60 mb-1">Nom de l'événement *</label>
+                        <input
+                          type="text"
+                          value={newPhotofindEvent.name}
+                          onChange={(e) => setNewPhotofindEvent({...newPhotofindEvent, name: e.target.value})}
+                          placeholder="Ex: Mariage Sophie & Thomas"
+                          className="w-full bg-black/50 border border-white/20 rounded px-3 py-2 text-white placeholder:text-white/40"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-1">Date *</label>
+                        <input
+                          type="text"
+                          value={newPhotofindEvent.event_date}
+                          onChange={(e) => setNewPhotofindEvent({...newPhotofindEvent, event_date: e.target.value})}
+                          placeholder="15 mars 2026"
+                          className="w-full bg-black/50 border border-white/20 rounded px-3 py-2 text-white placeholder:text-white/40"
+                        />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm text-white/60 mb-1">Description</label>
+                        <textarea
+                          value={newPhotofindEvent.description}
+                          onChange={(e) => setNewPhotofindEvent({...newPhotofindEvent, description: e.target.value})}
+                          placeholder="Description de l'événement..."
+                          className="w-full bg-black/50 border border-white/20 rounded px-3 py-2 text-white placeholder:text-white/40"
+                          rows={2}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-1">Prix par photo (€)</label>
+                        <input
+                          type="number"
+                          value={newPhotofindEvent.price_per_photo}
+                          onChange={(e) => setNewPhotofindEvent({...newPhotofindEvent, price_per_photo: parseFloat(e.target.value)})}
+                          className="w-full bg-black/50 border border-white/20 rounded px-3 py-2 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-1">Prix pack 5 photos (€)</label>
+                        <input
+                          type="number"
+                          value={newPhotofindEvent.price_pack_5}
+                          onChange={(e) => setNewPhotofindEvent({...newPhotofindEvent, price_pack_5: parseFloat(e.target.value)})}
+                          className="w-full bg-black/50 border border-white/20 rounded px-3 py-2 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-1">Prix pack 10 photos (€)</label>
+                        <input
+                          type="number"
+                          value={newPhotofindEvent.price_pack_10}
+                          onChange={(e) => setNewPhotofindEvent({...newPhotofindEvent, price_pack_10: parseFloat(e.target.value)})}
+                          className="w-full bg-black/50 border border-white/20 rounded px-3 py-2 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-white/60 mb-1">Prix toutes les photos (€)</label>
+                        <input
+                          type="number"
+                          value={newPhotofindEvent.price_all}
+                          onChange={(e) => setNewPhotofindEvent({...newPhotofindEvent, price_all: parseFloat(e.target.value)})}
+                          className="w-full bg-black/50 border border-white/20 rounded px-3 py-2 text-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button onClick={createPhotofindEvent} className="btn-primary px-4 py-2 text-sm">Créer</button>
+                      <button onClick={() => setShowAddPhotofindEvent(false)} className="px-4 py-2 text-sm bg-white/10">Annuler</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* PhotoFind Events List */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {photofindEvents.map(event => (
+                    <div key={event.id} className="bg-card border border-white/10 p-4 rounded-lg">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-bold text-white">{event.name}</h3>
+                        <span className={`text-xs px-2 py-1 rounded ${event.is_active ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
+                          {event.is_active ? 'Actif' : 'Inactif'}
+                        </span>
+                      </div>
+                      <p className="text-white/60 text-sm mb-3">{event.event_date}</p>
+                      <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+                        <div className="bg-black/30 p-2 rounded text-center">
+                          <p className="text-white/60">Photos</p>
+                          <p className="font-bold text-primary">{event.photos_count || 0}</p>
+                        </div>
+                        <div className="bg-black/30 p-2 rounded text-center">
+                          <p className="text-white/60">Visages</p>
+                          <p className="font-bold text-blue-400">{event.faces_indexed || 0}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => fetchPhotofindEventDetail(event.id)}
+                          className="flex-1 px-3 py-2 bg-primary/20 text-primary text-sm rounded flex items-center justify-center gap-1"
+                        >
+                          <Eye size={14} /> Gérer
+                        </button>
+                        <button 
+                          onClick={() => copyPhotofindLink(event.id)}
+                          className="px-3 py-2 bg-white/10 text-sm rounded"
+                          title="Copier le lien"
+                        >
+                          <Copy size={14} />
+                        </button>
+                        <button 
+                          onClick={() => deletePhotofindEvent(event.id)}
+                          className="px-3 py-2 bg-red-500/20 text-red-500 text-sm rounded"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {photofindEvents.length === 0 && (
+                  <div className="text-center py-12 text-white/40">
+                    <Camera size={48} className="mx-auto mb-4 opacity-50" />
+                    <p>Aucun événement PhotoFind. Créez-en un pour commencer.</p>
+                  </div>
+                )}
+
+                {/* Purchases Section */}
+                {photofindPurchases.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="font-bold text-lg mb-4">Commandes récentes</h3>
+                    <div className="bg-card border border-white/10 rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-white/5">
+                          <tr>
+                            <th className="text-left p-3 text-sm text-white/60">Client</th>
+                            <th className="text-left p-3 text-sm text-white/60">Photos</th>
+                            <th className="text-left p-3 text-sm text-white/60">Prix</th>
+                            <th className="text-left p-3 text-sm text-white/60">Statut</th>
+                            <th className="text-left p-3 text-sm text-white/60">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {photofindPurchases.slice(0, 10).map(purchase => (
+                            <tr key={purchase.id} className="border-t border-white/10">
+                              <td className="p-3">
+                                <p className="text-white">{purchase.customer_name}</p>
+                                <p className="text-white/60 text-sm">{purchase.customer_email}</p>
+                              </td>
+                              <td className="p-3">{purchase.num_photos}</td>
+                              <td className="p-3 text-primary font-bold">{purchase.price}€</td>
+                              <td className="p-3">
+                                <span className={`text-xs px-2 py-1 rounded ${purchase.status === 'confirmed' ? 'bg-green-500/20 text-green-500' : 'bg-yellow-500/20 text-yellow-500'}`}>
+                                  {purchase.status === 'confirmed' ? 'Confirmé' : 'En attente'}
+                                </span>
+                              </td>
+                              <td className="p-3">
+                                {purchase.status !== 'confirmed' && (
+                                  <button
+                                    onClick={() => confirmPhotofindPurchase(purchase.id)}
+                                    className="px-3 py-1 bg-green-500/20 text-green-500 text-sm rounded"
+                                  >
+                                    Confirmer
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* PhotoFind Event Detail View */
+              <div>
+                <button 
+                  onClick={() => setSelectedPhotofindEvent(null)}
+                  className="flex items-center gap-2 text-white/60 hover:text-white mb-4"
+                >
+                  <ArrowLeft size={16} /> Retour aux événements
+                </button>
+                
+                <div className="bg-card border border-white/10 p-6 rounded-lg mb-6">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h2 className="font-primary font-bold text-2xl text-white">{selectedPhotofindEvent.name}</h2>
+                      <p className="text-white/60">{selectedPhotofindEvent.event_date}</p>
+                      {selectedPhotofindEvent.description && (
+                        <p className="text-white/40 mt-2">{selectedPhotofindEvent.description}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => copyPhotofindLink(selectedPhotofindEvent.id)}
+                        className="px-4 py-2 bg-primary/20 text-primary text-sm rounded flex items-center gap-2"
+                      >
+                        <QrCode size={16} /> Lien public
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 gap-4 mt-6">
+                    <div className="bg-black/30 p-3 rounded text-center">
+                      <p className="text-white/60 text-sm">Photos</p>
+                      <p className="font-bold text-2xl text-white">{selectedPhotofindEvent.photos_count || 0}</p>
+                    </div>
+                    <div className="bg-black/30 p-3 rounded text-center">
+                      <p className="text-white/60 text-sm">Visages indexés</p>
+                      <p className="font-bold text-2xl text-blue-400">{selectedPhotofindEvent.faces_indexed || 0}</p>
+                    </div>
+                    <div className="bg-black/30 p-3 rounded text-center">
+                      <p className="text-white/60 text-sm">Prix/photo</p>
+                      <p className="font-bold text-2xl text-primary">{selectedPhotofindEvent.price_per_photo}€</p>
+                    </div>
+                    <div className="bg-black/30 p-3 rounded text-center">
+                      <p className="text-white/60 text-sm">Pack 10</p>
+                      <p className="font-bold text-2xl text-green-500">{selectedPhotofindEvent.price_pack_10}€</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Upload Photos */}
+                <div className="bg-card border border-white/10 p-6 rounded-lg mb-6">
+                  <h3 className="font-bold mb-4">Ajouter des photos</h3>
+                  <p className="text-white/60 text-sm mb-4">
+                    Uploadez les photos de l'événement. Les visages seront automatiquement détectés et indexés pour la recherche.
+                  </p>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files?.length) {
+                        uploadPhotofindPhotos(selectedPhotofindEvent.id, e.target.files);
+                      }
+                    }}
+                    className="hidden"
+                    id="photofind-upload"
+                    disabled={uploadingPhotofindPhotos}
+                  />
+                  <label
+                    htmlFor="photofind-upload"
+                    className={`inline-flex items-center gap-2 px-6 py-3 bg-primary text-black font-bold rounded cursor-pointer ${uploadingPhotofindPhotos ? 'opacity-50' : ''}`}
+                  >
+                    {uploadingPhotofindPhotos ? (
+                      <><Loader className="animate-spin" size={20} /> Upload en cours...</>
+                    ) : (
+                      <><Upload size={20} /> Sélectionner des photos</>
+                    )}
+                  </label>
+                </div>
+
+                {/* Photos Grid */}
+                {selectedPhotofindEvent.photos && selectedPhotofindEvent.photos.length > 0 && (
+                  <div>
+                    <h3 className="font-bold mb-4">Photos ({selectedPhotofindEvent.photos.length})</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                      {selectedPhotofindEvent.photos.map(photo => (
+                        <div key={photo.id} className="relative group">
+                          <img
+                            src={`${BACKEND_URL}${photo.url}`}
+                            alt=""
+                            className="w-full aspect-square object-cover rounded-lg"
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 rounded-b-lg">
+                            <p className="text-xs text-white/80">{photo.faces_count} visage(s)</p>
+                          </div>
+                          <button
+                            onClick={() => deletePhotofindPhoto(photo.id)}
+                            className="absolute top-2 right-2 p-1 bg-red-500/80 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Site Content Tab */}
         {activeTab === "content" && siteContent && (
           <div>
