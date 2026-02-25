@@ -109,4 +109,4 @@ French
 - `PWAInstallPrompt.js` - Composant d'installation
 
 ---
-*Last updated: December 2025*
+*Last updated: February 25, 2026*
