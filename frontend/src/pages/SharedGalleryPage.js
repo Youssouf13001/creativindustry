@@ -87,13 +87,22 @@ const SharedGalleryPage = () => {
             </div>
             <div className="flex gap-2">
               {photos.length > 0 && (
-                <button
-                  onClick={() => setShowSlideshow(true)}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-black font-bold px-6 py-3 rounded transition-colors"
-                  data-testid="start-slideshow-btn"
-                >
-                  <Play size={20} /> Diaporama
-                </button>
+                <>
+                  <button
+                    onClick={() => navigate(`/galerie3d/${galleryId}`)}
+                    className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold px-6 py-3 rounded transition-all shadow-lg"
+                    data-testid="view-3d-btn"
+                  >
+                    <Box size={20} /> Vue 3D
+                  </button>
+                  <button
+                    onClick={() => setShowSlideshow(true)}
+                    className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-black font-bold px-6 py-3 rounded transition-colors"
+                    data-testid="start-slideshow-btn"
+                  >
+                    <Play size={20} /> Diaporama
+                  </button>
+                </>
               )}
               <button
                 onClick={handleShare}
