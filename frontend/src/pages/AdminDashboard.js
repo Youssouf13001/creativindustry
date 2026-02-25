@@ -612,16 +612,44 @@ const AdminDashboard = () => {
   const fetchBillingData = async () => {
     setLoadingBilling(true);
     try {
-      const res = await axios.get(`${API}/admin/renewal-invoices`, { headers });
-      setRenewalInvoices(res.data.invoices || []);
+      const [invoicesRes, pricingRes, purchasesRes] = await Promise.all([
+        axios.get(`${API}/admin/renewal-invoices`, { headers }),
+        axios.get(`${API}/admin/gallery-pricing`, { headers }),
+        axios.get(`${API}/admin/gallery-purchases`, { headers })
+      ]);
+      
+      setRenewalInvoices(invoicesRes.data.invoices || []);
       setBillingStats({
-        total_revenue: res.data.total_revenue || 0,
-        total_invoices: res.data.total_invoices || 0
+        total_revenue: invoicesRes.data.total_revenue || 0,
+        total_invoices: invoicesRes.data.total_invoices || 0
       });
+      
+      if (pricingRes.data) {
+        setGalleryPricing(pricingRes.data);
+      }
+      
+      setGalleryPurchases(purchasesRes.data.purchases || []);
     } catch (e) {
       console.error("Error fetching billing data:", e);
     } finally {
       setLoadingBilling(false);
+    }
+  };
+
+  // Save gallery pricing
+  const saveGalleryPricing = async () => {
+    setSavingPricing(true);
+    try {
+      await axios.put(`${API}/admin/gallery-pricing`, {
+        gallery_3d_price: parseFloat(galleryPricing.gallery_3d?.price || 49),
+        hd_download_price: parseFloat(galleryPricing.hd_download?.price || 99),
+        pack_complete_price: parseFloat(galleryPricing.pack_complete?.price || 129)
+      }, { headers });
+      toast.success("Tarifs enregistrés !");
+    } catch (e) {
+      toast.error("Erreur lors de la sauvegarde");
+    } finally {
+      setSavingPricing(false);
     }
   };
 
