@@ -2622,6 +2622,26 @@ const AdminDashboard = () => {
                       Voir sélection ({selectedGallery.selection_count || 0})
                     </button>
                     <button 
+                      onClick={() => {
+                        const url = `${window.location.origin}/galerie/${selectedGallery.id}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success("Lien galerie copié !");
+                      }}
+                      className="bg-blue-500/20 text-blue-400 px-4 py-2 text-sm hover:bg-blue-500/30 flex items-center gap-2"
+                      title="Copier le lien de partage"
+                    >
+                      <Copy size={16} /> Lien
+                    </button>
+                    <a 
+                      href={`/galerie3d/${selectedGallery.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-purple-500/20 text-purple-400 px-4 py-2 text-sm hover:bg-purple-500/30 flex items-center gap-2"
+                      title="Voir en 3D"
+                    >
+                      🥽 Galerie 3D
+                    </a>
+                    <button 
                       onClick={() => deleteGallery(selectedGallery.id)}
                       className="bg-red-500/20 text-red-500 px-4 py-2 text-sm hover:bg-red-500/30"
                     >
