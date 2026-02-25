@@ -6660,6 +6660,10 @@ async def confirm_photofind_purchase(purchase_id: str, admin: dict = Depends(get
     if not purchase:
         raise HTTPException(status_code=404, detail="Achat non trouvé")
     
+    # Get event info
+    event = await db.photofind_events.find_one({"id": purchase["event_id"]}, {"_id": 0})
+    event_name = event.get("name", "Événement") if event else "Événement"
+    
     # Get photos
     photos = await db.photofind_photos.find(
         {"id": {"$in": purchase["photo_ids"]}},
@@ -6669,29 +6673,168 @@ async def confirm_photofind_purchase(purchase_id: str, admin: dict = Depends(get
     # Generate download token
     download_token = secrets.token_urlsafe(32)
     
+    # Set expiration date (7 days)
+    expiration_date = datetime.now(timezone.utc) + timedelta(days=7)
+    
     await db.photofind_purchases.update_one(
         {"id": purchase_id},
         {
             "$set": {
                 "status": "confirmed",
                 "download_token": download_token,
+                "download_expires": expiration_date.isoformat(),
                 "confirmed_at": datetime.now(timezone.utc).isoformat(),
                 "confirmed_by": admin["id"]
             }
         }
     )
     
-    # Send email with download link
+    # Build download URL
     site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
     download_url = f"{site_url}/photofind/download/{purchase_id}?token={download_token}"
     
-    # TODO: Send email to customer
+    # Send email to customer with download link
+    try:
+        customer_email_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #1a1a1a; color: white; padding: 30px; border-radius: 10px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #D4AF37; margin: 0;">CREATIVINDUSTRY</h1>
+                <p style="color: #888; margin-top: 5px;">France</p>
+            </div>
+            
+            <h2 style="color: #D4AF37; text-align: center;">📸 Vos photos sont prêtes !</h2>
+            
+            <p style="text-align: center; color: #ccc;">Bonjour {purchase['customer_name']},</p>
+            
+            <p style="text-align: center; color: #ccc;">Merci pour votre achat ! Vos {purchase['num_photos']} photo(s) de <strong>{event_name}</strong> sont maintenant disponibles au téléchargement.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{download_url}" style="display: inline-block; background: #D4AF37; color: black; padding: 15px 40px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 18px;">📥 TÉLÉCHARGER MES PHOTOS</a>
+            </div>
+            
+            <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 0; color: #888; font-size: 14px;">
+                    ⚠️ Ce lien est valable pendant <strong>7 jours</strong> jusqu'au {expiration_date.strftime('%d/%m/%Y')}.<br>
+                    Téléchargez vos photos avant cette date !
+                </p>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid #333; margin: 30px 0;">
+            
+            <p style="text-align: center; color: #666; font-size: 12px;">
+                CREATIVINDUSTRY - Photographe professionnel<br>
+                <a href="https://creativindustry.com" style="color: #D4AF37;">creativindustry.com</a>
+            </p>
+        </div>
+        """
+        send_email(
+            purchase["customer_email"], 
+            f"📸 Vos photos de {event_name} sont prêtes ! - CREATIVINDUSTRY",
+            customer_email_html
+        )
+        logging.info(f"Download email sent to {purchase['customer_email']}")
+    except Exception as e:
+        logging.error(f"Error sending download email: {e}")
     
     return {
-        "message": "Achat confirmé",
+        "message": "Achat confirmé et email envoyé",
         "download_url": download_url,
-        "customer_email": purchase["customer_email"]
+        "customer_email": purchase["customer_email"],
+        "expires": expiration_date.isoformat()
     }
+
+# Public download endpoint for PhotoFind
+@api_router.get("/public/photofind/download/{purchase_id}")
+async def get_photofind_download_info(purchase_id: str, token: str):
+    """Get download info for a PhotoFind purchase"""
+    purchase = await db.photofind_purchases.find_one(
+        {"id": purchase_id, "download_token": token},
+        {"_id": 0}
+    )
+    
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Lien invalide ou expiré")
+    
+    if purchase.get("status") != "confirmed":
+        raise HTTPException(status_code=400, detail="Cet achat n'a pas encore été confirmé")
+    
+    # Check expiration
+    if purchase.get("download_expires"):
+        expires = datetime.fromisoformat(purchase["download_expires"].replace("Z", "+00:00"))
+        if datetime.now(timezone.utc) > expires:
+            raise HTTPException(status_code=410, detail="Ce lien de téléchargement a expiré")
+    
+    # Get event info
+    event = await db.photofind_events.find_one({"id": purchase["event_id"]}, {"_id": 0, "collection_id": 0})
+    
+    # Get photos
+    photos = await db.photofind_photos.find(
+        {"id": {"$in": purchase["photo_ids"]}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    return {
+        "customer_name": purchase.get("customer_name"),
+        "event_name": event.get("name") if event else "Événement",
+        "num_photos": purchase.get("num_photos"),
+        "photos": photos,
+        "expires": purchase.get("download_expires")
+    }
+
+@api_router.get("/public/photofind/download/{purchase_id}/zip")
+async def download_photofind_zip(purchase_id: str, token: str):
+    """Download all photos as a ZIP file"""
+    purchase = await db.photofind_purchases.find_one(
+        {"id": purchase_id, "download_token": token}
+    )
+    
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Lien invalide")
+    
+    if purchase.get("status") != "confirmed":
+        raise HTTPException(status_code=400, detail="Achat non confirmé")
+    
+    # Check expiration
+    if purchase.get("download_expires"):
+        expires = datetime.fromisoformat(purchase["download_expires"].replace("Z", "+00:00"))
+        if datetime.now(timezone.utc) > expires:
+            raise HTTPException(status_code=410, detail="Lien expiré")
+    
+    # Get photos
+    photos = await db.photofind_photos.find(
+        {"id": {"$in": purchase["photo_ids"]}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    # Get event for naming
+    event = await db.photofind_events.find_one({"id": purchase["event_id"]})
+    event_name = event.get("name", "photos").replace(" ", "_") if event else "photos"
+    
+    # Create ZIP in memory
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for i, photo in enumerate(photos, 1):
+            filepath = PHOTOFIND_DIR / purchase["event_id"] / photo["filename"]
+            if filepath.exists():
+                # Use a clean filename in the ZIP
+                ext = Path(photo["filename"]).suffix
+                zip_file.write(filepath, f"{event_name}_{i:03d}{ext}")
+    
+    zip_buffer.seek(0)
+    
+    # Update download count
+    await db.photofind_purchases.update_one(
+        {"id": purchase_id},
+        {"$inc": {"download_count": 1}, "$set": {"last_download": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return Response(
+        content=zip_buffer.getvalue(),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{event_name}_photos.zip"'
+        }
+    )
 
 # ==================== SEED DATA ====================
 
