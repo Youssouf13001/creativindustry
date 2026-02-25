@@ -6337,9 +6337,9 @@ const AdminDashboard = () => {
             <div className="bg-card border border-green-500/30 p-6 mb-6">
               <h3 className="font-primary font-bold text-lg mb-4 text-green-400">💾 Sauvegarde complète</h3>
               <p className="text-white/60 text-sm mb-4">
-                Téléchargez une sauvegarde complète de votre site incluant :
+                Téléchargez une sauvegarde de votre site :
               </p>
-              <ul className="text-white/60 text-sm mb-6 space-y-2">
+              <ul className="text-white/60 text-sm mb-4 space-y-2">
                 <li className="flex items-center gap-2">
                   <span className="text-green-400">✓</span> Base de données (clients, réservations, devis, portfolio...)
                 </li>
@@ -6350,6 +6350,25 @@ const AdminDashboard = () => {
                   <span className="text-green-400">✓</span> Instructions de restauration
                 </li>
               </ul>
+              
+              {/* Option: Include code for migration */}
+              <div className="bg-blue-500/10 border border-blue-500/30 p-4 mb-6 rounded">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="includeCode"
+                    className="mt-1 w-5 h-5 accent-primary"
+                    onChange={(e) => window.backupIncludeCode = e.target.checked}
+                  />
+                  <div>
+                    <span className="font-medium text-blue-400">🚀 Inclure le code source (migration serveur)</span>
+                    <p className="text-white/50 text-xs mt-1">
+                      Cochez cette option pour obtenir une sauvegarde complète permettant de migrer vers un autre serveur.
+                      Inclut : code backend, frontend compilé, fichier .env.example, guide d'installation.
+                    </p>
+                  </div>
+                </label>
+              </div>
               
               {/* Progress Bar */}
               {backupProgress.active && (
