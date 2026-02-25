@@ -288,45 +288,6 @@ const PhotoFindPage = () => {
               Prenez un selfie ou importez une photo pour retrouver toutes les photos où vous apparaissez.
             </p>
 
-            {/* Camera View */}
-            {cameraActive && (
-              <div className="mb-6">
-                <div className="relative inline-block">
-                  <video 
-                    ref={videoRef} 
-                    autoPlay 
-                    playsInline
-                    muted
-                    className="mx-auto rounded-lg max-w-full max-h-[400px]"
-                    style={{ transform: facingMode === "user" ? "scaleX(-1)" : "none" }}
-                  />
-                  {/* Switch camera button */}
-                  <button
-                    onClick={switchCamera}
-                    className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-black/70"
-                    title="Changer de caméra"
-                  >
-                    <RefreshCw size={20} />
-                  </button>
-                </div>
-                <canvas ref={canvasRef} className="hidden" />
-                <div className="mt-4 flex gap-4 justify-center flex-wrap">
-                  <button
-                    onClick={captureAndSearch}
-                    className="px-6 py-3 bg-primary text-black font-bold rounded-lg flex items-center gap-2"
-                  >
-                    <Camera size={20} /> Capturer et rechercher
-                  </button>
-                  <button
-                    onClick={stopCamera}
-                    className="px-6 py-3 bg-white/10 text-white rounded-lg"
-                  >
-                    Annuler
-                  </button>
-                </div>
-              </div>
-            )}
-
             {/* Camera Error Message */}
             {cameraError && !cameraActive && (
               <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-center">
