@@ -435,28 +435,55 @@ const RenewalPage = () => {
           </div>
         )}
 
-        {/* PayPal Payment Button */}
-        <button
-          onClick={handlePayWithPayPal}
-          disabled={!selectedPlan || !email || loading}
-          className="w-full bg-[#0070ba] hover:bg-[#005ea6] disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-4 text-lg flex items-center justify-center gap-3 font-bold transition-colors"
-          data-testid="paypal-pay-button"
-        >
-          {loading ? (
-            <>
-              <Clock size={24} className="animate-spin" />
-              Redirection vers PayPal...
-            </>
-          ) : (
-            <>
-              <CreditCard size={24} />
-              Payer {selectedPlan ? `${selectedPlan.price}€ TTC` : ""} avec PayPal
-            </>
+        {/* Payment Buttons */}
+        <div className="space-y-3">
+          {/* Stripe CB Button */}
+          {stripePromise && (
+            <button
+              onClick={handlePayWithStripe}
+              disabled={!selectedPlan || !email || loading}
+              className="w-full bg-[#635bff] hover:bg-[#5851db] disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-4 text-lg flex items-center justify-center gap-3 font-bold transition-colors rounded-lg"
+              data-testid="stripe-pay-button"
+            >
+              {loading ? (
+                <>
+                  <Loader size={24} className="animate-spin" />
+                  Chargement...
+                </>
+              ) : (
+                <>
+                  <CreditCard size={24} />
+                  Payer {selectedPlan ? `${selectedPlan.price}€` : ""} par Carte Bancaire
+                </>
+              )}
+            </button>
           )}
-        </button>
+
+          {/* PayPal Button */}
+          <button
+            onClick={handlePayWithPayPal}
+            disabled={!selectedPlan || !email || loading}
+            className="w-full bg-[#0070ba] hover:bg-[#005ea6] disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-4 text-lg flex items-center justify-center gap-3 font-bold transition-colors rounded-lg"
+            data-testid="paypal-pay-button"
+          >
+            {loading ? (
+              <>
+                <Clock size={24} className="animate-spin" />
+                Redirection vers PayPal...
+              </>
+            ) : (
+              <>
+                <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.59 3.025-2.566 6.082-8.558 6.082h-2.19c-1.052 0-1.937.762-2.103 1.8l-1.12 7.106-.318 2.015a.641.641 0 0 0 .633.74h3.472c.524 0 .968-.382 1.05-.9l.434-2.75.278-1.76c.082-.518.526-.9 1.05-.9h.66c4.298 0 7.664-1.747 8.647-6.797a5.64 5.64 0 0 0 .287-1.948c-.148-.089-.303-.169-.574-.401z"/>
+                </svg>
+                Payer {selectedPlan ? `${selectedPlan.price}€` : ""} avec PayPal
+              </>
+            )}
+          </button>
+        </div>
 
         <p className="text-center text-white/40 text-sm mt-4">
-          Paiement sécurisé via PayPal. TVA 20% incluse. Votre compte sera activé automatiquement.
+          Paiement sécurisé. TVA 20% incluse. Votre compte sera activé automatiquement.
         </p>
 
         {/* Back link */}
