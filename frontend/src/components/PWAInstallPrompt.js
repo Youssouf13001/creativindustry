@@ -3,6 +3,10 @@ import { Download, Bell, X, Smartphone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const PWAInstallPrompt = () => {
+  // DÉSACTIVÉ - Le popup était trop intrusif pour les utilisateurs
+  // Pour réactiver, supprimer ce return null
+  return null;
+  
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
