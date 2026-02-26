@@ -191,6 +191,56 @@ const RenewalPage = () => {
     }
   };
 
+  const handlePayWithStripe = async () => {
+    if (!email || !selectedPlan) {
+      setError("Veuillez sélectionner un plan et entrer votre email");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await axios.post(`${API}/stripe/create-renewal-payment`, {
+        plan_type: selectedPlan.id,
+        email: email
+      });
+      
+      if (res.data.client_secret) {
+        window.stripeClientSecret = res.data.client_secret;
+        setStripePaymentId(res.data.payment_id);
+        setStep("stripe-form");
+      } else {
+        setError("Erreur: Configuration Stripe non reçue");
+      }
+    } catch (e) {
+      setError(e.response?.data?.detail || "Une erreur est survenue");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStripeSuccess = async (paymentIntentId) => {
+    setStep("processing");
+    try {
+      const res = await axios.post(`${API}/stripe/confirm-renewal-payment`, {
+        payment_id: stripePaymentId,
+        payment_intent_id: paymentIntentId
+      });
+      
+      if (res.data.success) {
+        setSuccessData(res.data);
+        setStep("success");
+      } else {
+        setError(res.data.message || "Erreur lors de la confirmation");
+        setStep("error");
+      }
+    } catch (e) {
+      setError(e.response?.data?.detail || "Erreur lors de la confirmation");
+      setStep("error");
+    }
+  };
+
   // Processing state (waiting for PayPal confirmation)
   if (step === "processing") {
     return (
