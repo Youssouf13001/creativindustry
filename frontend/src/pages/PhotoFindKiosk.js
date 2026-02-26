@@ -1065,7 +1065,7 @@ const PhotoFindKiosk = () => {
             </div>
             
             <Elements 
-              stripe={stripePromise} 
+              stripe={getStripe()} 
               options={{
                 clientSecret: stripeClientSecret,
                 appearance: {
