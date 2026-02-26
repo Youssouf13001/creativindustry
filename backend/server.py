@@ -7252,6 +7252,149 @@ async def capture_kiosk_paypal_order(event_id: str, data: KioskCapturePayPalRequ
         return {"success": True, "purchase_id": purchase_id}
 
 
+# ==================== KIOSK STRIPE PAYMENTS ====================
+
+import stripe
+
+class KioskStripePaymentIntent(BaseModel):
+    photo_ids: List[str]
+    amount: float
+    frame: str = "none"
+    email: Optional[str] = None
+
+
+@api_router.post("/public/photofind/{event_id}/create-stripe-payment")
+async def create_kiosk_stripe_payment(event_id: str, data: KioskStripePaymentIntent):
+    """Create a Stripe Payment Intent for kiosk CB payment"""
+    event = await db.photofind_events.find_one({"id": event_id, "is_active": True})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    stripe.api_key = stripe_secret
+    
+    try:
+        # Create Payment Intent
+        intent = stripe.PaymentIntent.create(
+            amount=int(data.amount * 100),  # Stripe uses cents
+            currency="eur",
+            metadata={
+                "event_id": event_id,
+                "event_name": event.get("name", "PhotoFind"),
+                "photo_ids": ",".join(data.photo_ids),
+                "frame": data.frame,
+                "photo_count": str(len(data.photo_ids))
+            },
+            description=f"Photos {event.get('name', 'PhotoFind')} - {len(data.photo_ids)} photo(s)",
+            automatic_payment_methods={"enabled": True}
+        )
+        
+        # Save pending order
+        order_id = str(uuid.uuid4())[:8]
+        await db.photofind_stripe_orders.insert_one({
+            "id": order_id,
+            "stripe_payment_intent_id": intent.id,
+            "event_id": event_id,
+            "photo_ids": data.photo_ids,
+            "amount": data.amount,
+            "frame": data.frame,
+            "email": data.email,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "order_id": order_id,
+            "client_secret": intent.client_secret,
+            "payment_intent_id": intent.id
+        }
+        
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe error: {e}")
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
+
+@api_router.post("/public/photofind/{event_id}/confirm-stripe-payment")
+async def confirm_kiosk_stripe_payment(event_id: str, order_id: str = Body(...), payment_intent_id: str = Body(...)):
+    """Confirm a Stripe payment after completion"""
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    stripe.api_key = stripe_secret
+    
+    # Get order from DB
+    order = await db.photofind_stripe_orders.find_one({"id": order_id, "event_id": event_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+    
+    try:
+        # Verify payment with Stripe
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        
+        if intent.status == "succeeded":
+            # Update order
+            await db.photofind_stripe_orders.update_one(
+                {"id": order_id},
+                {"$set": {
+                    "status": "completed",
+                    "completed_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            
+            # Create purchase record
+            event = await db.photofind_events.find_one({"id": event_id})
+            purchase_id = str(uuid.uuid4())
+            
+            await db.photofind_kiosk_purchases.insert_one({
+                "id": purchase_id,
+                "event_id": event_id,
+                "photo_ids": order.get("photo_ids", []),
+                "email": order.get("email", "stripe@kiosk"),
+                "amount": order.get("amount", 0),
+                "payment_method": "stripe",
+                "frame": order.get("frame", "none"),
+                "stripe_payment_intent_id": payment_intent_id,
+                "status": "completed",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            # Send admin notification
+            try:
+                admin_html = f"""
+                <div style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2 style="color: #D4AF37;">💳 Paiement Kiosque CB Stripe !</h2>
+                    <p><strong>Événement:</strong> {event.get('name', 'N/A') if event else 'N/A'}</p>
+                    <p><strong>Photos:</strong> {len(order.get('photo_ids', []))}</p>
+                    <p><strong>Montant:</strong> {order.get('amount', 0)}€</p>
+                    <p><strong>Cadre:</strong> {order.get('frame', 'none')}</p>
+                </div>
+                """
+                send_email(SMTP_EMAIL, f"💳 Paiement CB Kiosque - {order.get('amount', 0)}€", admin_html)
+            except:
+                pass
+            
+            return {"success": True, "purchase_id": purchase_id}
+        else:
+            return {"success": False, "status": intent.status}
+            
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe verify error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@api_router.get("/public/stripe-config")
+async def get_stripe_public_config():
+    """Get Stripe public key for frontend"""
+    public_key = os.environ.get("STRIPE_PUBLIC_KEY")
+    if not public_key:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    return {"public_key": public_key}
+
+
 # Admin endpoint to get kiosk stats
 @api_router.get("/admin/photofind/events/{event_id}/kiosk-stats")
 async def get_kiosk_stats(event_id: str, admin: dict = Depends(get_current_admin)):
