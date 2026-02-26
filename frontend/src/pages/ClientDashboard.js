@@ -80,6 +80,12 @@ const ClientDashboard = () => {
   const [stripePaymentId, setStripePaymentId] = useState(null);
   const [stripePaymentDetails, setStripePaymentDetails] = useState(null);
   
+  // Guestbook purchase state
+  const [showGuestbookPurchase, setShowGuestbookPurchase] = useState(false);
+  const [guestbookPurchaseLoading, setGuestbookPurchaseLoading] = useState(false);
+  const [newGuestbookName, setNewGuestbookName] = useState("");
+  const [newGuestbookEventDate, setNewGuestbookEventDate] = useState("");
+  
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
   const headers = { Authorization: `Bearer ${token}` };
