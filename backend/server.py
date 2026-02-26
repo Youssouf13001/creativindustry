@@ -7771,7 +7771,7 @@ async def get_stripe_public_config():
     public_key = os.environ.get("STRIPE_PUBLIC_KEY")
     if not public_key:
         raise HTTPException(status_code=500, detail="Stripe non configuré")
-    return {"public_key": public_key}
+    return {"publishable_key": public_key, "public_key": public_key}
 
 
 # ==================== CUSTOM FRAMES FOR KIOSK ====================
