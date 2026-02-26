@@ -933,6 +933,22 @@ const PhotoFindKiosk = () => {
             </div>
             
             <div className="grid gap-4">
+              {/* Stripe CB Option */}
+              <button
+                onClick={createStripePayment}
+                disabled={processing}
+                className="w-full bg-[#635bff] hover:bg-[#5851db] text-white font-bold text-xl px-8 py-5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-3"
+              >
+                {processing ? (
+                  <Loader className="animate-spin" size={24} />
+                ) : (
+                  <>
+                    <CreditCard size={24} />
+                    Payer par Carte Bancaire
+                  </>
+                )}
+              </button>
+
               {/* PayPal Option */}
               <button
                 onClick={createPayPalOrder}
