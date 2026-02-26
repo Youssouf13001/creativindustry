@@ -687,6 +687,11 @@ const ClientDashboard = () => {
       return;
     }
     
+    if (!stripePromise) {
+      toast.error("Stripe n'est pas encore chargé. Réessayez dans quelques secondes.");
+      return;
+    }
+    
     setGuestbookPurchaseLoading(true);
     
     try {
@@ -696,21 +701,41 @@ const ClientDashboard = () => {
       }, { headers });
       
       if (res.data.client_secret) {
-        setStripeClientSecret(res.data.client_secret);
-        setStripePaymentId(res.data.payment_id);
-        setStripePaymentDetails({
-          type: "guestbook",
-          name: newGuestbookName,
-          event_date: newGuestbookEventDate,
-          amount: 200
-        });
-        setShowStripeModal(true);
+        setGuestbookStripeClientSecret(res.data.client_secret);
+        setGuestbookStripePaymentId(res.data.payment_id);
         setShowGuestbookPurchase(false);
+        setShowGuestbookStripeForm(true);
       }
     } catch (e) {
       toast.error(e.response?.data?.detail || "Erreur lors de la création du paiement");
     } finally {
       setGuestbookPurchaseLoading(false);
+    }
+  };
+
+  // Confirm Guestbook Stripe payment
+  const confirmGuestbookStripe = async (paymentIntentId) => {
+    try {
+      const res = await axios.post(`${API}/client/guestbook/confirm-stripe-payment`, {
+        payment_id: guestbookStripePaymentId,
+        payment_intent_id: paymentIntentId,
+        name: newGuestbookName,
+        event_date: newGuestbookEventDate
+      }, { headers });
+      
+      if (res.data.success) {
+        toast.success("Livre d'or créé avec succès ! 🎉");
+        setShowGuestbookStripeForm(false);
+        setGuestbookStripeClientSecret(null);
+        setGuestbookStripePaymentId(null);
+        setNewGuestbookName("");
+        setNewGuestbookEventDate("");
+        fetchGuestbooks();
+      } else {
+        toast.error(res.data.message || "Erreur lors de la confirmation");
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la confirmation");
     }
   };
 
