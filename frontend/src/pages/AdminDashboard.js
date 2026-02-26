@@ -672,6 +672,52 @@ const AdminDashboard = () => {
     }
   };
 
+  // Temporary state for pricing updates
+  const [pendingPricingUpdates, setPendingPricingUpdates] = useState({});
+
+  // Update event pricing locally (before saving)
+  const updateEventPricing = (eventId, field, value) => {
+    setPendingPricingUpdates(prev => ({
+      ...prev,
+      [eventId]: {
+        ...(prev[eventId] || {}),
+        [field]: value
+      }
+    }));
+    
+    // Also update the local photofindEvents state for immediate UI feedback
+    setPhotofindEvents(prev => prev.map(evt => {
+      if (evt.id === eventId) {
+        return {
+          ...evt,
+          pricing: {
+            ...(evt.pricing || {}),
+            [field]: value
+          }
+        };
+      }
+      return evt;
+    }));
+  };
+
+  // Save event pricing to backend
+  const saveEventPricing = async (eventId) => {
+    const event = photofindEvents.find(e => e.id === eventId);
+    if (!event) return;
+    
+    try {
+      await axios.put(
+        `${BACKEND_URL}/api/admin/photofind/events/${eventId}/pricing`,
+        { pricing: event.pricing },
+        { headers }
+      );
+      toast.success("Tarifs sauvegardés !");
+    } catch (e) {
+      toast.error("Erreur lors de la sauvegarde");
+      console.error(e);
+    }
+  };
+
   // Fetch billing/invoices data
   const fetchBillingData = async () => {
     setLoadingBilling(true);
