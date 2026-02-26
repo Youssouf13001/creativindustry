@@ -12360,10 +12360,11 @@ async def purchase_guestbook_stripe(data: GuestbookPurchaseRequest, client: dict
         raise HTTPException(status_code=500, detail="Stripe non configuré")
     
     stripe.api_key = stripe_secret
+    guestbook_price = await get_guestbook_price()
     
     try:
         intent = stripe.PaymentIntent.create(
-            amount=int(GUESTBOOK_PRICE * 100),
+            amount=int(guestbook_price * 100),
             currency="eur",
             metadata={
                 "type": "guestbook_purchase",
@@ -12382,7 +12383,7 @@ async def purchase_guestbook_stripe(data: GuestbookPurchaseRequest, client: dict
             "client_id": client["id"],
             "guestbook_name": data.name,
             "event_date": data.event_date,
-            "amount": GUESTBOOK_PRICE,
+            "amount": guestbook_price,
             "status": "pending",
             "created_at": datetime.now(timezone.utc).isoformat()
         })
@@ -12391,7 +12392,7 @@ async def purchase_guestbook_stripe(data: GuestbookPurchaseRequest, client: dict
             "success": True,
             "payment_id": payment_id,
             "client_secret": intent.client_secret,
-            "amount": GUESTBOOK_PRICE
+            "amount": guestbook_price
         }
     except stripe.error.StripeError as e:
         logging.error(f"Stripe error: {str(e)}")
