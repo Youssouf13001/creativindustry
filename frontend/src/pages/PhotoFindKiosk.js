@@ -113,7 +113,7 @@ const PhotoFindKiosk = () => {
       // Search for matching photos
       try {
         const formData = new FormData();
-        formData.append("selfie", blob, "selfie.jpg");
+        formData.append("file", blob, "selfie.jpg");
         
         const res = await axios.post(
           `${API}/public/photofind/${eventId}/search`,
@@ -121,8 +121,10 @@ const PhotoFindKiosk = () => {
           { headers: { "Content-Type": "multipart/form-data" } }
         );
         
-        setMatchedPhotos(res.data.matches || []);
-        setSelectedPhotos(res.data.matches?.map(p => p.id) || []);
+        // Handle response format from backend
+        const photos = res.data.photos || res.data.matches || [];
+        setMatchedPhotos(photos);
+        setSelectedPhotos(photos.map(p => p.id) || []);
         stopCamera();
         setStep("results");
       } catch (e) {
