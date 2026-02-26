@@ -7488,6 +7488,26 @@ async def get_public_event_frames(event_id: str):
     return {"frames": event.get("custom_frames", [])}
 
 
+# Admin endpoint to update kiosk pricing (advanced: by format and frame)
+@api_router.put("/admin/photofind/events/{event_id}/pricing")
+async def update_event_pricing(event_id: str, data: dict = Body(...), admin: dict = Depends(get_current_admin)):
+    """Update pricing for a PhotoFind event (supports format-based and frame-based pricing)"""
+    event = await db.photofind_events.find_one({"id": event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    pricing = data.get("pricing", {})
+    
+    # Update the pricing field
+    await db.photofind_events.update_one(
+        {"id": event_id},
+        {"$set": {"pricing": pricing}}
+    )
+    
+    updated_event = await db.photofind_events.find_one({"id": event_id}, {"_id": 0})
+    return {"success": True, "pricing": updated_event.get("pricing", {})}
+
+
 # Admin endpoint to get kiosk stats
 @api_router.get("/admin/photofind/events/{event_id}/kiosk-stats")
 async def get_kiosk_stats(event_id: str, admin: dict = Depends(get_current_admin)):
