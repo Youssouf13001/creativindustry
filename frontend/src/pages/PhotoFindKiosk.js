@@ -1510,7 +1510,8 @@ const PhotoFindKiosk = () => {
                   setProcessing(true);
                   
                   if (deliveryMethod === "email") {
-                    // For email delivery, ask for email address
+                    // For email delivery, mark cash payment as confirmed and ask for email address
+                    setCashPaymentConfirmed(true);
                     setProcessing(false);
                     setStep("email");
                   } else {
