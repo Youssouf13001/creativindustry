@@ -12722,6 +12722,172 @@ async def client_delete_message(message_id: str, credentials: HTTPAuthorizationC
     return {"success": True}
 
 
+
+# ==================== GUESTBOOK VIDEO MONTAGE ====================
+
+@api_router.post("/client/guestbook/{guestbook_id}/generate-montage")
+async def generate_guestbook_montage(
+    guestbook_id: str,
+    music_url: Optional[str] = Body(None),
+    client: dict = Depends(get_current_client)
+):
+    """Generate a video montage from all approved video messages"""
+    import subprocess
+    import tempfile
+    
+    # Verify ownership
+    guestbook = await db.guestbooks.find_one({"id": guestbook_id, "client_id": client["id"]})
+    if not guestbook:
+        raise HTTPException(status_code=404, detail="Livre d'or non trouvé")
+    
+    # Get all approved video messages
+    messages = await db.guestbook_messages.find({
+        "guestbook_id": guestbook_id,
+        "type": "video",
+        "is_approved": True
+    }).sort("created_at", 1).to_list(100)
+    
+    if not messages:
+        raise HTTPException(status_code=400, detail="Aucune vidéo approuvée à monter")
+    
+    # Collect video files
+    video_files = []
+    for msg in messages:
+        if msg.get("media_url"):
+            video_path = UPLOADS_DIR / msg["media_url"].lstrip("/uploads/")
+            if video_path.exists():
+                video_files.append(str(video_path))
+    
+    if not video_files:
+        raise HTTPException(status_code=400, detail="Aucun fichier vidéo trouvé")
+    
+    # Create output directory
+    montage_dir = GUESTBOOK_DIR / guestbook_id / "montages"
+    montage_dir.mkdir(parents=True, exist_ok=True)
+    
+    montage_id = str(uuid.uuid4())[:8]
+    output_file = montage_dir / f"montage_{montage_id}.mp4"
+    
+    try:
+        # Create a temporary file list for FFmpeg concat
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            for vf in video_files:
+                f.write(f"file '{vf}'\n")
+            concat_file = f.name
+        
+        # Step 1: Concatenate all videos
+        temp_concat = str(montage_dir / f"temp_concat_{montage_id}.mp4")
+        concat_cmd = [
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+            "-i", concat_file,
+            "-c:v", "libx264", "-preset", "fast",
+            "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart",
+            temp_concat
+        ]
+        
+        result = subprocess.run(concat_cmd, capture_output=True, text=True, timeout=300)
+        if result.returncode != 0:
+            logging.error(f"FFmpeg concat error: {result.stderr}")
+            raise HTTPException(status_code=500, detail="Erreur lors de la concaténation des vidéos")
+        
+        # Step 2: Add background music if provided
+        if music_url:
+            # Download or use local music file
+            music_path = None
+            if music_url.startswith("/uploads/"):
+                music_path = UPLOADS_DIR / music_url.lstrip("/uploads/")
+            elif music_url.startswith("http"):
+                # Download music
+                music_path = montage_dir / f"music_{montage_id}.mp3"
+                async with httpx.AsyncClient() as http_client:
+                    response = await http_client.get(music_url)
+                    with open(music_path, "wb") as mf:
+                        mf.write(response.content)
+            
+            if music_path and Path(music_path).exists():
+                # Mix original audio with music
+                music_cmd = [
+                    "ffmpeg", "-y",
+                    "-i", temp_concat,
+                    "-i", str(music_path),
+                    "-filter_complex", "[0:a]volume=1.0[a0];[1:a]volume=0.3[a1];[a0][a1]amix=inputs=2:duration=first[aout]",
+                    "-map", "0:v", "-map", "[aout]",
+                    "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+                    "-movflags", "+faststart",
+                    str(output_file)
+                ]
+                result = subprocess.run(music_cmd, capture_output=True, text=True, timeout=300)
+                if result.returncode != 0:
+                    logging.error(f"FFmpeg music error: {result.stderr}")
+                    # Fallback to video without music
+                    import shutil
+                    shutil.move(temp_concat, str(output_file))
+            else:
+                import shutil
+                shutil.move(temp_concat, str(output_file))
+        else:
+            import shutil
+            shutil.move(temp_concat, str(output_file))
+        
+        # Clean up temp files
+        os.unlink(concat_file)
+        if Path(temp_concat).exists():
+            os.unlink(temp_concat)
+        
+        # Save montage record
+        montage_record = {
+            "id": montage_id,
+            "guestbook_id": guestbook_id,
+            "client_id": client["id"],
+            "video_count": len(video_files),
+            "has_music": bool(music_url),
+            "file_path": f"/uploads/guestbooks/{guestbook_id}/montages/montage_{montage_id}.mp4",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.guestbook_montages.insert_one(montage_record)
+        
+        return {
+            "success": True,
+            "montage_id": montage_id,
+            "video_url": f"/uploads/guestbooks/{guestbook_id}/montages/montage_{montage_id}.mp4",
+            "video_count": len(video_files)
+        }
+        
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail="Le montage a pris trop de temps")
+    except Exception as e:
+        logging.error(f"Montage error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur lors du montage: {str(e)}")
+
+@api_router.get("/client/guestbook/{guestbook_id}/montages")
+async def get_guestbook_montages(guestbook_id: str, client: dict = Depends(get_current_client)):
+    """Get all montages for a guestbook"""
+    guestbook = await db.guestbooks.find_one({"id": guestbook_id, "client_id": client["id"]})
+    if not guestbook:
+        raise HTTPException(status_code=404, detail="Livre d'or non trouvé")
+    
+    montages = await db.guestbook_montages.find(
+        {"guestbook_id": guestbook_id},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    return {"montages": montages}
+
+# Default background musics (royalty-free)
+DEFAULT_MUSICS = [
+    {"id": "romantic", "name": "Romantique", "url": "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6ff1bab.mp3"},
+    {"id": "happy", "name": "Joyeux", "url": "https://cdn.pixabay.com/download/audio/2022/10/25/audio_946b0939c8.mp3"},
+    {"id": "emotional", "name": "Émouvant", "url": "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3"},
+]
+
+@api_router.get("/public/guestbook-musics")
+async def get_default_musics():
+    """Get list of default background musics"""
+    return {"musics": DEFAULT_MUSICS}
+
+
+
 # ==================== GALLERY PREMIUM OPTIONS (3D + HD Downloads + Video) ====================
 
 # Default pricing (can be modified by admin)
