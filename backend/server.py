@@ -7271,6 +7271,266 @@ async def capture_kiosk_paypal_order(event_id: str, data: KioskCapturePayPalRequ
         return {"success": True, "purchase_id": purchase_id}
 
 
+
+# ==================== GENERIC STRIPE PAYMENTS ====================
+
+class StripeRenewalPayment(BaseModel):
+    plan_type: str  # "weekly" or "6months"
+    client_id: Optional[str] = None
+    email: Optional[str] = None
+
+class StripeDevisPayment(BaseModel):
+    doc_type: str  # "devis", "invoice", "document"
+    doc_ref: str
+    amount: float
+    title: str
+
+@api_router.post("/stripe/create-renewal-payment")
+async def create_stripe_renewal_payment(data: StripeRenewalPayment):
+    """Create a Stripe Payment Intent for account renewal"""
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    stripe.api_key = stripe_secret
+    
+    # Define plans (same as PayPal)
+    plans = {
+        "weekly": {"name": "1 Semaine", "price": 24.00},  # 20€ HT + 20% TVA
+        "6months": {"name": "6 Mois", "price": 108.00}    # 90€ HT + 20% TVA
+    }
+    
+    plan = plans.get(data.plan_type)
+    if not plan:
+        raise HTTPException(status_code=400, detail="Plan invalide")
+    
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=int(plan["price"] * 100),  # Stripe uses cents
+            currency="eur",
+            metadata={
+                "type": "renewal",
+                "plan_type": data.plan_type,
+                "plan_name": plan["name"],
+                "client_id": data.client_id or "",
+                "email": data.email or ""
+            }
+        )
+        
+        # Store payment record
+        payment_id = str(uuid.uuid4())
+        await db.stripe_payments.insert_one({
+            "id": payment_id,
+            "type": "renewal",
+            "stripe_payment_intent_id": intent.id,
+            "client_secret": intent.client_secret,
+            "plan_type": data.plan_type,
+            "plan_name": plan["name"],
+            "amount": plan["price"],
+            "client_id": data.client_id,
+            "email": data.email,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "payment_id": payment_id,
+            "client_secret": intent.client_secret,
+            "amount": plan["price"]
+        }
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
+@api_router.post("/stripe/confirm-renewal-payment")
+async def confirm_stripe_renewal_payment(payment_id: str = Body(...), payment_intent_id: str = Body(...)):
+    """Confirm a Stripe renewal payment and activate account"""
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    stripe.api_key = stripe_secret
+    
+    # Find payment record
+    payment = await db.stripe_payments.find_one({"id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Paiement non trouvé")
+    
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        
+        if intent.status == "succeeded":
+            # Update payment status
+            await db.stripe_payments.update_one(
+                {"id": payment_id},
+                {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            
+            # Calculate new expiry date
+            plan_type = payment.get("plan_type", "weekly")
+            if plan_type == "6months":
+                days_to_add = 180
+            else:
+                days_to_add = 7
+            
+            new_expiry = datetime.now(timezone.utc) + timedelta(days=days_to_add)
+            
+            # Try to find and update client
+            client_id = payment.get("client_id")
+            email = payment.get("email")
+            
+            if client_id:
+                await db.clients.update_one(
+                    {"id": client_id},
+                    {"$set": {"expires_at": new_expiry.isoformat(), "status": "active"}}
+                )
+            elif email:
+                await db.clients.update_one(
+                    {"email": email},
+                    {"$set": {"expires_at": new_expiry.isoformat(), "status": "active"}}
+                )
+            
+            # Create invoice
+            invoice_id = str(uuid.uuid4())
+            invoice = {
+                "id": invoice_id,
+                "client_id": client_id,
+                "email": email,
+                "type": "renewal",
+                "plan_type": plan_type,
+                "amount": payment.get("amount", 0),
+                "payment_method": "Stripe",
+                "stripe_payment_intent_id": payment_intent_id,
+                "status": "paid",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.invoices.insert_one(invoice)
+            
+            return {
+                "success": True,
+                "message": "Paiement confirmé ! Votre compte est activé.",
+                "expires_at": new_expiry.isoformat()
+            }
+        else:
+            return {"success": False, "message": f"Paiement non confirmé: {intent.status}"}
+            
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
+@api_router.post("/client/stripe/create-devis-payment")
+async def create_stripe_devis_payment(data: StripeDevisPayment, client: dict = Depends(get_current_client)):
+    """Create a Stripe Payment Intent for devis/invoice payment"""
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    stripe.api_key = stripe_secret
+    
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=int(data.amount * 100),  # Stripe uses cents
+            currency="eur",
+            metadata={
+                "type": "devis_payment",
+                "doc_type": data.doc_type,
+                "doc_ref": data.doc_ref,
+                "title": data.title,
+                "client_id": client["id"]
+            }
+        )
+        
+        # Store payment record
+        payment_id = str(uuid.uuid4())
+        await db.stripe_payments.insert_one({
+            "id": payment_id,
+            "type": "devis_payment",
+            "stripe_payment_intent_id": intent.id,
+            "client_secret": intent.client_secret,
+            "doc_type": data.doc_type,
+            "doc_ref": data.doc_ref,
+            "title": data.title,
+            "amount": data.amount,
+            "client_id": client["id"],
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "payment_id": payment_id,
+            "client_secret": intent.client_secret,
+            "amount": data.amount
+        }
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
+@api_router.post("/client/stripe/confirm-devis-payment")
+async def confirm_stripe_devis_payment(
+    payment_id: str = Body(...), 
+    payment_intent_id: str = Body(...),
+    client: dict = Depends(get_current_client)
+):
+    """Confirm a Stripe devis/invoice payment"""
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    stripe.api_key = stripe_secret
+    
+    # Find payment record
+    payment = await db.stripe_payments.find_one({"id": payment_id, "client_id": client["id"]})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Paiement non trouvé")
+    
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        
+        if intent.status == "succeeded":
+            # Update payment status
+            await db.stripe_payments.update_one(
+                {"id": payment_id},
+                {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            
+            # Update the document as paid
+            doc_type = payment.get("doc_type")
+            doc_ref = payment.get("doc_ref")
+            amount = payment.get("amount", 0)
+            
+            if doc_type == "devis":
+                devis = await db.quotes.find_one({"reference": doc_ref})
+                if devis:
+                    paid = (devis.get("amount_paid") or 0) + amount
+                    await db.quotes.update_one(
+                        {"reference": doc_ref},
+                        {"$set": {"amount_paid": paid, "payment_status": "partial" if paid < devis.get("total_ttc", 0) else "paid"}}
+                    )
+            elif doc_type == "invoice":
+                invoice = await db.invoices.find_one({"reference": doc_ref})
+                if invoice:
+                    paid = (invoice.get("amount_paid") or 0) + amount
+                    await db.invoices.update_one(
+                        {"reference": doc_ref},
+                        {"$set": {"amount_paid": paid, "status": "partial" if paid < invoice.get("total_ttc", 0) else "paid"}}
+                    )
+            
+            return {
+                "success": True,
+                "message": "Paiement confirmé !",
+                "doc_ref": doc_ref
+            }
+        else:
+            return {"success": False, "message": f"Paiement non confirmé: {intent.status}"}
+            
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
+
+
 # ==================== KIOSK STRIPE PAYMENTS ====================
 
 import stripe
