@@ -437,20 +437,13 @@ const PhotoFindKiosk = () => {
     }
   };
 
-  // Print photos
-  // Calculate print price (5€ per photo)
-  const calculatePrintPrice = () => {
-    return selectedPhotos.length * 5;
-  };
-
+  // Legacy handlePrint - redirects to payment choice now
   const handlePrint = async () => {
     if (selectedPhotos.length === 0) {
       toast.error("Sélectionnez au moins une photo");
       return;
     }
-    
-    // Show confirmation step first
-    setStep("print-confirm");
+    proceedToFrames();
   };
 
   const confirmPrint = async () => {
