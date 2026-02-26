@@ -1538,11 +1538,14 @@ const PhotoFindKiosk = () => {
               <p className="text-sm text-primary mt-1">
                 {deliveryMethod === "print" ? "📄 Impression" : "📧 Envoi par email"}
               </p>
-              {deliveryMethod === "print" && selectedPrintFormat && (
-                <p className="text-sm text-white/50">Format : {selectedPrintFormat}</p>
+              {deliveryMethod === "print" && (
+                <>
+                  <p className="text-sm text-white/50">Format : {selectedPrintFormat}</p>
+                  <p className="text-sm text-white/50">{withPhysicalFrame ? "🖼️ Avec cadre physique" : "Sans cadre physique"}</p>
+                </>
               )}
               {selectedFilter !== "none" && (
-                <p className="text-sm text-white/50">Cadre : {PHOTO_FILTERS.find(f => f.id === selectedFilter)?.name}</p>
+                <p className="text-sm text-white/50">✨ Filtre : {PHOTO_FILTERS.find(f => f.id === selectedFilter)?.name}</p>
               )}
             </div>
             
