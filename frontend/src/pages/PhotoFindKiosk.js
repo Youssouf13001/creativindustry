@@ -118,6 +118,10 @@ const PhotoFindKiosk = () => {
   const [checkingPayment, setCheckingPayment] = useState(false);
   const paymentCheckInterval = useRef(null);
 
+  // Stripe payment
+  const [stripeClientSecret, setStripeClientSecret] = useState(null);
+  const [stripeOrderId, setStripeOrderId] = useState(null);
+
   // Pricing
   const [pricing, setPricing] = useState({
     single: 5,
