@@ -59,16 +59,6 @@ const GuestbookPage = () => {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       
-      if (messageType === "video" && videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = stream;
-        // iOS requires explicit play after setting srcObject
-        try {
-          await videoPreviewRef.current.play();
-        } catch (playError) {
-          console.log("Video play error (may be normal on some devices):", playError);
-        }
-      }
-      
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: messageType === "video" ? "video/webm" : "audio/webm"
       });
@@ -85,6 +75,14 @@ const GuestbookPage = () => {
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingTime(0);
+      
+      // Assign stream to video element AFTER isRecording is true (so the element exists)
+      setTimeout(() => {
+        if (messageType === "video" && videoPreviewRef.current) {
+          videoPreviewRef.current.srcObject = stream;
+          videoPreviewRef.current.play().catch(e => console.log("Play error:", e));
+        }
+      }, 100);
       
       // Start timer
       timerRef.current = setInterval(() => {
