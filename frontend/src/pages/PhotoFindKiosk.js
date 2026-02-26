@@ -789,19 +789,11 @@ const PhotoFindKiosk = () => {
                 {/* Action Buttons */}
                 <div className="flex flex-wrap justify-center gap-4 mt-8">
                   <button
-                    onClick={() => setStep("email")}
+                    onClick={proceedToFrames}
                     disabled={selectedPhotos.length === 0}
                     className="bg-primary hover:bg-primary/90 text-black font-bold text-xl px-8 py-4 rounded-xl disabled:opacity-50 flex items-center gap-3"
                   >
-                    <Mail size={24} /> Recevoir par email
-                  </button>
-                  
-                  <button
-                    onClick={handlePrint}
-                    disabled={selectedPhotos.length === 0}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xl px-8 py-4 rounded-xl disabled:opacity-50 flex items-center gap-3"
-                  >
-                    <Printer size={24} /> Imprimer ({selectedPhotos.length * 5}€)
+                    <Sparkles size={24} /> Continuer ({selectedPhotos.length} photos)
                   </button>
                 </div>
               </>
@@ -820,6 +812,256 @@ const PhotoFindKiosk = () => {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Step: Frame Selection */}
+        {step === "frames" && (
+          <div className="w-full max-w-4xl">
+            <div className="text-center mb-8">
+              <Image className="mx-auto text-primary mb-4" size={60} />
+              <h2 className="text-3xl font-bold mb-2">Choisissez un style</h2>
+              <p className="text-white/60">Sélectionnez un cadre pour vos photos (optionnel)</p>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+              {[...PHOTO_FRAMES.filter(f => f.id !== "custom"), ...customFrames].map((frame) => (
+                <div
+                  key={frame.id}
+                  onClick={() => setSelectedFrame(frame.id)}
+                  className={`cursor-pointer p-4 rounded-xl border-2 transition-all ${
+                    selectedFrame === frame.id 
+                      ? 'border-primary bg-primary/20' 
+                      : 'border-white/20 bg-white/5 hover:border-white/40'
+                  }`}
+                >
+                  {/* Frame Preview */}
+                  <div 
+                    className="aspect-[3/4] mb-3 rounded-lg flex items-center justify-center overflow-hidden"
+                    style={{
+                      background: frame.id === "none" ? "#333" : "#fff",
+                      border: frame.id !== "none" ? `${frame.border} ${frame.color}` : "2px solid #555"
+                    }}
+                  >
+                    {frame.id === "none" ? (
+                      <span className="text-white/50 text-sm">Sans cadre</span>
+                    ) : (
+                      <div className="text-center">
+                        <div className="text-4xl mb-2">{frame.decoration || "📷"}</div>
+                        <div className="text-xs text-gray-600">{frame.name}</div>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-center font-bold">{frame.name}</p>
+                  {selectedFrame === frame.id && (
+                    <div className="mt-2 flex justify-center">
+                      <Check className="text-primary" size={24} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => setStep("results")}
+                className="bg-white/10 hover:bg-white/20 px-6 py-4 rounded-xl flex items-center gap-2"
+              >
+                <ArrowLeft size={20} /> Retour
+              </button>
+              
+              <button
+                onClick={proceedToPayment}
+                className="bg-primary hover:bg-primary/90 text-black font-bold text-xl px-8 py-4 rounded-xl flex items-center gap-3"
+              >
+                Continuer <CreditCard size={24} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Payment Choice */}
+        {step === "payment-choice" && (
+          <div className="w-full max-w-xl text-center">
+            <CreditCard className="mx-auto text-primary mb-6" size={80} />
+            <h2 className="text-3xl font-bold mb-2">Comment souhaitez-vous payer ?</h2>
+            <p className="text-white/60 mb-4">{selectedPhotos.length} photo(s) sélectionnée(s)</p>
+            
+            <div className="bg-white/10 rounded-xl p-6 mb-8">
+              <p className="text-white/60">Total à payer</p>
+              <p className="text-5xl font-bold text-primary">{calculatePrice()}€</p>
+              {selectedFrame !== "none" && (
+                <p className="text-sm text-white/50 mt-2">Cadre : {PHOTO_FRAMES.find(f => f.id === selectedFrame)?.name}</p>
+              )}
+            </div>
+            
+            <div className="grid gap-4">
+              {/* PayPal Option */}
+              <button
+                onClick={createPayPalOrder}
+                disabled={processing}
+                className="w-full bg-[#0070ba] hover:bg-[#005ea6] text-white font-bold text-xl px-8 py-5 rounded-xl disabled:opacity-50 flex items-center justify-center gap-3"
+              >
+                {processing ? (
+                  <Loader className="animate-spin" size={24} />
+                ) : (
+                  <>
+                    <Smartphone size={24} />
+                    Payer avec PayPal (sur mon téléphone)
+                  </>
+                )}
+              </button>
+              
+              {/* Cash Option */}
+              <button
+                onClick={handleCashPayment}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-xl px-8 py-5 rounded-xl flex items-center justify-center gap-3"
+              >
+                💶 Payer en liquide / CB au photographe
+              </button>
+              
+              {/* Email Option */}
+              <button
+                onClick={() => setStep("email")}
+                className="w-full bg-white/10 hover:bg-white/20 text-white font-bold text-xl px-8 py-5 rounded-xl flex items-center justify-center gap-3"
+              >
+                <Mail size={24} />
+                Recevoir par email (payer plus tard)
+              </button>
+            </div>
+            
+            <button
+              onClick={() => setStep("frames")}
+              className="mt-6 text-white/50 hover:text-white flex items-center justify-center gap-2 mx-auto"
+            >
+              <ArrowLeft size={16} /> Retour
+            </button>
+          </div>
+        )}
+
+        {/* Step: PayPal QR Code */}
+        {step === "payment-paypal" && (
+          <div className="w-full max-w-xl text-center">
+            <div className="bg-white rounded-2xl p-8 mb-6">
+              <h3 className="text-black text-xl font-bold mb-4">Scannez avec votre téléphone</h3>
+              
+              {paypalQrCode ? (
+                <div className="mb-4">
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(paypalQrCode)}`}
+                    alt="QR Code PayPal"
+                    className="mx-auto"
+                  />
+                </div>
+              ) : (
+                <Loader className="animate-spin mx-auto text-[#0070ba] mb-4" size={60} />
+              )}
+              
+              <p className="text-gray-600 text-sm">Ou cliquez sur le lien ci-dessous :</p>
+              <a 
+                href={paypalQrCode} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[#0070ba] underline text-sm break-all"
+              >
+                Ouvrir PayPal
+              </a>
+            </div>
+            
+            <div className="bg-white/10 rounded-xl p-4 mb-6">
+              <p className="text-white/60">Montant</p>
+              <p className="text-4xl font-bold text-primary">{calculatePrice()}€</p>
+            </div>
+            
+            {checkingPayment && (
+              <div className="flex items-center justify-center gap-3 text-white/70 mb-4">
+                <Loader className="animate-spin" size={20} />
+                <span>En attente du paiement...</span>
+              </div>
+            )}
+            
+            <button
+              onClick={() => {
+                if (paymentCheckInterval.current) {
+                  clearInterval(paymentCheckInterval.current);
+                }
+                setCheckingPayment(false);
+                setStep("payment-choice");
+              }}
+              className="text-white/50 hover:text-white flex items-center justify-center gap-2 mx-auto"
+            >
+              <ArrowLeft size={16} /> Annuler
+            </button>
+          </div>
+        )}
+
+        {/* Step: Cash Payment (Manual) */}
+        {step === "payment-cash" && (
+          <div className="w-full max-w-xl text-center">
+            <div className="text-6xl mb-6">💶</div>
+            <h2 className="text-3xl font-bold mb-4">Paiement au photographe</h2>
+            
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 mb-6">
+              <p className="text-yellow-400 text-xl mb-2">
+                Montant à régler : <strong className="text-3xl">{calculatePrice()}€</strong>
+              </p>
+              <p className="text-white/70">
+                Réglez en liquide ou par carte auprès du photographe
+              </p>
+            </div>
+            
+            <div className="bg-white/10 rounded-xl p-4 mb-6">
+              <p className="text-sm text-white/60 mb-2">Résumé</p>
+              <p>{selectedPhotos.length} photo(s)</p>
+              {selectedFrame !== "none" && (
+                <p className="text-sm text-white/50">Cadre : {PHOTO_FRAMES.find(f => f.id === selectedFrame)?.name}</p>
+              )}
+            </div>
+            
+            <p className="text-white/50 mb-6">
+              Une fois le paiement effectué, cliquez sur le bouton ci-dessous :
+            </p>
+            
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => setStep("payment-choice")}
+                className="bg-white/10 hover:bg-white/20 px-6 py-4 rounded-xl flex items-center gap-2"
+              >
+                <ArrowLeft size={20} /> Retour
+              </button>
+              
+              <button
+                onClick={async () => {
+                  setProcessing(true);
+                  // Log the purchase
+                  try {
+                    await axios.post(`${API}/public/photofind/${eventId}/kiosk-purchase`, {
+                      photo_ids: selectedPhotos,
+                      email: email || "kiosk@local",
+                      amount: calculatePrice(),
+                      payment_method: "cash",
+                      frame: selectedFrame
+                    });
+                  } catch (e) {
+                    console.error(e);
+                  }
+                  // Print
+                  await autoPrintPhotos();
+                  setProcessing(false);
+                  setStep("print-success");
+                }}
+                disabled={processing}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold text-xl px-8 py-4 rounded-xl disabled:opacity-50 flex items-center gap-3"
+              >
+                {processing ? (
+                  <Loader className="animate-spin" size={24} />
+                ) : (
+                  <>
+                    <Check size={24} /> Paiement reçu - Imprimer
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         )}
 
@@ -848,7 +1090,7 @@ const PhotoFindKiosk = () => {
             
             <div className="flex gap-4 justify-center">
               <button
-                onClick={() => setStep("results")}
+                onClick={() => setStep("payment-choice")}
                 className="bg-white/10 hover:bg-white/20 px-6 py-4 rounded-xl flex items-center gap-2"
               >
                 <ArrowLeft size={20} /> Retour
