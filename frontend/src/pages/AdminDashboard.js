@@ -3402,11 +3402,25 @@ const AdminDashboard = () => {
                           <Eye size={14} /> Gérer
                         </button>
                         <button 
-                          onClick={() => copyPhotofindLink(event.id)}
-                          className="px-3 py-2 bg-white/10 text-sm rounded"
-                          title="Copier le lien"
+                          onClick={() => openKioskMode(event.id)}
+                          className="px-3 py-2 bg-purple-500/20 text-purple-400 text-sm rounded"
+                          title="Ouvrir mode kiosque"
+                        >
+                          <Maximize size={14} />
+                        </button>
+                        <button 
+                          onClick={() => copyKioskLink(event.id)}
+                          className="px-3 py-2 bg-blue-500/20 text-blue-400 text-sm rounded"
+                          title="Copier lien kiosque"
                         >
                           <Copy size={14} />
+                        </button>
+                        <button 
+                          onClick={() => copyPhotofindLink(event.id)}
+                          className="px-3 py-2 bg-white/10 text-sm rounded"
+                          title="Copier le lien public"
+                        >
+                          <Link size={14} />
                         </button>
                         <a 
                           href={`${BACKEND_URL}/uploads/photofind/${event.id}/qr_code.png`}
