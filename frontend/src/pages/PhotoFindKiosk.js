@@ -1071,17 +1071,17 @@ const PhotoFindKiosk = () => {
                 </div>
               </div>
               
-              {/* Right: Frame options */}
+              {/* Right: Filter options */}
               <div>
-                <h3 className="text-lg font-bold mb-4">Cadres disponibles</h3>
+                <h3 className="text-lg font-bold mb-4">Filtres disponibles</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Standard frames */}
-                  {PHOTO_FILTERS.filter(f => f.id !== "custom").map((frame) => (
+                  {/* Standard filters */}
+                  {PHOTO_FILTERS.filter(f => f.id !== "custom").map((filter) => (
                     <div
-                      key={frame.id}
-                      onClick={() => setSelectedFilter(frame.id)}
+                      key={filter.id}
+                      onClick={() => setSelectedFilter(filter.id)}
                       className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${
-                        selectedFilter === frame.id 
+                        selectedFilter === filter.id 
                           ? 'border-primary bg-primary/20' 
                           : 'border-white/20 bg-white/5 hover:border-white/40'
                       }`}
@@ -1090,15 +1090,15 @@ const PhotoFindKiosk = () => {
                         <div 
                           className="w-12 h-12 rounded flex items-center justify-center text-xl"
                           style={{
-                            background: frame.id === "none" ? "#333" : "#fff",
-                            border: frame.id !== "none" ? `3px solid ${frame.color}` : "2px solid #555"
+                            background: filter.id === "none" ? "#333" : "#fff",
+                            border: filter.id !== "none" ? `3px solid ${filter.color}` : "2px solid #555"
                           }}
                         >
-                          {frame.id === "none" ? "✕" : frame.decoration?.split(" ")[0] || "🖼️"}
+                          {filter.id === "none" ? "✕" : filter.decoration?.split(" ")[0] || "🖼️"}
                         </div>
                         <div>
-                          <p className="font-bold">{frame.name}</p>
-                          {selectedFilter === frame.id && (
+                          <p className="font-bold">{filter.name}</p>
+                          {selectedFilter === filter.id && (
                             <Check className="text-primary" size={18} />
                           )}
                         </div>
@@ -1106,13 +1106,13 @@ const PhotoFindKiosk = () => {
                     </div>
                   ))}
                   
-                  {/* Custom frames from event */}
-                  {customFrames.map((frame) => (
+                  {/* Custom filters from event */}
+                  {customFrames.map((filter) => (
                     <div
-                      key={frame.id}
-                      onClick={() => setSelectedFilter(frame.id)}
+                      key={filter.id}
+                      onClick={() => setSelectedFilter(filter.id)}
                       className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${
-                        selectedFilter === frame.id 
+                        selectedFilter === filter.id 
                           ? 'border-primary bg-primary/20' 
                           : 'border-white/20 bg-white/5 hover:border-white/40'
                       }`}
@@ -1121,19 +1121,19 @@ const PhotoFindKiosk = () => {
                         <div 
                           className="w-12 h-12 rounded flex items-center justify-center overflow-hidden"
                           style={{
-                            border: `3px solid ${frame.color || '#D4AF37'}`
+                            border: `3px solid ${filter.color || '#D4AF37'}`
                           }}
                         >
-                          {frame.thumbnail ? (
-                            <img src={frame.thumbnail} alt="" className="w-full h-full object-cover" />
+                          {filter.thumbnail ? (
+                            <img src={filter.thumbnail} alt="" className="w-full h-full object-cover" />
                           ) : (
                             <span className="text-xl">💒</span>
                           )}
                         </div>
                         <div>
-                          <p className="font-bold">{frame.name}</p>
+                          <p className="font-bold">{filter.name}</p>
                           <p className="text-xs text-white/50">Personnalisé</p>
-                          {selectedFilter === frame.id && (
+                          {selectedFilter === filter.id && (
                             <Check className="text-primary" size={18} />
                           )}
                         </div>
@@ -1142,10 +1142,10 @@ const PhotoFindKiosk = () => {
                   ))}
                 </div>
                 
-                {/* Info about custom frames */}
+                {/* Info about custom filters */}
                 {customFrames.length === 0 && (
                   <div className="mt-4 p-3 bg-white/5 rounded-lg text-sm text-white/50">
-                    💡 Des cadres personnalisés peuvent être ajoutés par le photographe pour cet événement
+                    💡 Des filtres personnalisés peuvent être ajoutés par le photographe pour cet événement
                   </div>
                 )}
               </div>
