@@ -131,6 +131,21 @@ const RenewalPage = () => {
     }
   }, [searchParams]);
 
+  // Load Stripe public key
+  useEffect(() => {
+    const loadStripeKey = async () => {
+      try {
+        const res = await axios.get(`${API}/public/stripe-config`);
+        if (res.data.publishable_key) {
+          setStripePromise(loadStripe(res.data.publishable_key));
+        }
+      } catch (e) {
+        console.error("Failed to load Stripe config");
+      }
+    };
+    loadStripeKey();
+  }, []);
+
   const executePayment = async (paymentId, payerId) => {
     setStep("processing");
     setLoading(true);
