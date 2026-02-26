@@ -731,12 +731,52 @@ const AdminDashboard = () => {
     const event = photofindEvents.find(e => e.id === eventId);
     if (!event) return;
     
+    // Build complete pricing object with defaults for any missing values
+    const defaultFormats = {
+      "10x15": { sans_cadre: 5, avec_cadre: 8 },
+      "13x18": { sans_cadre: 10, avec_cadre: 15 },
+      "15x20": { sans_cadre: 10, avec_cadre: 15 },
+      "20x30": { sans_cadre: 10, avec_cadre: 15 },
+      "A4": { sans_cadre: 20, avec_cadre: 25 },
+      "A5": { sans_cadre: 10, avec_cadre: 15 }
+    };
+    
+    const currentFormats = event.pricing?.formats || {};
+    const mergedFormats = {};
+    
+    // Merge current values with defaults
+    Object.keys(defaultFormats).forEach(formatId => {
+      mergedFormats[formatId] = {
+        sans_cadre: currentFormats[formatId]?.sans_cadre ?? defaultFormats[formatId].sans_cadre,
+        avec_cadre: currentFormats[formatId]?.avec_cadre ?? defaultFormats[formatId].avec_cadre
+      };
+    });
+    
+    const completePricing = {
+      formats: mergedFormats,
+      email_single: event.pricing?.email_single ?? 3,
+      email_pack_5: event.pricing?.email_pack_5 ?? 12,
+      email_pack_10: event.pricing?.email_pack_10 ?? 20,
+      email_all: event.pricing?.email_all ?? 30,
+      // Keep legacy fields for backward compatibility
+      print_single: event.pricing?.print_single ?? 5,
+      print_pack_5: event.pricing?.print_pack_5 ?? 20,
+      print_pack_10: event.pricing?.print_pack_10 ?? 35,
+      print_all: event.pricing?.print_all ?? 50
+    };
+    
     try {
       await axios.put(
         `${BACKEND_URL}/api/admin/photofind/events/${eventId}/pricing`,
-        { pricing: event.pricing },
+        { pricing: completePricing },
         { headers }
       );
+      
+      // Update local state with complete pricing
+      setPhotofindEvents(prev => prev.map(evt => 
+        evt.id === eventId ? { ...evt, pricing: completePricing } : evt
+      ));
+      
       toast.success("Tarifs sauvegardés !");
     } catch (e) {
       toast.error("Erreur lors de la sauvegarde");
