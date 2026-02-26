@@ -673,6 +673,74 @@ const PhotoFindKiosk = () => {
           </div>
         )}
 
+        {/* Step: Print Confirmation */}
+        {step === "print-confirm" && (
+          <div className="text-center max-w-xl">
+            <Printer className="mx-auto text-primary mb-6" size={80} />
+            <h2 className="text-3xl font-bold mb-4">Confirmer l'impression</h2>
+            
+            <div className="bg-white/10 rounded-xl p-6 mb-8">
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <p className="text-white/60 text-sm">Photos</p>
+                  <p className="text-2xl font-bold">{selectedPhotos.length}</p>
+                </div>
+                <div>
+                  <p className="text-white/60 text-sm">Prix unitaire</p>
+                  <p className="text-2xl font-bold">5€</p>
+                </div>
+              </div>
+              <div className="border-t border-white/20 pt-4">
+                <p className="text-white/60">Total à payer</p>
+                <p className="text-5xl font-bold text-primary">{calculatePrintPrice()}€</p>
+              </div>
+            </div>
+            
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 mb-8">
+              <p className="text-yellow-400 text-lg">
+                💳 Réglez auprès du photographe avant de confirmer
+              </p>
+            </div>
+            
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => setStep("results")}
+                className="bg-white/10 hover:bg-white/20 px-8 py-4 rounded-xl flex items-center gap-2"
+              >
+                <ArrowLeft size={20} /> Retour
+              </button>
+              
+              <button
+                onClick={confirmPrint}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold text-xl px-8 py-4 rounded-xl flex items-center gap-3"
+              >
+                <Printer size={24} /> Confirmer & Imprimer
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Print Success */}
+        {step === "print-success" && (
+          <div className="text-center max-w-xl">
+            <div className="bg-green-500/20 rounded-full p-8 inline-block mb-8">
+              <Check className="text-green-500" size={100} />
+            </div>
+            <h2 className="text-4xl font-bold mb-4">Impression lancée !</h2>
+            <p className="text-xl text-white/70 mb-8">
+              Vos {selectedPhotos.length} photo(s) sont en cours d'impression.<br />
+              <span className="text-primary font-bold">Récupérez-les auprès du photographe.</span>
+            </p>
+            
+            <button
+              onClick={reset}
+              className="bg-primary hover:bg-primary/90 text-black font-bold text-xl px-8 py-4 rounded-xl"
+            >
+              Nouvelle recherche
+            </button>
+          </div>
+        )}
+
         {/* Step: Printing */}
         {step === "printing" && (
           <div className="text-center">
