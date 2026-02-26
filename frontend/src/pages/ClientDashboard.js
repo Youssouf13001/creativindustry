@@ -1846,10 +1846,6 @@ const ClientDashboard = () => {
                             </p>
                           </div>
                         )}
-                              ✓ Paiement sécurisé - Enregistrement automatique
-                            </p>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
