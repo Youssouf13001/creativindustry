@@ -392,15 +392,22 @@ const ServicePage = ({ category }) => {
                     type="submit" 
                     disabled={buyLoading || paypalRedirecting} 
                     className={`flex-1 py-3 font-bold flex items-center justify-center gap-2 ${
-                      paymentMethod === "paypal" 
-                        ? "bg-[#0070ba] hover:bg-[#005ea6] text-white" 
-                        : "btn-primary"
+                      paymentMethod === "stripe"
+                        ? "bg-[#635bff] hover:bg-[#5851db] text-white"
+                        : paymentMethod === "paypal" 
+                          ? "bg-[#0070ba] hover:bg-[#005ea6] text-white" 
+                          : "btn-primary"
                     } disabled:opacity-50`}
                   >
                     {buyLoading || paypalRedirecting ? (
                       <>
                         <Loader size={20} className="animate-spin" />
-                        {paypalRedirecting ? "Redirection PayPal..." : "Envoi..."}
+                        {paypalRedirecting ? "Redirection..." : "Envoi..."}
+                      </>
+                    ) : paymentMethod === "stripe" ? (
+                      <>
+                        <CreditCard size={20} />
+                        Payer {depositAmount.toFixed(0)}€ par CB
                       </>
                     ) : paymentMethod === "paypal" ? (
                       <>
