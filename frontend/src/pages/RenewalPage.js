@@ -241,6 +241,37 @@ const RenewalPage = () => {
     }
   };
 
+  // Stripe form state
+  if (step === "stripe-form" && stripePromise) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-lg bg-card border border-white/10 p-8"
+        >
+          <h2 className="text-2xl font-bold mb-2 text-center">Paiement par Carte Bancaire</h2>
+          <p className="text-white/60 text-center mb-6">
+            {selectedPlan?.label} - {selectedPlan?.price}€ TTC
+          </p>
+          
+          <Elements stripe={stripePromise}>
+            <StripeRenewalForm
+              onSuccess={handleStripeSuccess}
+              onCancel={() => setStep("options")}
+              amount={selectedPlan?.price}
+              planName={selectedPlan?.label}
+            />
+          </Elements>
+          
+          <p className="text-center text-white/40 text-xs mt-4">
+            🔒 Paiement sécurisé par Stripe
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
   // Processing state (waiting for PayPal confirmation)
   if (step === "processing") {
     return (
