@@ -1,12 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { Camera, Loader, Download, Printer, Mail, RefreshCw, X, Check, CreditCard, ArrowLeft, Maximize } from "lucide-react";
+import { Camera, Loader, Download, Printer, Mail, RefreshCw, X, Check, CreditCard, ArrowLeft, Maximize, Smartphone, QrCode, Image, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { API } from "../config/api";
 
+// Frame/Filter definitions
+const PHOTO_FRAMES = [
+  { id: "none", name: "Sans cadre", preview: null },
+  { id: "wedding", name: "Mariage", color: "#D4AF37", border: "8px solid", decoration: "🌸 💍 🌸" },
+  { id: "vintage", name: "Vintage", color: "#8B4513", border: "12px double", decoration: "✨" },
+  { id: "polaroid", name: "Polaroid", color: "#FFFFFF", border: "15px solid", bottomPadding: 60 },
+  { id: "party", name: "Fête", color: "#FF69B4", border: "6px dashed", decoration: "🎉 🎊 ⭐" },
+  { id: "custom", name: "Personnalisé", color: "#1a1a2e", border: "10px solid", isCustom: true }
+];
+
 const PhotoFindKiosk = () => {
   const { eventId } = useParams();
+  const [searchParams] = useSearchParams();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -18,10 +29,20 @@ const PhotoFindKiosk = () => {
   const [searching, setSearching] = useState(false);
   const [matchedPhotos, setMatchedPhotos] = useState([]);
   const [selectedPhotos, setSelectedPhotos] = useState([]);
-  const [step, setStep] = useState("welcome"); // welcome, camera, results, payment, email, printing, success
+  const [step, setStep] = useState("welcome"); // welcome, camera, results, frames, payment-choice, payment-paypal, payment-cash, email, printing, print-confirm, print-success, success
   const [email, setEmail] = useState("");
   const [processing, setProcessing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Frame selection
+  const [selectedFrame, setSelectedFrame] = useState("none");
+  const [customFrames, setCustomFrames] = useState([]);
+  
+  // PayPal payment
+  const [paypalOrderId, setPaypalOrderId] = useState(null);
+  const [paypalQrCode, setPaypalQrCode] = useState(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const paymentCheckInterval = useRef(null);
 
   // Pricing
   const [pricing, setPricing] = useState({
@@ -31,6 +52,15 @@ const PhotoFindKiosk = () => {
     pack_10: 25,
     all: 35
   });
+
+  // Check for PayPal return
+  useEffect(() => {
+    const paypalSuccess = searchParams.get("paypal_success");
+    const orderId = searchParams.get("order_id");
+    if (paypalSuccess === "true" && orderId) {
+      handlePayPalSuccess(orderId);
+    }
+  }, [searchParams]);
 
   // Fetch event info
   useEffect(() => {
@@ -48,6 +78,10 @@ const PhotoFindKiosk = () => {
             pack_10: p.pack_10 || 25,
             all: p.all || 35
           });
+        }
+        // Load custom frames if any
+        if (res.data.custom_frames) {
+          setCustomFrames(res.data.custom_frames);
         }
       } catch (e) {
         toast.error("Événement non trouvé");
