@@ -1106,10 +1106,122 @@ const PhotoFindKiosk = () => {
               </button>
               
               <button
-                onClick={proceedToPayment}
+                onClick={proceedToDeliveryChoice}
                 className="bg-primary hover:bg-primary/90 text-black font-bold text-xl px-8 py-4 rounded-xl flex items-center gap-3"
               >
                 Continuer <CreditCard size={24} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Delivery Method Choice (Print vs Email) */}
+        {step === "delivery-choice" && (
+          <div className="w-full max-w-3xl text-center">
+            <h2 className="text-3xl font-bold mb-2">Comment souhaitez-vous recevoir vos photos ?</h2>
+            <p className="text-white/60 mb-8">{selectedPhotos.length} photo(s) sélectionnée(s)</p>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Print Option */}
+              <div 
+                onClick={() => proceedToPayment("print")}
+                className="bg-white/5 hover:bg-white/10 border-2 border-white/20 hover:border-primary rounded-2xl p-6 cursor-pointer transition-all"
+              >
+                <Printer className="mx-auto text-primary mb-4" size={60} />
+                <h3 className="text-2xl font-bold mb-2">Impression</h3>
+                <p className="text-white/60 mb-4">Récupérez vos photos imprimées sur place</p>
+                <div className="bg-primary/20 rounded-lg p-4">
+                  <p className="text-sm text-white/70">À partir de</p>
+                  <p className="text-3xl font-bold text-primary">{pricing.print_single}€</p>
+                  <p className="text-xs text-white/50">par photo</p>
+                </div>
+                <div className="mt-3 text-sm text-white/50">
+                  <p>Pack 5 : {pricing.print_pack_5}€ • Pack 10 : {pricing.print_pack_10}€</p>
+                </div>
+              </div>
+              
+              {/* Email Option */}
+              <div 
+                onClick={() => proceedToPayment("email")}
+                className="bg-white/5 hover:bg-white/10 border-2 border-white/20 hover:border-primary rounded-2xl p-6 cursor-pointer transition-all"
+              >
+                <Mail className="mx-auto text-primary mb-4" size={60} />
+                <h3 className="text-2xl font-bold mb-2">Par Email</h3>
+                <p className="text-white/60 mb-4">Recevez vos photos par email (HD)</p>
+                <div className="bg-green-500/20 rounded-lg p-4">
+                  <p className="text-sm text-white/70">À partir de</p>
+                  <p className="text-3xl font-bold text-green-400">{pricing.email_single}€</p>
+                  <p className="text-xs text-white/50">par photo</p>
+                </div>
+                <div className="mt-3 text-sm text-white/50">
+                  <p>Pack 5 : {pricing.email_pack_5}€ • Pack 10 : {pricing.email_pack_10}€</p>
+                </div>
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setStep("frames")}
+              className="mt-8 text-white/50 hover:text-white flex items-center justify-center gap-2 mx-auto"
+            >
+              <ArrowLeft size={16} /> Retour aux cadres
+            </button>
+          </div>
+        )}
+
+        {/* Step: Print Format Selection */}
+        {step === "print-format" && (
+          <div className="w-full max-w-2xl text-center">
+            <Printer className="mx-auto text-primary mb-4" size={60} />
+            <h2 className="text-3xl font-bold mb-2">Choisissez le format d'impression</h2>
+            <p className="text-white/60 mb-8">Sélectionnez la taille de vos photos</p>
+            
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+              {PRINT_FORMATS.map(format => (
+                <div
+                  key={format.id}
+                  onClick={() => setSelectedPrintFormat(format.id)}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    selectedPrintFormat === format.id
+                      ? 'border-primary bg-primary/20'
+                      : 'border-white/20 bg-white/5 hover:border-white/40'
+                  }`}
+                >
+                  <div 
+                    className="mx-auto mb-3 bg-white/20 rounded flex items-center justify-center"
+                    style={{ 
+                      width: format.id === "A4" ? "42px" : format.id === "A5" ? "35px" : `${parseInt(format.width) * 2}px`,
+                      height: format.id === "A4" ? "60px" : format.id === "A5" ? "50px" : `${parseInt(format.height) * 2}px`,
+                      maxWidth: "60px",
+                      maxHeight: "80px"
+                    }}
+                  >
+                    <span className="text-xs text-white/70">{format.id}</span>
+                  </div>
+                  <p className="font-bold">{format.name}</p>
+                  {selectedPrintFormat === format.id && (
+                    <Check className="mx-auto mt-2 text-primary" size={20} />
+                  )}
+                </div>
+              ))}
+            </div>
+            
+            <div className="bg-white/10 rounded-xl p-6 mb-6">
+              <p className="text-white/60">Total pour {selectedPhotos.length} photo(s)</p>
+              <p className="text-4xl font-bold text-primary">{calculatePrice("print")}€</p>
+            </div>
+            
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => setStep("delivery-choice")}
+                className="bg-white/10 hover:bg-white/20 px-6 py-4 rounded-xl flex items-center gap-2"
+              >
+                <ArrowLeft size={20} /> Retour
+              </button>
+              <button
+                onClick={proceedToPaymentFromFormat}
+                className="bg-primary hover:bg-primary/90 text-black font-bold text-xl px-8 py-4 rounded-xl"
+              >
+                Payer {calculatePrice("print")}€
               </button>
             </div>
           </div>
@@ -1120,7 +1232,7 @@ const PhotoFindKiosk = () => {
           <div className="w-full max-w-xl text-center">
             <CreditCard className="mx-auto text-primary mb-6" size={80} />
             <h2 className="text-3xl font-bold mb-2">Comment souhaitez-vous payer ?</h2>
-            <p className="text-white/60 mb-4">{selectedPhotos.length} photo(s) sélectionnée(s)</p>
+            <p className="text-white/60 mb-4">{selectedPhotos.length} photo(s) • {deliveryMethod === "print" ? "Impression" : "Email"}</p>
             
             <div className="bg-white/10 rounded-xl p-6 mb-8">
               <p className="text-white/60">Total à payer</p>
