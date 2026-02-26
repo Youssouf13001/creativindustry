@@ -133,6 +133,9 @@ const AdminDashboard = () => {
   const [newPhotofindEvent, setNewPhotofindEvent] = useState({ name: "", description: "", event_date: "", price_per_photo: 5, price_pack_5: 20, price_pack_10: 35, price_all: 50 });
   const [photofindPurchases, setPhotofindPurchases] = useState([]);
   const [uploadingPhotofindPhotos, setUploadingPhotofindPhotos] = useState(false);
+  // Kiosk states (separate tab)
+  const [kioskStats, setKioskStats] = useState({});
+  const [loadingKioskStats, setLoadingKioskStats] = useState(false);
   // Chat state
   const [showChat, setShowChat] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
