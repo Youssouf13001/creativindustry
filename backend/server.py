@@ -12605,7 +12605,7 @@ async def confirm_guestbook_paypal_payment(
                         "max_duration_audio": 60,
                         "payment_method": "PayPal",
                         "payment_id": pending_id,
-                        "amount_paid": GUESTBOOK_PRICE,
+                        "amount_paid": payment.get("amount", 200),
                         "created_at": datetime.now(timezone.utc).isoformat()
                     }
                     await db.guestbooks.insert_one(guestbook)
