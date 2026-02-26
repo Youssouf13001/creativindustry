@@ -770,32 +770,6 @@ const ClientDashboard = () => {
   };
 
   // Confirm Stripe guestbook payment
-  const confirmGuestbookStripePayment = async (paymentIntentId) => {
-    try {
-      const res = await axios.post(`${API}/client/guestbook/confirm-stripe-payment`, {
-        payment_id: stripePaymentId,
-        payment_intent_id: paymentIntentId,
-        name: stripePaymentDetails?.name,
-        event_date: stripePaymentDetails?.event_date
-      }, { headers });
-      
-      if (res.data.success) {
-        toast.success("Livre d'or créé avec succès ! 🎉");
-        setShowStripeModal(false);
-        setStripeClientSecret(null);
-        setStripePaymentId(null);
-        setStripePaymentDetails(null);
-        setNewGuestbookName("");
-        setNewGuestbookEventDate("");
-        fetchGuestbooks();
-      } else {
-        toast.error(res.data.message || "Erreur lors de la confirmation");
-      }
-    } catch (e) {
-      toast.error(e.response?.data?.detail || "Erreur lors de la confirmation");
-    }
-  };
-
   // Handle PayPal return
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
