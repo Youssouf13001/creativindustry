@@ -1224,63 +1224,104 @@ const PhotoFindKiosk = () => {
 
         {/* Step: Print Format Selection */}
         {step === "print-format" && (
-          <div className="w-full max-w-2xl text-center">
+          <div className="w-full max-w-3xl text-center">
             <Printer className="mx-auto text-primary mb-4" size={60} />
             <h2 className="text-3xl font-bold mb-2">Choisissez le format d'impression</h2>
-            <p className="text-white/60 mb-4">Sélectionnez la taille de vos photos</p>
+            <p className="text-white/60 mb-4">Sélectionnez la taille et les options</p>
             
-            {/* Frame indicator */}
+            {/* Filter indicator */}
             {selectedFilter && selectedFilter !== "none" && (
-              <div className="bg-primary/20 border border-primary/50 rounded-lg px-4 py-2 mb-6 inline-block">
-                <span className="text-primary">🖼️ Cadre : {PHOTO_FILTERS.find(f => f.id === selectedFilter)?.name || customFrames.find(f => f.id === selectedFilter)?.name || "Personnalisé"}</span>
+              <div className="bg-purple-500/20 border border-purple-500/50 rounded-lg px-4 py-2 mb-6 inline-block">
+                <span className="text-purple-400">✨ Filtre : {PHOTO_FILTERS.find(f => f.id === selectedFilter)?.name || customFrames.find(f => f.id === selectedFilter)?.name || "Personnalisé"}</span>
               </div>
             )}
             
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+            {/* Format Selection */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
               {PRINT_FORMATS.map(format => {
                 const formatPricing = pricing.formats?.[format.id];
-                const hasFrame = selectedFilter && selectedFilter !== "none";
-                const unitPrice = formatPricing 
-                  ? (hasFrame ? formatPricing.avec_cadre : formatPricing.sans_cadre) 
-                  : (pricing.print_single || 5);
+                const basePrice = formatPricing?.sans_cadre || pricing.print_single || 5;
                 
                 return (
                   <div
                     key={format.id}
                     onClick={() => setSelectedPrintFormat(format.id)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${
                       selectedPrintFormat === format.id
                         ? 'border-primary bg-primary/20'
                         : 'border-white/20 bg-white/5 hover:border-white/40'
                     }`}
                   >
                     <div 
-                      className="mx-auto mb-3 bg-white/20 rounded flex items-center justify-center"
+                      className="mx-auto mb-2 bg-white/20 rounded flex items-center justify-center"
                       style={{ 
-                        width: format.id === "A4" ? "42px" : format.id === "A5" ? "35px" : `${parseInt(format.width) * 2}px`,
-                        height: format.id === "A4" ? "60px" : format.id === "A5" ? "50px" : `${parseInt(format.height) * 2}px`,
-                        maxWidth: "60px",
-                        maxHeight: "80px"
+                        width: format.id === "A4" ? "35px" : format.id === "A5" ? "28px" : `${parseInt(format.width) * 1.5}px`,
+                        height: format.id === "A4" ? "50px" : format.id === "A5" ? "40px" : `${parseInt(format.height) * 1.5}px`,
+                        maxWidth: "50px",
+                        maxHeight: "70px"
                       }}
                     >
                       <span className="text-xs text-white/70">{format.id}</span>
                     </div>
-                    <p className="font-bold">{format.name}</p>
-                    <p className="text-primary font-bold text-lg mt-1">{unitPrice}€ /photo</p>
+                    <p className="font-bold text-sm">{format.name}</p>
+                    <p className="text-primary text-sm">à partir de {basePrice}€</p>
                     {selectedPrintFormat === format.id && (
-                      <Check className="mx-auto mt-2 text-primary" size={20} />
+                      <Check className="mx-auto mt-1 text-primary" size={16} />
                     )}
                   </div>
                 );
               })}
             </div>
             
+            {/* Physical Frame Option */}
+            <div className="bg-white/5 rounded-xl p-6 mb-6">
+              <h3 className="text-xl font-bold mb-4 flex items-center justify-center gap-2">
+                🖼️ Souhaitez-vous un cadre physique ?
+              </h3>
+              <p className="text-white/60 text-sm mb-4">Un cadre pour exposer votre photo une fois imprimée</p>
+              
+              <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                <div
+                  onClick={() => setWithPhysicalFrame(false)}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    !withPhysicalFrame
+                      ? 'border-primary bg-primary/20'
+                      : 'border-white/20 bg-white/5 hover:border-white/40'
+                  }`}
+                >
+                  <div className="text-3xl mb-2">📄</div>
+                  <p className="font-bold">Sans cadre</p>
+                  <p className="text-primary text-lg font-bold">
+                    {pricing.formats?.[selectedPrintFormat]?.sans_cadre || pricing.print_single || 5}€
+                  </p>
+                  {!withPhysicalFrame && <Check className="mx-auto mt-2 text-primary" size={20} />}
+                </div>
+                
+                <div
+                  onClick={() => setWithPhysicalFrame(true)}
+                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                    withPhysicalFrame
+                      ? 'border-primary bg-primary/20'
+                      : 'border-white/20 bg-white/5 hover:border-white/40'
+                  }`}
+                >
+                  <div className="text-3xl mb-2">🖼️</div>
+                  <p className="font-bold">Avec cadre</p>
+                  <p className="text-primary text-lg font-bold">
+                    {pricing.formats?.[selectedPrintFormat]?.avec_cadre || (pricing.print_single || 5) + 3}€
+                  </p>
+                  {withPhysicalFrame && <Check className="mx-auto mt-2 text-primary" size={20} />}
+                </div>
+              </div>
+            </div>
+            
+            {/* Price Summary */}
             <div className="bg-white/10 rounded-xl p-6 mb-6">
               <p className="text-white/60">Total pour {selectedPhotos.length} photo(s) en {selectedPrintFormat}</p>
               <p className="text-4xl font-bold text-primary">{calculatePrice("print")}€</p>
-              {selectedFilter && selectedFilter !== "none" && (
-                <p className="text-sm text-white/50 mt-2">Prix avec cadre inclus</p>
-              )}
+              <p className="text-sm text-white/50 mt-2">
+                {withPhysicalFrame ? "Avec cadre physique" : "Sans cadre physique"}
+              </p>
             </div>
             
             <div className="flex gap-4 justify-center">
