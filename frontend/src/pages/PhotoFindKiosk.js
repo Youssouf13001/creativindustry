@@ -727,7 +727,7 @@ const PhotoFindKiosk = () => {
     setStep("welcome");
     setCashPaymentConfirmed(false);
     setDeliveryMethod(null);
-    setSelectedFrame("none");
+    setSelectedFilter("none");
     stopCamera();
   };
 
@@ -1079,7 +1079,7 @@ const PhotoFindKiosk = () => {
                   {PHOTO_FILTERS.filter(f => f.id !== "custom").map((frame) => (
                     <div
                       key={frame.id}
-                      onClick={() => setSelectedFrame(frame.id)}
+                      onClick={() => setSelectedFilter(frame.id)}
                       className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${
                         selectedFilter === frame.id 
                           ? 'border-primary bg-primary/20' 
@@ -1110,7 +1110,7 @@ const PhotoFindKiosk = () => {
                   {customFrames.map((frame) => (
                     <div
                       key={frame.id}
-                      onClick={() => setSelectedFrame(frame.id)}
+                      onClick={() => setSelectedFilter(frame.id)}
                       className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${
                         selectedFilter === frame.id 
                           ? 'border-primary bg-primary/20' 
