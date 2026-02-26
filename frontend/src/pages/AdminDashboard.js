@@ -2262,6 +2262,7 @@ const AdminDashboard = () => {
             { id: "extensions", label: "💳 Extensions" },
             { id: "billing", label: "🧾 Facturation" },
             { id: "newsletter", label: "📧 Newsletter" },
+            { id: "kiosk", label: "🖥️ Kiosque" },
             { id: "deployment", label: "🚀 Déploiement" },
             { id: "services", label: "Services" },
             { id: "options", label: "Options Mariage" },
