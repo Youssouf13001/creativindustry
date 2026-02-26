@@ -26,6 +26,7 @@ const PhotoFindKiosk = () => {
   // Pricing
   const [pricing, setPricing] = useState({
     single: 5,
+    per_photo: 5,
     pack_5: 15,
     pack_10: 25,
     all: 35
@@ -38,7 +39,15 @@ const PhotoFindKiosk = () => {
         const res = await axios.get(`${API}/public/photofind/${eventId}`);
         setEvent(res.data);
         if (res.data.pricing) {
-          setPricing(res.data.pricing);
+          // Normalize pricing fields (handle both single and per_photo)
+          const p = res.data.pricing;
+          setPricing({
+            single: p.single || p.per_photo || 5,
+            per_photo: p.per_photo || p.single || 5,
+            pack_5: p.pack_5 || 15,
+            pack_10: p.pack_10 || 25,
+            all: p.all || 35
+          });
         }
       } catch (e) {
         toast.error("Événement non trouvé");
