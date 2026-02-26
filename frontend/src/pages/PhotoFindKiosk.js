@@ -18,8 +18,8 @@ const getStripe = () => {
 };
 
 // Frame/Filter definitions
-const PHOTO_FRAMES = [
-  { id: "none", name: "Sans cadre", preview: null },
+const PHOTO_FILTERS = [
+  { id: "none", name: "Sans filtre", preview: null },
   { id: "wedding", name: "Mariage", color: "#D4AF37", border: "8px solid", decoration: "🌸 💍 🌸" },
   { id: "vintage", name: "Vintage", color: "#8B4513", border: "12px double", decoration: "✨" },
   { id: "polaroid", name: "Polaroid", color: "#FFFFFF", border: "15px solid", bottomPadding: 60 },
