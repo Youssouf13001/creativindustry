@@ -8048,6 +8048,32 @@ const AdminDashboard = () => {
               </button>
             </div>
 
+            {/* Guestbook Price */}
+            <div className="bg-card border border-white/10 p-6 mb-6">
+              <h3 className="font-primary font-bold text-lg mb-4 text-primary">📖 Prix du Livre d'or</h3>
+              <p className="text-white/60 text-sm mb-4">Définissez le prix de vente du livre d'or pour vos clients.</p>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex-1 max-w-xs">
+                  <label className="block text-sm text-white/60 mb-2">Prix (€)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="10"
+                    value={guestbookPrice}
+                    onChange={(e) => setGuestbookPrice(parseFloat(e.target.value) || 0)}
+                    className="w-full bg-background border border-white/20 px-4 py-3 text-xl font-bold"
+                  />
+                </div>
+                <button 
+                  onClick={saveGuestbookPrice} 
+                  className="btn-primary px-6 py-3 mt-6"
+                >
+                  Enregistrer
+                </button>
+              </div>
+            </div>
+
             {/* Backup Section */}
             <div className="bg-card border border-green-500/30 p-6 mb-6">
               <h3 className="font-primary font-bold text-lg mb-4 text-green-400">💾 Sauvegarde complète</h3>
