@@ -6820,9 +6820,15 @@ async def get_photofind_download_info(purchase_id: str, token: str):
 @api_router.get("/public/photofind/download/{purchase_id}/zip")
 async def download_photofind_zip(purchase_id: str, token: str):
     """Download all photos as a ZIP file"""
+    # Check in both collections
     purchase = await db.photofind_purchases.find_one(
         {"id": purchase_id, "download_token": token}
     )
+    
+    if not purchase:
+        purchase = await db.photofind_kiosk_purchases.find_one(
+            {"id": purchase_id, "download_token": token}
+        )
     
     if not purchase:
         raise HTTPException(status_code=404, detail="Lien invalide")
