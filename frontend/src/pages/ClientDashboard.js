@@ -1349,7 +1349,7 @@ const ClientDashboard = () => {
                       {/* Price */}
                       <div className="text-center mb-6">
                         <p className="text-white/60 text-sm mb-1">Prix unique</p>
-                        <p className="text-4xl font-bold text-primary">>{guestbookPrice}€</p>
+                        <p className="text-4xl font-bold text-primary"{guestbookPrice}€</p>
                         <p className="text-white/40 text-xs">TVA incluse</p>
                       </div>
                       
@@ -1399,7 +1399,7 @@ const ClientDashboard = () => {
                       
                       <div className="bg-white/5 rounded p-4 mb-6 text-center">
                         <p className="text-white/60 text-sm">Total à payer</p>
-                        <p className="text-3xl font-bold text-primary">>{guestbookPrice}€</p>
+                        <p className="text-3xl font-bold text-primary"{guestbookPrice}€</p>
                       </div>
                       
                       <div className="space-y-3">
@@ -1451,7 +1451,7 @@ const ClientDashboard = () => {
                       
                       <div className="bg-white/5 rounded-lg p-4 mb-6">
                         <p className="text-white/60 text-center mb-2">Livre d'or : {newGuestbookName}</p>
-                        <p className="text-3xl font-bold text-primary text-center">>{guestbookPrice}€</p>
+                        <p className="text-3xl font-bold text-primary text-center"{guestbookPrice}€</p>
                       </div>
                       
                       <Elements stripe={stripePromise} options={{ clientSecret: guestbookStripeClientSecret }}>
