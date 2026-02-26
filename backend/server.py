@@ -6992,6 +6992,266 @@ async def log_kiosk_print(event_id: str, data: KioskPrintLog):
     return {"success": True, "logged": data.count}
 
 
+# ==================== KIOSK PAYPAL PAYMENTS ====================
+
+class KioskPayPalOrderRequest(BaseModel):
+    photo_ids: List[str]
+    amount: float
+    frame: str = "none"
+    return_url: str
+
+
+@api_router.post("/public/photofind/{event_id}/create-paypal-order")
+async def create_kiosk_paypal_order(event_id: str, data: KioskPayPalOrderRequest):
+    """Create a PayPal order for kiosk payment"""
+    import base64
+    import httpx
+    
+    event = await db.photofind_events.find_one({"id": event_id, "is_active": True})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    # PayPal credentials
+    client_id = os.environ.get("PAYPAL_CLIENT_ID")
+    client_secret = os.environ.get("PAYPAL_SECRET")
+    paypal_mode = os.environ.get("PAYPAL_MODE", "sandbox")
+    
+    if not client_id or not client_secret:
+        raise HTTPException(status_code=500, detail="PayPal non configuré")
+    
+    base_url = "https://api-m.paypal.com" if paypal_mode == "live" else "https://api-m.sandbox.paypal.com"
+    
+    # Get access token
+    auth_string = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            f"{base_url}/v1/oauth2/token",
+            headers={
+                "Authorization": f"Basic {auth_string}",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            data="grant_type=client_credentials"
+        )
+        
+        if token_resp.status_code != 200:
+            raise HTTPException(status_code=500, detail="Erreur PayPal auth")
+        
+        access_token = token_resp.json()["access_token"]
+        
+        # Create order
+        order_id = str(uuid.uuid4())[:8]
+        
+        order_resp = await client.post(
+            f"{base_url}/v2/checkout/orders",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "intent": "CAPTURE",
+                "purchase_units": [{
+                    "reference_id": f"KIOSK-{event_id[:8]}-{order_id}",
+                    "description": f"Photos {event.get('name', 'PhotoFind')} - {len(data.photo_ids)} photo(s)",
+                    "amount": {
+                        "currency_code": "EUR",
+                        "value": str(data.amount)
+                    }
+                }],
+                "application_context": {
+                    "brand_name": "CREATIVINDUSTRY PhotoFind",
+                    "landing_page": "NO_PREFERENCE",
+                    "user_action": "PAY_NOW",
+                    "return_url": f"{data.return_url}&order_id={order_id}",
+                    "cancel_url": data.return_url.split("?")[0]
+                }
+            }
+        )
+        
+        if order_resp.status_code not in [200, 201]:
+            logging.error(f"PayPal order error: {order_resp.text}")
+            raise HTTPException(status_code=500, detail="Erreur création commande PayPal")
+        
+        paypal_order = order_resp.json()
+        paypal_order_id = paypal_order["id"]
+        
+        # Get approval URL
+        approval_url = None
+        for link in paypal_order.get("links", []):
+            if link["rel"] == "approve":
+                approval_url = link["href"]
+                break
+        
+        # Save pending order in DB
+        await db.photofind_paypal_orders.insert_one({
+            "id": order_id,
+            "paypal_order_id": paypal_order_id,
+            "event_id": event_id,
+            "photo_ids": data.photo_ids,
+            "amount": data.amount,
+            "frame": data.frame,
+            "status": "PENDING",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "order_id": order_id,
+            "paypal_order_id": paypal_order_id,
+            "approval_url": approval_url,
+            "qr_code_url": approval_url
+        }
+
+
+@api_router.get("/public/photofind/{event_id}/check-payment/{order_id}")
+async def check_kiosk_payment_status(event_id: str, order_id: str):
+    """Check if a kiosk PayPal payment has been completed"""
+    import base64
+    import httpx
+    
+    order = await db.photofind_paypal_orders.find_one({"id": order_id, "event_id": event_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+    
+    # If already completed, return status
+    if order.get("status") == "COMPLETED":
+        return {"status": "COMPLETED"}
+    
+    # Check with PayPal
+    client_id = os.environ.get("PAYPAL_CLIENT_ID")
+    client_secret = os.environ.get("PAYPAL_SECRET")
+    paypal_mode = os.environ.get("PAYPAL_MODE", "sandbox")
+    base_url = "https://api-m.paypal.com" if paypal_mode == "live" else "https://api-m.sandbox.paypal.com"
+    
+    auth_string = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            f"{base_url}/v1/oauth2/token",
+            headers={
+                "Authorization": f"Basic {auth_string}",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            data="grant_type=client_credentials"
+        )
+        
+        if token_resp.status_code != 200:
+            return {"status": "PENDING"}
+        
+        access_token = token_resp.json()["access_token"]
+        
+        # Check order status
+        order_resp = await client.get(
+            f"{base_url}/v2/checkout/orders/{order['paypal_order_id']}",
+            headers={"Authorization": f"Bearer {access_token}"}
+        )
+        
+        if order_resp.status_code == 200:
+            paypal_status = order_resp.json().get("status", "PENDING")
+            return {"status": paypal_status}
+        
+        return {"status": "PENDING"}
+
+
+class KioskCapturePayPalRequest(BaseModel):
+    order_id: str
+    photo_ids: List[str]
+    frame: str = "none"
+    email: Optional[str] = None
+
+
+@api_router.post("/public/photofind/{event_id}/capture-paypal-order")
+async def capture_kiosk_paypal_order(event_id: str, data: KioskCapturePayPalRequest):
+    """Capture a PayPal order after user approval"""
+    import base64
+    import httpx
+    
+    order = await db.photofind_paypal_orders.find_one({"id": data.order_id, "event_id": event_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Commande non trouvée")
+    
+    client_id = os.environ.get("PAYPAL_CLIENT_ID")
+    client_secret = os.environ.get("PAYPAL_SECRET")
+    paypal_mode = os.environ.get("PAYPAL_MODE", "sandbox")
+    base_url = "https://api-m.paypal.com" if paypal_mode == "live" else "https://api-m.sandbox.paypal.com"
+    
+    auth_string = base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+    
+    async with httpx.AsyncClient() as client:
+        token_resp = await client.post(
+            f"{base_url}/v1/oauth2/token",
+            headers={
+                "Authorization": f"Basic {auth_string}",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            data="grant_type=client_credentials"
+        )
+        
+        if token_resp.status_code != 200:
+            raise HTTPException(status_code=500, detail="Erreur PayPal auth")
+        
+        access_token = token_resp.json()["access_token"]
+        
+        # Capture the order
+        capture_resp = await client.post(
+            f"{base_url}/v2/checkout/orders/{order['paypal_order_id']}/capture",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+        )
+        
+        if capture_resp.status_code not in [200, 201]:
+            logging.error(f"PayPal capture error: {capture_resp.text}")
+            return {"success": False, "error": "Erreur capture paiement"}
+        
+        capture_data = capture_resp.json()
+        
+        # Update order status
+        await db.photofind_paypal_orders.update_one(
+            {"id": data.order_id},
+            {"$set": {
+                "status": "COMPLETED",
+                "captured_at": datetime.now(timezone.utc).isoformat(),
+                "capture_data": capture_data
+            }}
+        )
+        
+        # Create purchase record
+        event = await db.photofind_events.find_one({"id": event_id})
+        purchase_id = str(uuid.uuid4())
+        
+        await db.photofind_kiosk_purchases.insert_one({
+            "id": purchase_id,
+            "event_id": event_id,
+            "photo_ids": data.photo_ids,
+            "email": data.email or "paypal@kiosk",
+            "amount": order.get("amount", 0),
+            "payment_method": "paypal",
+            "frame": data.frame,
+            "paypal_order_id": order["paypal_order_id"],
+            "status": "completed",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        # Send admin notification
+        try:
+            admin_html = f"""
+            <div style="font-family: Arial, sans-serif; padding: 20px;">
+                <h2 style="color: #D4AF37;">🎉 Paiement Kiosque PayPal !</h2>
+                <p><strong>Événement:</strong> {event.get('name', 'N/A') if event else 'N/A'}</p>
+                <p><strong>Photos:</strong> {len(data.photo_ids)}</p>
+                <p><strong>Montant:</strong> {order.get('amount', 0)}€</p>
+                <p><strong>Cadre:</strong> {data.frame}</p>
+                <p><strong>PayPal ID:</strong> {order['paypal_order_id']}</p>
+            </div>
+            """
+            send_email(SMTP_EMAIL, f"🎉 Paiement Kiosque PayPal - {order.get('amount', 0)}€", admin_html)
+        except:
+            pass
+        
+        return {"success": True, "purchase_id": purchase_id}
+
+
 # Admin endpoint to get kiosk stats
 @api_router.get("/admin/photofind/events/{event_id}/kiosk-stats")
 async def get_kiosk_stats(event_id: str, admin: dict = Depends(get_current_admin)):
