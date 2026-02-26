@@ -72,6 +72,8 @@ function App() {
             {/* PhotoFind - Facial Recognition Photo Booth */}
             <Route path="/photofind/:eventId" element={<PhotoFindPage />} />
             <Route path="/photofind/download/:purchaseId" element={<PhotoFindDownloadPage />} />
+            {/* PhotoFind Kiosk Mode (fullscreen for events) */}
+            <Route path="/kiosk/:eventId" element={<PhotoFindKiosk />} />
             {/* Aliases for different URLs */}
             <Route path="/mariages" element={<ServicePage category="wedding" />} />
             <Route path="/podcast" element={<ServicePage category="podcast" />} />
