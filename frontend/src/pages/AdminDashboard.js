@@ -3912,6 +3912,157 @@ const AdminDashboard = () => {
               </div>
             </div>
 
+            {/* Pricing Management per Event */}
+            <div className="mt-8 bg-white/5 rounded-lg p-6">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <CreditCard size={20} className="text-primary" />
+                Tarifs par Événement
+              </h3>
+              <p className="text-white/60 text-sm mb-4">
+                Configurez les prix pour l'impression et l'envoi par email pour chaque événement
+              </p>
+              
+              {photofindEvents.length === 0 ? (
+                <p className="text-white/50">Aucun événement disponible</p>
+              ) : (
+                <div className="space-y-4">
+                  {photofindEvents.map(evt => (
+                    <div key={evt.id} className="bg-white/5 rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-bold">{evt.name}</h4>
+                        <span className={`text-xs px-2 py-1 rounded ${evt.is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                          {evt.is_active ? 'Actif' : 'Inactif'}
+                        </span>
+                      </div>
+                      
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {/* Print Pricing */}
+                        <div className="bg-blue-500/10 rounded-lg p-4">
+                          <h5 className="font-bold text-blue-400 mb-3 flex items-center gap-2">
+                            <Printer size={16} /> Tarifs Impression
+                          </h5>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-white/60">1 photo</label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={evt.pricing?.print_single || evt.pricing?.per_photo || 5}
+                                  onChange={(e) => updateEventPricing(evt.id, 'print_single', parseFloat(e.target.value))}
+                                  className="w-full bg-white/10 border border-white/20 px-2 py-1 rounded text-sm"
+                                />
+                                <span className="text-white/50">€</span>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-white/60">Pack 5</label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={evt.pricing?.print_pack_5 || evt.pricing?.pack_5 || 20}
+                                  onChange={(e) => updateEventPricing(evt.id, 'print_pack_5', parseFloat(e.target.value))}
+                                  className="w-full bg-white/10 border border-white/20 px-2 py-1 rounded text-sm"
+                                />
+                                <span className="text-white/50">€</span>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-white/60">Pack 10</label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={evt.pricing?.print_pack_10 || evt.pricing?.pack_10 || 35}
+                                  onChange={(e) => updateEventPricing(evt.id, 'print_pack_10', parseFloat(e.target.value))}
+                                  className="w-full bg-white/10 border border-white/20 px-2 py-1 rounded text-sm"
+                                />
+                                <span className="text-white/50">€</span>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-white/60">Toutes</label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={evt.pricing?.print_all || evt.pricing?.all || 50}
+                                  onChange={(e) => updateEventPricing(evt.id, 'print_all', parseFloat(e.target.value))}
+                                  className="w-full bg-white/10 border border-white/20 px-2 py-1 rounded text-sm"
+                                />
+                                <span className="text-white/50">€</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Email Pricing */}
+                        <div className="bg-green-500/10 rounded-lg p-4">
+                          <h5 className="font-bold text-green-400 mb-3 flex items-center gap-2">
+                            <Mail size={16} /> Tarifs Email
+                          </h5>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-white/60">1 photo</label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={evt.pricing?.email_single || 3}
+                                  onChange={(e) => updateEventPricing(evt.id, 'email_single', parseFloat(e.target.value))}
+                                  className="w-full bg-white/10 border border-white/20 px-2 py-1 rounded text-sm"
+                                />
+                                <span className="text-white/50">€</span>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-white/60">Pack 5</label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={evt.pricing?.email_pack_5 || 12}
+                                  onChange={(e) => updateEventPricing(evt.id, 'email_pack_5', parseFloat(e.target.value))}
+                                  className="w-full bg-white/10 border border-white/20 px-2 py-1 rounded text-sm"
+                                />
+                                <span className="text-white/50">€</span>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-white/60">Pack 10</label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={evt.pricing?.email_pack_10 || 20}
+                                  onChange={(e) => updateEventPricing(evt.id, 'email_pack_10', parseFloat(e.target.value))}
+                                  className="w-full bg-white/10 border border-white/20 px-2 py-1 rounded text-sm"
+                                />
+                                <span className="text-white/50">€</span>
+                              </div>
+                            </div>
+                            <div>
+                              <label className="text-xs text-white/60">Toutes</label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  value={evt.pricing?.email_all || 30}
+                                  onChange={(e) => updateEventPricing(evt.id, 'email_all', parseFloat(e.target.value))}
+                                  className="w-full bg-white/10 border border-white/20 px-2 py-1 rounded text-sm"
+                                />
+                                <span className="text-white/50">€</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => saveEventPricing(evt.id)}
+                        className="mt-4 bg-primary text-black px-4 py-2 text-sm font-bold hover:bg-primary/90 rounded"
+                      >
+                        Sauvegarder les tarifs
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Kiosk Technical Configuration */}
             <div className="mt-8 bg-white/5 rounded-lg p-6">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
