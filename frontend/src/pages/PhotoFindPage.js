@@ -484,7 +484,7 @@ const PhotoFindPage = () => {
                 clientSecret={stripeClientSecret}
                 onSuccess={async (paymentIntentId) => {
                   try {
-                    const res = await axios.post(`${API}/photofind/${eventId}/confirm-stripe-payment`, {
+                    const res = await axios.post(`${API}/public/photofind/${eventId}/confirm-stripe-payment`, {
                       payment_id: stripePaymentId,
                       payment_intent_id: paymentIntentId,
                       photo_ids: selectedPhotos,
