@@ -1048,6 +1048,44 @@ const PhotoFindKiosk = () => {
           </div>
         )}
 
+        {/* Step: Stripe CB Payment */}
+        {step === "payment-stripe" && stripeClientSecret && (
+          <div className="w-full max-w-xl">
+            <div className="text-center mb-6">
+              <CreditCard className="mx-auto text-[#635bff] mb-4" size={60} />
+              <h2 className="text-2xl font-bold mb-2">Paiement par Carte Bancaire</h2>
+              <p className="text-white/60">Montant : <span className="text-primary font-bold text-xl">{calculatePrice()}€</span></p>
+            </div>
+            
+            <Elements 
+              stripe={stripePromise} 
+              options={{
+                clientSecret: stripeClientSecret,
+                appearance: {
+                  theme: 'night',
+                  variables: {
+                    colorPrimary: '#D4AF37',
+                    colorBackground: '#1a1a2e',
+                    colorText: '#ffffff',
+                    colorDanger: '#ef4444',
+                    fontFamily: 'system-ui, sans-serif',
+                    borderRadius: '8px'
+                  }
+                }
+              }}
+            >
+              <StripeCheckoutForm 
+                amount={calculatePrice()}
+                onSuccess={handleStripeSuccess}
+                onCancel={() => {
+                  setStripeClientSecret(null);
+                  setStep("payment-choice");
+                }}
+              />
+            </Elements>
+          </div>
+        )}
+
         {/* Step: Cash Payment (Manual) */}
         {step === "payment-cash" && (
           <div className="w-full max-w-xl text-center">
