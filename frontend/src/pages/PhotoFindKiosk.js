@@ -350,22 +350,47 @@ const PhotoFindKiosk = () => {
   };
 
   // Calculate price based on delivery method (print or email)
+  // For print: uses format-based pricing with frame option
+  // For email: uses pack-based pricing
   const calculatePrice = (method = deliveryMethod) => {
     const count = selectedPhotos.length;
     if (count === 0) return 0;
     
     const isPrint = method === "print";
     
-    // Get the right pricing based on delivery method
-    const singlePrice = isPrint ? pricing.print_single : pricing.email_single;
-    const pack5Price = isPrint ? pricing.print_pack_5 : pricing.email_pack_5;
-    const pack10Price = isPrint ? pricing.print_pack_10 : pricing.email_pack_10;
-    const allPrice = isPrint ? pricing.print_all : pricing.email_all;
-    
-    if (count >= matchedPhotos.length && matchedPhotos.length >= 5) return allPrice;
-    if (count >= 10) return pack10Price;
-    if (count >= 5) return pack5Price;
-    return count * singlePrice;
+    if (isPrint) {
+      // Check if we have format-based pricing
+      const formatPricing = pricing.formats?.[selectedPrintFormat];
+      if (formatPricing) {
+        // Use format + frame based pricing
+        const hasFrame = selectedFrame && selectedFrame !== "none";
+        const unitPrice = hasFrame 
+          ? (formatPricing.avec_cadre || formatPricing.sans_cadre || pricing.print_single || 5)
+          : (formatPricing.sans_cadre || pricing.print_single || 5);
+        return count * unitPrice;
+      }
+      // Fallback to pack-based pricing for print
+      const singlePrice = pricing.print_single || pricing.single || 5;
+      const pack5Price = pricing.print_pack_5 || pricing.pack_5 || 20;
+      const pack10Price = pricing.print_pack_10 || pricing.pack_10 || 35;
+      const allPrice = pricing.print_all || pricing.all || 50;
+      
+      if (count >= matchedPhotos.length && matchedPhotos.length >= 5) return allPrice;
+      if (count >= 10) return pack10Price;
+      if (count >= 5) return pack5Price;
+      return count * singlePrice;
+    } else {
+      // Email: pack-based pricing
+      const singlePrice = pricing.email_single || 3;
+      const pack5Price = pricing.email_pack_5 || 12;
+      const pack10Price = pricing.email_pack_10 || 20;
+      const allPrice = pricing.email_all || 30;
+      
+      if (count >= matchedPhotos.length && matchedPhotos.length >= 5) return allPrice;
+      if (count >= 10) return pack10Price;
+      if (count >= 5) return pack5Price;
+      return count * singlePrice;
+    }
   };
 
   // Calculate print price (5€ per photo)
