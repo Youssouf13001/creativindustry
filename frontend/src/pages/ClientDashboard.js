@@ -1456,7 +1456,7 @@ const ClientDashboard = () => {
                       
                       <Elements stripe={stripePromise} options={{ clientSecret: guestbookStripeClientSecret }}>
                         <StripeGuestbookForm
-                          amount={200}
+                          amount={guestbookPrice}
                           clientSecret={guestbookStripeClientSecret}
                           onSuccess={confirmGuestbookStripe}
                           onCancel={() => {
