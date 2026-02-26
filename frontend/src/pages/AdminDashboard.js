@@ -130,7 +130,21 @@ const AdminDashboard = () => {
   const [photofindEvents, setPhotofindEvents] = useState([]);
   const [selectedPhotofindEvent, setSelectedPhotofindEvent] = useState(null);
   const [showAddPhotofindEvent, setShowAddPhotofindEvent] = useState(false);
-  const [newPhotofindEvent, setNewPhotofindEvent] = useState({ name: "", description: "", event_date: "", price_per_photo: 5, price_pack_5: 20, price_pack_10: 35, price_all: 50 });
+  const [newPhotofindEvent, setNewPhotofindEvent] = useState({ 
+    name: "", 
+    description: "", 
+    event_date: "", 
+    // Print pricing
+    print_single: 5, 
+    print_pack_5: 20, 
+    print_pack_10: 35, 
+    print_all: 50,
+    // Email pricing
+    email_single: 3, 
+    email_pack_5: 12, 
+    email_pack_10: 20, 
+    email_all: 30
+  });
   const [photofindPurchases, setPhotofindPurchases] = useState([]);
   const [uploadingPhotofindPhotos, setUploadingPhotofindPhotos] = useState(false);
   // Kiosk states (separate tab)
