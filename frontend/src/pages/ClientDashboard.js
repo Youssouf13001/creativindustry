@@ -609,6 +609,97 @@ const ClientDashboard = () => {
     }
   };
 
+  // Purchase Guestbook with Stripe
+  const purchaseGuestbookStripe = async () => {
+    if (!newGuestbookName.trim()) {
+      toast.error("Veuillez entrer un nom pour votre livre d'or");
+      return;
+    }
+    
+    setGuestbookPurchaseLoading(true);
+    
+    try {
+      const res = await axios.post(`${API}/client/guestbook/purchase-stripe`, {
+        name: newGuestbookName,
+        event_date: newGuestbookEventDate || null
+      }, { headers });
+      
+      if (res.data.client_secret) {
+        setStripeClientSecret(res.data.client_secret);
+        setStripePaymentId(res.data.payment_id);
+        setStripePaymentDetails({
+          type: "guestbook",
+          name: newGuestbookName,
+          event_date: newGuestbookEventDate,
+          amount: 200
+        });
+        setShowStripeModal(true);
+        setShowGuestbookPurchase(false);
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la création du paiement");
+    } finally {
+      setGuestbookPurchaseLoading(false);
+    }
+  };
+
+  // Purchase Guestbook with PayPal
+  const purchaseGuestbookPayPal = async () => {
+    if (!newGuestbookName.trim()) {
+      toast.error("Veuillez entrer un nom pour votre livre d'or");
+      return;
+    }
+    
+    setGuestbookPurchaseLoading(true);
+    
+    try {
+      const res = await axios.post(`${API}/client/guestbook/purchase-paypal`, {
+        name: newGuestbookName,
+        event_date: newGuestbookEventDate || null
+      }, { headers });
+      
+      if (res.data.approval_url) {
+        // Store guestbook info in localStorage for after payment
+        localStorage.setItem("pending_guestbook", JSON.stringify({
+          name: newGuestbookName,
+          event_date: newGuestbookEventDate
+        }));
+        window.location.href = res.data.approval_url;
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la création du paiement");
+    } finally {
+      setGuestbookPurchaseLoading(false);
+    }
+  };
+
+  // Confirm Stripe guestbook payment
+  const confirmGuestbookStripePayment = async (paymentIntentId) => {
+    try {
+      const res = await axios.post(`${API}/client/guestbook/confirm-stripe-payment`, {
+        payment_id: stripePaymentId,
+        payment_intent_id: paymentIntentId,
+        name: stripePaymentDetails?.name,
+        event_date: stripePaymentDetails?.event_date
+      }, { headers });
+      
+      if (res.data.success) {
+        toast.success("Livre d'or créé avec succès ! 🎉");
+        setShowStripeModal(false);
+        setStripeClientSecret(null);
+        setStripePaymentId(null);
+        setStripePaymentDetails(null);
+        setNewGuestbookName("");
+        setNewGuestbookEventDate("");
+        fetchGuestbooks();
+      } else {
+        toast.error(res.data.message || "Erreur lors de la confirmation");
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la confirmation");
+    }
+  };
+
   // Handle PayPal return
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
