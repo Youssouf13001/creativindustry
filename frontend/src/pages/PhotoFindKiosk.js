@@ -144,6 +144,9 @@ const PhotoFindKiosk = () => {
   
   // Delivery method (print or email) - affects pricing
   const [deliveryMethod, setDeliveryMethod] = useState(null); // "print" or "email"
+  
+  // Track if cash payment was already confirmed (to skip payment on email screen)
+  const [cashPaymentConfirmed, setCashPaymentConfirmed] = useState(false);
 
   // Pricing - separate for print and email
   const [pricing, setPricing] = useState({
