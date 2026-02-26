@@ -1,5 +1,5 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 
 // Components
@@ -34,58 +34,80 @@ import PhotoFindDownloadPage from "./pages/PhotoFindDownloadPage";
 import PhotoFindKiosk from "./pages/PhotoFindKiosk";
 import Gallery3DPage from "./pages/Gallery3DPage";
 
+// Layout wrapper that conditionally shows header/footer
+function AppLayout({ children }) {
+  const location = useLocation();
+  
+  // Pages that should be displayed without header/footer (fullscreen mode)
+  const fullscreenPaths = ['/kiosk/', '/galerie3d/'];
+  const isFullscreen = fullscreenPaths.some(path => location.pathname.startsWith(path));
+  
+  if (isFullscreen) {
+    return (
+      <div className="min-h-screen bg-background text-white">
+        {children}
+        <Toaster position="top-right" richColors />
+      </div>
+    );
+  }
+  
+  return (
+    <div className="min-h-screen bg-background text-white">
+      <Header />
+      <main>{children}</main>
+      <Footer />
+      <ChatWidget />
+      <WelcomePopup />
+      <PWAInstallPrompt />
+      <Toaster position="top-right" richColors />
+    </div>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-background text-white">
-        <Header />
-        <main>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/services/wedding" element={<ServicePage category="wedding" />} />
-            <Route path="/services/podcast" element={<ServicePage category="podcast" />} />
-            <Route path="/services/tv_set" element={<ServicePage category="tv_set" />} />
-            <Route path="/devis-mariage" element={<WeddingQuotePage />} />
-            <Route path="/portfolio" element={<PortfolioPage />} />
-            <Route path="/booking" element={<BookingPage />} />
-            <Route path="/rendez-vous" element={<AppointmentPage />} />
-            <Route path="/rendez-vous/confirmer/:appointmentId/:token" element={<AppointmentConfirmPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/temoignages" element={<TestimonialsPage />} />
-            <Route path="/actualites" element={<NewsPage />} />
-            <Route path="/admin" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/client" element={<ClientLogin />} />
-            <Route path="/client/dashboard" element={<ClientDashboard />} />
-            <Route path="/unsubscribe/:clientId" element={<UnsubscribePage />} />
-            <Route path="/renouvellement" element={<RenewalPage />} />
-            <Route path="/renouvellement/success" element={<RenewalPage />} />
-            <Route path="/renouvellement/cancel" element={<RenewalPage />} />
-            <Route path="/espace-client" element={<ClientLogin />} />
-            <Route path="/paiement-confirme" element={<PaymentConfirmPage />} />
-            {/* Shared Gallery (public access) */}
-            <Route path="/galerie/:galleryId" element={<SharedGalleryPage />} />
-            {/* 3D Gallery (immersive experience) */}
-            <Route path="/galerie3d/:galleryId" element={<Gallery3DPage />} />
-            {/* Guestbook (public access) */}
-            <Route path="/livre-dor/:guestbookId" element={<GuestbookPage />} />
-            {/* PhotoFind - Facial Recognition Photo Booth */}
-            <Route path="/photofind/:eventId" element={<PhotoFindPage />} />
-            <Route path="/photofind/download/:purchaseId" element={<PhotoFindDownloadPage />} />
-            {/* PhotoFind Kiosk Mode (fullscreen for events) */}
-            <Route path="/kiosk/:eventId" element={<PhotoFindKiosk />} />
-            {/* Aliases for different URLs */}
-            <Route path="/mariages" element={<ServicePage category="wedding" />} />
-            <Route path="/podcast" element={<ServicePage category="podcast" />} />
-            <Route path="/plateau-tv" element={<ServicePage category="tv_set" />} />
-          </Routes>
-        </main>
-        <Footer />
-        <ChatWidget />
-        <WelcomePopup />
-        <PWAInstallPrompt />
-        <Toaster position="top-right" richColors />
-      </div>
+      <AppLayout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/services/wedding" element={<ServicePage category="wedding" />} />
+          <Route path="/services/podcast" element={<ServicePage category="podcast" />} />
+          <Route path="/services/tv_set" element={<ServicePage category="tv_set" />} />
+          <Route path="/devis-mariage" element={<WeddingQuotePage />} />
+          <Route path="/portfolio" element={<PortfolioPage />} />
+          <Route path="/booking" element={<BookingPage />} />
+          <Route path="/rendez-vous" element={<AppointmentPage />} />
+          <Route path="/rendez-vous/confirmer/:appointmentId/:token" element={<AppointmentConfirmPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/temoignages" element={<TestimonialsPage />} />
+          <Route path="/actualites" element={<NewsPage />} />
+          <Route path="/admin" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/client" element={<ClientLogin />} />
+          <Route path="/client/dashboard" element={<ClientDashboard />} />
+          <Route path="/unsubscribe/:clientId" element={<UnsubscribePage />} />
+          <Route path="/renouvellement" element={<RenewalPage />} />
+          <Route path="/renouvellement/success" element={<RenewalPage />} />
+          <Route path="/renouvellement/cancel" element={<RenewalPage />} />
+          <Route path="/espace-client" element={<ClientLogin />} />
+          <Route path="/paiement-confirme" element={<PaymentConfirmPage />} />
+          {/* Shared Gallery (public access) */}
+          <Route path="/galerie/:galleryId" element={<SharedGalleryPage />} />
+          {/* 3D Gallery (immersive experience - fullscreen) */}
+          <Route path="/galerie3d/:galleryId" element={<Gallery3DPage />} />
+          {/* Guestbook (public access) */}
+          <Route path="/livre-dor/:guestbookId" element={<GuestbookPage />} />
+          {/* PhotoFind - Facial Recognition Photo Booth */}
+          <Route path="/photofind/:eventId" element={<PhotoFindPage />} />
+          <Route path="/photofind/download/:purchaseId" element={<PhotoFindDownloadPage />} />
+          {/* PhotoFind Kiosk Mode (fullscreen for events) */}
+          <Route path="/kiosk/:eventId" element={<PhotoFindKiosk />} />
+          {/* Aliases for different URLs */}
+          <Route path="/mariages" element={<ServicePage category="wedding" />} />
+          <Route path="/podcast" element={<ServicePage category="podcast" />} />
+          <Route path="/plateau-tv" element={<ServicePage category="tv_set" />} />
+        </Routes>
+      </AppLayout>
     </BrowserRouter>
   );
 }
