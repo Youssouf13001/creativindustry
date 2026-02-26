@@ -12472,6 +12472,8 @@ async def purchase_guestbook_paypal(data: GuestbookPurchaseRequest, client: dict
         raise HTTPException(status_code=500, detail="PayPal non configuré")
     
     try:
+        guestbook_price = await get_guestbook_price()
+        
         # Get access token
         auth = httpx.BasicAuth(paypal_client_id, paypal_secret)
         async with httpx.AsyncClient() as http_client:
@@ -12493,7 +12495,7 @@ async def purchase_guestbook_paypal(data: GuestbookPurchaseRequest, client: dict
                 "client_id": client["id"],
                 "guestbook_name": data.name,
                 "event_date": data.event_date,
-                "amount": GUESTBOOK_PRICE,
+                "amount": guestbook_price,
                 "status": "pending",
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
@@ -12515,7 +12517,7 @@ async def purchase_guestbook_paypal(data: GuestbookPurchaseRequest, client: dict
                     "purchase_units": [{
                         "amount": {
                             "currency_code": "EUR",
-                            "value": str(GUESTBOOK_PRICE)
+                            "value": str(guestbook_price)
                         },
                         "description": f"Livre d'or - {data.name}"
                     }],
