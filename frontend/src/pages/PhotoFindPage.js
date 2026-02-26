@@ -64,9 +64,28 @@ const PhotoFindPage = () => {
   const [showPurchase, setShowPurchase] = useState(false);
   const [purchaseForm, setPurchaseForm] = useState({ name: "", email: "" });
   const fileInputRef = useRef(null);
+  
+  // Stripe states
+  const [stripePromise, setStripePromise] = useState(null);
+  const [showStripeForm, setShowStripeForm] = useState(false);
+  const [stripeClientSecret, setStripeClientSecret] = useState(null);
+  const [stripePaymentId, setStripePaymentId] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
     fetchEvent();
+    // Load Stripe
+    const loadStripeKey = async () => {
+      try {
+        const res = await axios.get(`${API}/public/stripe-config`);
+        if (res.data.publishable_key) {
+          setStripePromise(loadStripe(res.data.publishable_key));
+        }
+      } catch (e) {
+        console.error("Failed to load Stripe");
+      }
+    };
+    loadStripeKey();
   }, [eventId]);
 
   const fetchEvent = async () => {
