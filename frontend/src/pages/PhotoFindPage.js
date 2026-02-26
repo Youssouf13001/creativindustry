@@ -1,9 +1,58 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
-import { Camera, ShoppingCart, Check, X, Loader, Image } from "lucide-react";
+import { Camera, ShoppingCart, Check, X, Loader, Image, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
+// Stripe Card Form
+const StripePhotoForm = ({ amount, onSuccess, onCancel, clientSecret }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setProcessing(true);
+    setError(null);
+
+    const { error: paymentError, paymentIntent } = await stripe.confirmCardPayment(
+      clientSecret,
+      { payment_method: { card: elements.getElement(CardElement) } }
+    );
+
+    if (paymentError) {
+      setError(paymentError.message);
+      setProcessing(false);
+    } else if (paymentIntent.status === "succeeded") {
+      onSuccess(paymentIntent.id);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="bg-white/10 p-4 rounded-lg">
+        <CardElement options={{
+          style: {
+            base: { fontSize: "16px", color: "#fff", "::placeholder": { color: "#aab7c4" } },
+            invalid: { color: "#fa755a" }
+          }
+        }} />
+      </div>
+      {error && <div className="bg-red-500/20 border border-red-500/50 p-3 rounded text-red-400 text-sm">{error}</div>}
+      <div className="flex gap-3">
+        <button type="button" onClick={onCancel} className="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-lg text-white">Annuler</button>
+        <button type="submit" disabled={!stripe || processing} className="flex-1 bg-[#635bff] hover:bg-[#5851db] text-white font-bold py-3 rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
+          {processing ? <><Loader className="animate-spin" size={20} /> Paiement...</> : <>Payer {amount}€</>}
+        </button>
+      </div>
+    </form>
+  );
+};
 
 const PhotoFindPage = () => {
   const { eventId } = useParams();
