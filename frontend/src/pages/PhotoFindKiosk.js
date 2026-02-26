@@ -1352,8 +1352,14 @@ const PhotoFindKiosk = () => {
             <div className="bg-white/10 rounded-xl p-6 mb-8">
               <p className="text-white/60">Total à payer</p>
               <p className="text-5xl font-bold text-primary">{calculatePrice()}€</p>
-              {selectedFilter !== "none" && (
-                <p className="text-sm text-white/50 mt-2">Cadre : {PHOTO_FILTERS.find(f => f.id === selectedFilter)?.name}</p>
+              {deliveryMethod === "print" && (
+                <div className="text-sm text-white/50 mt-2 space-y-1">
+                  <p>Format : {selectedPrintFormat}</p>
+                  <p>{withPhysicalFrame ? "🖼️ Avec cadre physique" : "📄 Sans cadre physique"}</p>
+                  {selectedFilter !== "none" && (
+                    <p>✨ Filtre : {PHOTO_FILTERS.find(f => f.id === selectedFilter)?.name}</p>
+                  )}
+                </div>
               )}
             </div>
             
