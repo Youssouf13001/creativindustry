@@ -395,13 +395,40 @@ const PhotoFindKiosk = () => {
             
             <canvas ref={canvasRef} className="hidden" />
             
-            <button
-              onClick={captureSelfie}
-              disabled={!cameraReady || capturing || searching}
-              className="bg-primary hover:bg-primary/90 text-black font-bold text-2xl px-12 py-6 rounded-xl disabled:opacity-50 transition-all"
-            >
-              📷 Prendre la photo
-            </button>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <button
+                onClick={captureSelfie}
+                disabled={!cameraReady || capturing || searching}
+                className="bg-primary hover:bg-primary/90 text-black font-bold text-2xl px-12 py-6 rounded-xl disabled:opacity-50 transition-all"
+              >
+                📷 Prendre la photo
+              </button>
+              
+              {/* Fallback: Import photo from device */}
+              <div className="text-center">
+                <p className="text-white/40 text-sm mb-2">Ou importez une photo</p>
+                <label 
+                  htmlFor="kiosk-photo-input"
+                  className="inline-block bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg cursor-pointer transition-colors"
+                >
+                  <Download size={20} className="inline mr-2" /> Importer
+                </label>
+                <input
+                  id="kiosk-photo-input"
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      e.target.value = '';
+                      handlePhotoImport(file);
+                    }
+                  }}
+                />
+              </div>
+            </div>
           </div>
         )}
 
