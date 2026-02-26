@@ -141,6 +141,7 @@ const ClientDashboard = () => {
   const [showGuestbookStripeForm, setShowGuestbookStripeForm] = useState(false);
   const [guestbookStripeClientSecret, setGuestbookStripeClientSecret] = useState(null);
   const [guestbookStripePaymentId, setGuestbookStripePaymentId] = useState(null);
+  const [guestbookPrice, setGuestbookPrice] = useState(200);
   
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
