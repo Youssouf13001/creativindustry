@@ -139,8 +139,25 @@ const PhotoFindKiosk = () => {
   const [stripeClientSecret, setStripeClientSecret] = useState(null);
   const [stripeOrderId, setStripeOrderId] = useState(null);
 
-  // Pricing
+  // Print format selection
+  const [selectedPrintFormat, setSelectedPrintFormat] = useState("10x15");
+  
+  // Delivery method (print or email) - affects pricing
+  const [deliveryMethod, setDeliveryMethod] = useState(null); // "print" or "email"
+
+  // Pricing - separate for print and email
   const [pricing, setPricing] = useState({
+    // Print pricing
+    print_single: 5,
+    print_pack_5: 20,
+    print_pack_10: 35,
+    print_all: 50,
+    // Email pricing
+    email_single: 3,
+    email_pack_5: 12,
+    email_pack_10: 20,
+    email_all: 30,
+    // Legacy (fallback)
     single: 5,
     per_photo: 5,
     pack_5: 15,
