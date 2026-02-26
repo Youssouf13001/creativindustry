@@ -868,52 +868,161 @@ const PhotoFindKiosk = () => {
 
         {/* Step: Frame Selection */}
         {step === "frames" && (
-          <div className="w-full max-w-4xl">
-            <div className="text-center mb-8">
+          <div className="w-full max-w-6xl">
+            <div className="text-center mb-6">
               <Image className="mx-auto text-primary mb-4" size={60} />
               <h2 className="text-3xl font-bold mb-2">Choisissez un style</h2>
               <p className="text-white/60">Sélectionnez un cadre pour vos photos (optionnel)</p>
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-              {[...PHOTO_FRAMES.filter(f => f.id !== "custom"), ...customFrames].map((frame) => (
-                <div
-                  key={frame.id}
-                  onClick={() => setSelectedFrame(frame.id)}
-                  className={`cursor-pointer p-4 rounded-xl border-2 transition-all ${
-                    selectedFrame === frame.id 
-                      ? 'border-primary bg-primary/20' 
-                      : 'border-white/20 bg-white/5 hover:border-white/40'
-                  }`}
-                >
-                  {/* Frame Preview */}
-                  <div 
-                    className="aspect-[3/4] mb-3 rounded-lg flex items-center justify-center overflow-hidden"
-                    style={{
-                      background: frame.id === "none" ? "#333" : "#fff",
-                      border: frame.id !== "none" ? `${frame.border} ${frame.color}` : "2px solid #555"
-                    }}
-                  >
-                    {frame.id === "none" ? (
-                      <span className="text-white/50 text-sm">Sans cadre</span>
-                    ) : (
-                      <div className="text-center">
-                        <div className="text-4xl mb-2">{frame.decoration || "📷"}</div>
-                        <div className="text-xs text-gray-600">{frame.name}</div>
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* Left: Preview with selected frame */}
+              <div className="bg-white/5 rounded-2xl p-6">
+                <h3 className="text-lg font-bold mb-4 text-center">Aperçu</h3>
+                <div className="flex items-center justify-center">
+                  {(() => {
+                    const previewPhoto = matchedPhotos.find(p => selectedPhotos.includes(p.id)) || matchedPhotos[0];
+                    const frame = [...PHOTO_FRAMES, ...customFrames].find(f => f.id === selectedFrame) || PHOTO_FRAMES[0];
+                    const photoUrl = previewPhoto?.url ? `${BACKEND_URL}${previewPhoto.url}` : previewPhoto?.filename ? `${BACKEND_URL}/uploads/photofind/${eventId}/${previewPhoto.filename}` : null;
+                    
+                    if (!photoUrl) return <p className="text-white/50">Aucune photo</p>;
+                    
+                    return (
+                      <div className="relative inline-block">
+                        {/* Frame container */}
+                        <div 
+                          style={{
+                            padding: frame.id === "none" ? "0" : frame.id === "polaroid" ? "12px 12px 50px 12px" : "12px",
+                            background: frame.id === "polaroid" ? "#fff" : frame.id === "none" ? "transparent" : "rgba(255,255,255,0.05)",
+                            border: frame.id !== "none" ? `${frame.border} ${frame.color}` : "none",
+                            borderRadius: "4px",
+                            boxShadow: frame.id !== "none" ? "0 10px 30px rgba(0,0,0,0.3)" : "none"
+                          }}
+                        >
+                          <img 
+                            src={photoUrl}
+                            alt="Aperçu"
+                            className="max-h-[350px] max-w-full object-contain"
+                            style={{
+                              filter: frame.id === "vintage" ? "sepia(0.4) contrast(1.1)" : "none"
+                            }}
+                          />
+                          
+                          {/* Polaroid text */}
+                          {frame.id === "polaroid" && (
+                            <div className="text-center mt-2" style={{ fontFamily: "'Comic Sans MS', cursive", color: "#333" }}>
+                              {event?.name || "Photo Souvenir"}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Decoration overlay */}
+                        {frame.decoration && frame.id !== "polaroid" && (
+                          <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 text-2xl bg-black/50 px-4 py-1 rounded-full">
+                            {frame.decoration}
+                          </div>
+                        )}
+                        
+                        {/* Custom frame text overlay */}
+                        {frame.overlayText && (
+                          <div 
+                            className="absolute bottom-4 left-0 right-0 text-center font-bold"
+                            style={{ 
+                              color: frame.overlayTextColor || "#fff",
+                              fontSize: frame.overlayTextSize || "18px",
+                              textShadow: "2px 2px 4px rgba(0,0,0,0.8)"
+                            }}
+                          >
+                            {frame.overlayText}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <p className="text-center font-bold">{frame.name}</p>
-                  {selectedFrame === frame.id && (
-                    <div className="mt-2 flex justify-center">
-                      <Check className="text-primary" size={24} />
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
-              ))}
+              </div>
+              
+              {/* Right: Frame options */}
+              <div>
+                <h3 className="text-lg font-bold mb-4">Cadres disponibles</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Standard frames */}
+                  {PHOTO_FRAMES.filter(f => f.id !== "custom").map((frame) => (
+                    <div
+                      key={frame.id}
+                      onClick={() => setSelectedFrame(frame.id)}
+                      className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${
+                        selectedFrame === frame.id 
+                          ? 'border-primary bg-primary/20' 
+                          : 'border-white/20 bg-white/5 hover:border-white/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-12 h-12 rounded flex items-center justify-center text-xl"
+                          style={{
+                            background: frame.id === "none" ? "#333" : "#fff",
+                            border: frame.id !== "none" ? `3px solid ${frame.color}` : "2px solid #555"
+                          }}
+                        >
+                          {frame.id === "none" ? "✕" : frame.decoration?.split(" ")[0] || "🖼️"}
+                        </div>
+                        <div>
+                          <p className="font-bold">{frame.name}</p>
+                          {selectedFrame === frame.id && (
+                            <Check className="text-primary" size={18} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Custom frames from event */}
+                  {customFrames.map((frame) => (
+                    <div
+                      key={frame.id}
+                      onClick={() => setSelectedFrame(frame.id)}
+                      className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${
+                        selectedFrame === frame.id 
+                          ? 'border-primary bg-primary/20' 
+                          : 'border-white/20 bg-white/5 hover:border-white/40'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-12 h-12 rounded flex items-center justify-center overflow-hidden"
+                          style={{
+                            border: `3px solid ${frame.color || '#D4AF37'}`
+                          }}
+                        >
+                          {frame.thumbnail ? (
+                            <img src={frame.thumbnail} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-xl">💒</span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold">{frame.name}</p>
+                          <p className="text-xs text-white/50">Personnalisé</p>
+                          {selectedFrame === frame.id && (
+                            <Check className="text-primary" size={18} />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Info about custom frames */}
+                {customFrames.length === 0 && (
+                  <div className="mt-4 p-3 bg-white/5 rounded-lg text-sm text-white/50">
+                    💡 Des cadres personnalisés peuvent être ajoutés par le photographe pour cet événement
+                  </div>
+                )}
+              </div>
             </div>
             
-            <div className="flex gap-4 justify-center">
+            <div className="flex gap-4 justify-center mt-8">
               <button
                 onClick={() => setStep("results")}
                 className="bg-white/10 hover:bg-white/20 px-6 py-4 rounded-xl flex items-center gap-2"
