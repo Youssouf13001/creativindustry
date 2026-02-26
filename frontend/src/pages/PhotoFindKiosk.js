@@ -426,10 +426,13 @@ const PhotoFindKiosk = () => {
         
         const decoration = frame.decoration ? `<div style="text-align: center; font-size: 24px; margin-top: 10px;">${frame.decoration}</div>` : "";
         
+        // Use the same URL format as PhotoFindPage
+        const photoUrl = photo.url ? `${BACKEND_URL}${photo.url}` : `${BACKEND_URL}/uploads/photofind/${eventId}/${photo.filename}`;
+        
         return `
           <div style="page-break-after: always; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: white;">
             <div style="${frameStyle}">
-              <img src="${API}/public/photofind/${eventId}/photo/${photo.id}" 
+              <img src="${photoUrl}" 
                    style="max-width: 100%; max-height: 80vh; object-fit: contain;" 
                    crossorigin="anonymous" />
             </div>
