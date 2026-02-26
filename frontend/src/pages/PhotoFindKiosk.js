@@ -1479,6 +1479,12 @@ const PhotoFindKiosk = () => {
             <div className="bg-white/10 rounded-xl p-4 mb-6">
               <p className="text-sm text-white/60 mb-2">Résumé</p>
               <p>{selectedPhotos.length} photo(s)</p>
+              <p className="text-sm text-primary mt-1">
+                {deliveryMethod === "print" ? "📄 Impression" : "📧 Envoi par email"}
+              </p>
+              {deliveryMethod === "print" && selectedPrintFormat && (
+                <p className="text-sm text-white/50">Format : {selectedPrintFormat}</p>
+              )}
               {selectedFrame !== "none" && (
                 <p className="text-sm text-white/50">Cadre : {PHOTO_FRAMES.find(f => f.id === selectedFrame)?.name}</p>
               )}
@@ -1499,22 +1505,31 @@ const PhotoFindKiosk = () => {
               <button
                 onClick={async () => {
                   setProcessing(true);
-                  // Log the purchase
-                  try {
-                    await axios.post(`${API}/public/photofind/${eventId}/kiosk-purchase`, {
-                      photo_ids: selectedPhotos,
-                      email: email || "kiosk@local",
-                      amount: calculatePrice(),
-                      payment_method: "cash",
-                      frame: selectedFrame
-                    });
-                  } catch (e) {
-                    console.error(e);
+                  
+                  if (deliveryMethod === "email") {
+                    // For email delivery, ask for email address
+                    setProcessing(false);
+                    setStep("email");
+                  } else {
+                    // For print delivery, log purchase and print
+                    try {
+                      await axios.post(`${API}/public/photofind/${eventId}/kiosk-purchase`, {
+                        photo_ids: selectedPhotos,
+                        email: email || "kiosk@local",
+                        amount: calculatePrice(),
+                        payment_method: "cash",
+                        frame: selectedFrame,
+                        delivery_method: "print",
+                        print_format: selectedPrintFormat
+                      });
+                    } catch (e) {
+                      console.error(e);
+                    }
+                    // Print
+                    await autoPrintPhotos();
+                    setProcessing(false);
+                    setStep("print-success");
                   }
-                  // Print
-                  await autoPrintPhotos();
-                  setProcessing(false);
-                  setStep("print-success");
                 }}
                 disabled={processing}
                 className="bg-green-600 hover:bg-green-700 text-white font-bold text-xl px-8 py-4 rounded-xl disabled:opacity-50 flex items-center gap-3"
@@ -1523,7 +1538,8 @@ const PhotoFindKiosk = () => {
                   <Loader className="animate-spin" size={24} />
                 ) : (
                   <>
-                    <Check size={24} /> Paiement reçu - Imprimer
+                    <Check size={24} /> 
+                    {deliveryMethod === "email" ? "Paiement reçu - Continuer" : "Paiement reçu - Imprimer"}
                   </>
                 )}
               </button>
