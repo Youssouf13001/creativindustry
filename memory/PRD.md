@@ -52,6 +52,7 @@ French
 - [x] **Paiement Stripe CB Kiosque** - Paiement par carte bancaire intégré avec Stripe (26 Fév 2026)
 - [x] **Paiement Liquide/CB Kiosque** - Option paiement manuel avec confirmation (26 Fév 2026)
 - [x] **Popup PWA désactivé** - Plus de popup intrusif (26 Fév 2026)
+- [x] **Tarification avancée Kiosque** - Prix par format (A4, 10x15) avec/sans cadre (26 Fév 2026)
 
 ### 🔴 Known Issues (P0 - BLOCKER)
 1. **Erreur `[object Object]`** - Soumission de témoignage en production (IONOS)
@@ -96,12 +97,13 @@ French
 - `GET /api/public/galleries/{id}` - Vue publique galerie
 
 ### PhotoFind Kiosk (NEW)
-- `GET /api/public/photofind/{eventId}` - Infos publiques d'un événement
+- `GET /api/public/photofind/{eventId}` - Infos publiques d'un événement (avec pricing.formats)
 - `POST /api/public/photofind/{eventId}/search` - Recherche par selfie
 - `GET /api/public/photofind/{eventId}/photo/{photoId}` - Servir une photo
 - `POST /api/public/photofind/{eventId}/kiosk-purchase` - Créer un achat kiosque
 - `POST /api/public/photofind/{eventId}/log-print` - Logger une impression
 - `GET /api/admin/photofind/events/{eventId}/kiosk-stats` - Stats kiosque admin
+- `PUT /api/admin/photofind/events/{eventId}/pricing` - Sauvegarder tarification avancée (formats + cadres)
 
 ## Database Collections
 - `guestbooks` - Livres d'or
@@ -148,6 +150,24 @@ French
 - `manifest.json` - Icônes et métadonnées
 - `sw.js` - Service worker avec caching
 - `PWAInstallPrompt.js` - Composant d'installation
+
+## Tarification Kiosque (Structure)
+```json
+{
+  "pricing": {
+    "formats": {
+      "10x15": {"sans_cadre": 5, "avec_cadre": 8},
+      "13x18": {"sans_cadre": 6, "avec_cadre": 10},
+      "A5": {"sans_cadre": 8, "avec_cadre": 12},
+      "A4": {"sans_cadre": 10, "avec_cadre": 20}
+    },
+    "email_single": 3,
+    "email_pack_5": 12,
+    "email_pack_10": 20,
+    "email_all": 30
+  }
+}
+```
 
 ---
 *Last updated: February 26, 2026*
