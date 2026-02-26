@@ -623,6 +623,40 @@ const AdminDashboard = () => {
     }
   }, [activeTab]);
 
+  // Load Kiosk data when switching to kiosk tab
+  useEffect(() => {
+    if (activeTab === "kiosk") {
+      fetchPhotofindEvents(); // Reuse photofind events for kiosk
+      fetchAllKioskStats();
+    }
+  }, [activeTab]);
+
+  // Fetch all kiosk stats for all events
+  const fetchAllKioskStats = async () => {
+    setLoadingKioskStats(true);
+    try {
+      // First get all events
+      const eventsRes = await axios.get(`${API}/admin/photofind/events`, { headers });
+      const events = eventsRes.data || [];
+      
+      // Fetch stats for each event
+      const statsPromises = events.map(event => 
+        axios.get(`${API}/admin/photofind/events/${event.id}/kiosk-stats`, { headers })
+          .then(res => ({ eventId: event.id, ...res.data }))
+          .catch(() => ({ eventId: event.id, total_purchases: 0, total_revenue: 0, total_photos_sold: 0, total_printed: 0 }))
+      );
+      
+      const allStats = await Promise.all(statsPromises);
+      const statsMap = {};
+      allStats.forEach(s => { statsMap[s.eventId] = s; });
+      setKioskStats(statsMap);
+    } catch (e) {
+      console.error("Error fetching kiosk stats:", e);
+    } finally {
+      setLoadingKioskStats(false);
+    }
+  };
+
   // Fetch billing/invoices data
   const fetchBillingData = async () => {
     setLoadingBilling(true);
