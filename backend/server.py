@@ -6774,15 +6774,24 @@ async def confirm_photofind_purchase(purchase_id: str, admin: dict = Depends(get
 @api_router.get("/public/photofind/download/{purchase_id}")
 async def get_photofind_download_info(purchase_id: str, token: str):
     """Get download info for a PhotoFind purchase"""
+    # Check in both collections (regular purchases and kiosk purchases)
     purchase = await db.photofind_purchases.find_one(
         {"id": purchase_id, "download_token": token},
         {"_id": 0}
     )
     
+    # If not found in regular, check kiosk purchases
+    if not purchase:
+        purchase = await db.photofind_kiosk_purchases.find_one(
+            {"id": purchase_id, "download_token": token},
+            {"_id": 0}
+        )
+    
     if not purchase:
         raise HTTPException(status_code=404, detail="Lien invalide ou expiré")
     
-    if purchase.get("status") != "confirmed":
+    # For kiosk purchases, status might be "completed" instead of "confirmed"
+    if purchase.get("status") not in ["confirmed", "completed"]:
         raise HTTPException(status_code=400, detail="Cet achat n'a pas encore été confirmé")
     
     # Check expiration
