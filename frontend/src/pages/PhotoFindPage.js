@@ -421,7 +421,7 @@ const PhotoFindPage = () => {
                     }
                     setPaymentLoading(true);
                     try {
-                      const res = await axios.post(`${API}/photofind/${eventId}/create-stripe-payment`, {
+                      const res = await axios.post(`${API}/public/photofind/${eventId}/create-stripe-payment`, {
                         photo_ids: selectedPhotos,
                         client_name: purchaseForm.name,
                         client_email: purchaseForm.email,
