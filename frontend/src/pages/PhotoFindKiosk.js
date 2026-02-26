@@ -7,8 +7,15 @@ import { API } from "../config/api";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY);
+// Initialize Stripe lazily (to avoid error if key not available)
+let stripePromise = null;
+const getStripe = () => {
+  const key = process.env.REACT_APP_STRIPE_PUBLIC_KEY;
+  if (key && !stripePromise) {
+    stripePromise = loadStripe(key);
+  }
+  return stripePromise;
+};
 
 // Frame/Filter definitions
 const PHOTO_FRAMES = [
