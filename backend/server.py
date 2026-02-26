@@ -6912,6 +6912,9 @@ async def create_kiosk_purchase(event_id: str, data: KioskPurchaseData):
     purchase_id = str(uuid.uuid4())
     download_token = str(uuid.uuid4())[:8]
     
+    # Set expiration to 7 days from now
+    download_expires = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    
     purchase = {
         "id": purchase_id,
         "event_id": event_id,
@@ -6919,8 +6922,9 @@ async def create_kiosk_purchase(event_id: str, data: KioskPurchaseData):
         "email": data.email,
         "amount": data.amount,
         "payment_method": data.payment_method,
-        "status": "pending",
+        "status": "completed",  # Mark as completed for email delivery
         "download_token": download_token,
+        "download_expires": download_expires,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
