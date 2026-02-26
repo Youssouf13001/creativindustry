@@ -553,6 +553,56 @@ const ClientDashboard = () => {
     }
   };
 
+  // Stripe payment for devis/invoice/document
+  const handleStripePayment = async (docType, docRef, amount, title) => {
+    setPayingDocument({ docType, docRef, amount, title });
+    
+    try {
+      const res = await axios.post(`${API}/client/stripe/create-devis-payment`, {
+        doc_type: docType,
+        doc_ref: docRef,
+        amount: amount,
+        title: title
+      }, { headers });
+      
+      if (res.data.client_secret) {
+        setStripeClientSecret(res.data.client_secret);
+        setStripePaymentId(res.data.payment_id);
+        setStripePaymentDetails({ docType, docRef, amount, title });
+        setShowStripeModal(true);
+      } else {
+        toast.error("Erreur: Configuration Stripe non reçue");
+        setPayingDocument(null);
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la création du paiement");
+      setPayingDocument(null);
+    }
+  };
+
+  // Confirm Stripe payment
+  const confirmStripePayment = async (paymentIntentId) => {
+    try {
+      const res = await axios.post(`${API}/client/stripe/confirm-devis-payment`, {
+        payment_id: stripePaymentId,
+        payment_intent_id: paymentIntentId
+      }, { headers });
+      
+      if (res.data.success) {
+        toast.success(res.data.message || "Paiement confirmé !");
+        setShowStripeModal(false);
+        setStripeClientSecret(null);
+        setStripePaymentId(null);
+        setPayingDocument(null);
+        fetchDevisData();
+      } else {
+        toast.error(res.data.message || "Erreur lors de la confirmation");
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la confirmation");
+    }
+  };
+
   // Handle PayPal return
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
