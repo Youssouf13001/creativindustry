@@ -995,17 +995,17 @@ const PhotoFindKiosk = () => {
           </div>
         )}
 
-        {/* Step: Frame Selection */}
+        {/* Step: Filter Selection */}
         {step === "frames" && (
           <div className="w-full max-w-6xl">
             <div className="text-center mb-6">
               <Image className="mx-auto text-primary mb-4" size={60} />
-              <h2 className="text-3xl font-bold mb-2">Choisissez un style</h2>
-              <p className="text-white/60">Sélectionnez un cadre pour vos photos (optionnel)</p>
+              <h2 className="text-3xl font-bold mb-2">Choisissez un filtre</h2>
+              <p className="text-white/60">Ajoutez un effet visuel à vos photos (optionnel et gratuit)</p>
             </div>
             
             <div className="grid lg:grid-cols-2 gap-8">
-              {/* Left: Preview with selected frame */}
+              {/* Left: Preview with selected filter */}
               <div className="bg-white/5 rounded-2xl p-6">
                 <h3 className="text-lg font-bold mb-4 text-center">Aperçu</h3>
                 <div className="flex items-center justify-center">
