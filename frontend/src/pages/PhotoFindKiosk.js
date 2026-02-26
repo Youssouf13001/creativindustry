@@ -370,9 +370,8 @@ const PhotoFindKiosk = () => {
       // Check if we have format-based pricing
       const formatPricing = pricing.formats?.[selectedPrintFormat];
       if (formatPricing) {
-        // Use format + frame based pricing
-        const hasFrame = selectedFilter && selectedFilter !== "none";
-        const unitPrice = hasFrame 
+        // Use format + physical frame based pricing
+        const unitPrice = withPhysicalFrame 
           ? (formatPricing.avec_cadre || formatPricing.sans_cadre || pricing.print_single || 5)
           : (formatPricing.sans_cadre || pricing.print_single || 5);
         return count * unitPrice;
