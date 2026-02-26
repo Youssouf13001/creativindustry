@@ -12239,6 +12239,285 @@ async def post_media_message(
     return {"success": True, "message": message, "needs_approval": guestbook.get("require_approval", True)}
 
 
+# ==================== CLIENT GUESTBOOK PURCHASE ====================
+
+GUESTBOOK_PRICE = 200.00  # Price in EUR
+
+class GuestbookPurchaseRequest(BaseModel):
+    name: str
+    event_date: Optional[str] = None
+
+@api_router.post("/client/guestbook/purchase-stripe")
+async def purchase_guestbook_stripe(data: GuestbookPurchaseRequest, client: dict = Depends(get_current_client)):
+    """Create a Stripe payment for guestbook purchase"""
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    stripe.api_key = stripe_secret
+    
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=int(GUESTBOOK_PRICE * 100),
+            currency="eur",
+            metadata={
+                "type": "guestbook_purchase",
+                "client_id": client["id"],
+                "guestbook_name": data.name,
+                "event_date": data.event_date or ""
+            }
+        )
+        
+        payment_id = str(uuid.uuid4())
+        await db.stripe_payments.insert_one({
+            "id": payment_id,
+            "type": "guestbook_purchase",
+            "stripe_payment_intent_id": intent.id,
+            "client_secret": intent.client_secret,
+            "client_id": client["id"],
+            "guestbook_name": data.name,
+            "event_date": data.event_date,
+            "amount": GUESTBOOK_PRICE,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "payment_id": payment_id,
+            "client_secret": intent.client_secret,
+            "amount": GUESTBOOK_PRICE
+        }
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
+@api_router.post("/client/guestbook/confirm-stripe-payment")
+async def confirm_guestbook_stripe_payment(
+    payment_id: str = Body(...),
+    payment_intent_id: str = Body(...),
+    name: str = Body(...),
+    event_date: Optional[str] = Body(None),
+    client: dict = Depends(get_current_client)
+):
+    """Confirm Stripe payment and create the guestbook"""
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    stripe.api_key = stripe_secret
+    
+    payment = await db.stripe_payments.find_one({"id": payment_id, "client_id": client["id"]})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Paiement non trouvé")
+    
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        
+        if intent.status == "succeeded":
+            await db.stripe_payments.update_one(
+                {"id": payment_id},
+                {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            
+            # Create the guestbook
+            guestbook_id = str(uuid.uuid4())
+            guestbook = {
+                "id": guestbook_id,
+                "client_id": client["id"],
+                "client_name": client.get("company_name") or client.get("name", "Client"),
+                "name": name,
+                "event_date": event_date,
+                "is_active": True,
+                "allow_video": True,
+                "allow_audio": True,
+                "max_duration_video": 60,
+                "max_duration_audio": 60,
+                "payment_method": "Stripe",
+                "payment_id": payment_id,
+                "amount_paid": GUESTBOOK_PRICE,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.guestbooks.insert_one(guestbook)
+            
+            # Create folder
+            guestbook_folder = GUESTBOOK_DIR / guestbook_id
+            guestbook_folder.mkdir(exist_ok=True)
+            
+            return {
+                "success": True,
+                "guestbook_id": guestbook_id,
+                "message": "Livre d'or créé avec succès !"
+            }
+        else:
+            return {"success": False, "message": f"Paiement non confirmé: {intent.status}"}
+            
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
+@api_router.post("/client/guestbook/purchase-paypal")
+async def purchase_guestbook_paypal(data: GuestbookPurchaseRequest, client: dict = Depends(get_current_client)):
+    """Create a PayPal payment for guestbook purchase"""
+    paypal_client_id = os.environ.get("PAYPAL_CLIENT_ID")
+    paypal_secret = os.environ.get("PAYPAL_CLIENT_SECRET")
+    
+    if not paypal_client_id or not paypal_secret:
+        raise HTTPException(status_code=500, detail="PayPal non configuré")
+    
+    try:
+        # Get access token
+        auth = httpx.BasicAuth(paypal_client_id, paypal_secret)
+        async with httpx.AsyncClient() as http_client:
+            token_res = await http_client.post(
+                f"{PAYPAL_API_BASE}/v1/oauth2/token",
+                auth=auth,
+                data={"grant_type": "client_credentials"}
+            )
+            access_token = token_res.json().get("access_token")
+            
+            if not access_token:
+                raise HTTPException(status_code=500, detail="Erreur d'authentification PayPal")
+            
+            # Store pending purchase info
+            pending_id = str(uuid.uuid4())
+            await db.paypal_payments.insert_one({
+                "id": pending_id,
+                "type": "guestbook_purchase",
+                "client_id": client["id"],
+                "guestbook_name": data.name,
+                "event_date": data.event_date,
+                "amount": GUESTBOOK_PRICE,
+                "status": "pending",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            # Determine return URLs
+            base_url = os.environ.get("FRONTEND_URL", "https://creativindustry.fr")
+            return_url = f"{base_url}/client?guestbook_payment_success=true&pending_id={pending_id}"
+            cancel_url = f"{base_url}/client?guestbook_payment_cancelled=true"
+            
+            # Create order
+            order_res = await http_client.post(
+                f"{PAYPAL_API_BASE}/v2/checkout/orders",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "intent": "CAPTURE",
+                    "purchase_units": [{
+                        "amount": {
+                            "currency_code": "EUR",
+                            "value": str(GUESTBOOK_PRICE)
+                        },
+                        "description": f"Livre d'or - {data.name}"
+                    }],
+                    "application_context": {
+                        "return_url": return_url,
+                        "cancel_url": cancel_url,
+                        "brand_name": "CreativIndustry",
+                        "landing_page": "BILLING",
+                        "user_action": "PAY_NOW"
+                    }
+                }
+            )
+            
+            order_data = order_res.json()
+            approval_url = next(
+                (link["href"] for link in order_data.get("links", []) if link["rel"] == "approve"),
+                None
+            )
+            
+            if approval_url:
+                await db.paypal_payments.update_one(
+                    {"id": pending_id},
+                    {"$set": {"paypal_order_id": order_data.get("id")}}
+                )
+                return {"approval_url": approval_url, "pending_id": pending_id}
+            else:
+                raise HTTPException(status_code=500, detail="Erreur lors de la création de la commande PayPal")
+                
+    except Exception as e:
+        logging.error(f"PayPal error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur PayPal: {str(e)}")
+
+@api_router.post("/client/guestbook/confirm-paypal-payment")
+async def confirm_guestbook_paypal_payment(
+    pending_id: str = Body(...),
+    name: str = Body(...),
+    event_date: Optional[str] = Body(None),
+    client: dict = Depends(get_current_client)
+):
+    """Confirm PayPal payment and create the guestbook"""
+    payment = await db.paypal_payments.find_one({"id": pending_id, "client_id": client["id"]})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Paiement non trouvé")
+    
+    paypal_client_id = os.environ.get("PAYPAL_CLIENT_ID")
+    paypal_secret = os.environ.get("PAYPAL_CLIENT_SECRET")
+    
+    try:
+        auth = httpx.BasicAuth(paypal_client_id, paypal_secret)
+        async with httpx.AsyncClient() as http_client:
+            token_res = await http_client.post(
+                f"{PAYPAL_API_BASE}/v1/oauth2/token",
+                auth=auth,
+                data={"grant_type": "client_credentials"}
+            )
+            access_token = token_res.json().get("access_token")
+            
+            # Capture the payment
+            order_id = payment.get("paypal_order_id")
+            if order_id:
+                capture_res = await http_client.post(
+                    f"{PAYPAL_API_BASE}/v2/checkout/orders/{order_id}/capture",
+                    headers={"Authorization": f"Bearer {access_token}"}
+                )
+                capture_data = capture_res.json()
+                
+                if capture_data.get("status") == "COMPLETED":
+                    await db.paypal_payments.update_one(
+                        {"id": pending_id},
+                        {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+                    )
+                    
+                    # Create the guestbook
+                    guestbook_id = str(uuid.uuid4())
+                    guestbook = {
+                        "id": guestbook_id,
+                        "client_id": client["id"],
+                        "client_name": client.get("company_name") or client.get("name", "Client"),
+                        "name": name,
+                        "event_date": event_date,
+                        "is_active": True,
+                        "allow_video": True,
+                        "allow_audio": True,
+                        "max_duration_video": 60,
+                        "max_duration_audio": 60,
+                        "payment_method": "PayPal",
+                        "payment_id": pending_id,
+                        "amount_paid": GUESTBOOK_PRICE,
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    await db.guestbooks.insert_one(guestbook)
+                    
+                    guestbook_folder = GUESTBOOK_DIR / guestbook_id
+                    guestbook_folder.mkdir(exist_ok=True)
+                    
+                    return {
+                        "success": True,
+                        "guestbook_id": guestbook_id,
+                        "message": "Livre d'or créé avec succès !"
+                    }
+        
+        return {"success": False, "message": "Paiement non confirmé"}
+        
+    except Exception as e:
+        logging.error(f"PayPal error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur PayPal: {str(e)}")
+
+
 # ==================== CLIENT GUESTBOOK ROUTES ====================
 
 @api_router.get("/client/guestbooks")
