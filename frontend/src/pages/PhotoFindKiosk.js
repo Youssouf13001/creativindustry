@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { Camera, Loader, Download, Printer, Mail, RefreshCw, X, Check, CreditCard, ArrowLeft, Maximize, Smartphone, QrCode, Image, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { API } from "../config/api";
+import { API, BACKEND_URL } from "../config/api";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
