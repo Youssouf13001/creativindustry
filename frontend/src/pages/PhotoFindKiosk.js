@@ -371,7 +371,7 @@ const PhotoFindKiosk = () => {
       const formatPricing = pricing.formats?.[selectedPrintFormat];
       if (formatPricing) {
         // Use format + frame based pricing
-        const hasFrame = selectedFrame && selectedFrame !== "none";
+        const hasFrame = selectedFilter && selectedFilter !== "none";
         const unitPrice = hasFrame 
           ? (formatPricing.avec_cadre || formatPricing.sans_cadre || pricing.print_single || 5)
           : (formatPricing.sans_cadre || pricing.print_single || 5);
@@ -443,7 +443,7 @@ const PhotoFindKiosk = () => {
       const res = await axios.post(`${API}/public/photofind/${eventId}/create-paypal-order`, {
         photo_ids: selectedPhotos,
         amount: amount,
-        frame: selectedFrame,
+        frame: selectedFilter,
         return_url: `${window.location.origin}/kiosk/${eventId}?paypal_success=true`
       });
       
@@ -495,7 +495,7 @@ const PhotoFindKiosk = () => {
       const captureRes = await axios.post(`${API}/public/photofind/${eventId}/capture-paypal-order`, {
         order_id: orderId,
         photo_ids: selectedPhotos,
-        frame: selectedFrame,
+        frame: selectedFilter,
         email: email
       });
       
@@ -520,7 +520,7 @@ const PhotoFindKiosk = () => {
   const autoPrintPhotos = async () => {
     try {
       const printWindow = window.open("", "_blank");
-      const frame = PHOTO_FRAMES.find(f => f.id === selectedFrame) || PHOTO_FRAMES[0];
+      const frame = PHOTO_FILTERS.find(f => f.id === selectedFilter) || PHOTO_FILTERS[0];
       
       let photosHtml = selectedPhotos.map(photoId => {
         const photo = matchedPhotos.find(p => p.id === photoId);
@@ -633,7 +633,7 @@ const PhotoFindKiosk = () => {
       const res = await axios.post(`${API}/public/photofind/${eventId}/create-stripe-payment`, {
         photo_ids: selectedPhotos,
         amount: amount,
-        frame: selectedFrame,
+        frame: selectedFilter,
         email: email
       });
       
@@ -1012,7 +1012,7 @@ const PhotoFindKiosk = () => {
                 <div className="flex items-center justify-center">
                   {(() => {
                     const previewPhoto = matchedPhotos.find(p => selectedPhotos.includes(p.id)) || matchedPhotos[0];
-                    const frame = [...PHOTO_FRAMES, ...customFrames].find(f => f.id === selectedFrame) || PHOTO_FRAMES[0];
+                    const frame = [...PHOTO_FILTERS, ...customFrames].find(f => f.id === selectedFilter) || PHOTO_FILTERS[0];
                     const photoUrl = previewPhoto?.url ? `${BACKEND_URL}${previewPhoto.url}` : previewPhoto?.filename ? `${BACKEND_URL}/uploads/photofind/${eventId}/${previewPhoto.filename}` : null;
                     
                     if (!photoUrl) return <p className="text-white/50">Aucune photo</p>;
@@ -1077,12 +1077,12 @@ const PhotoFindKiosk = () => {
                 <h3 className="text-lg font-bold mb-4">Cadres disponibles</h3>
                 <div className="grid grid-cols-2 gap-3">
                   {/* Standard frames */}
-                  {PHOTO_FRAMES.filter(f => f.id !== "custom").map((frame) => (
+                  {PHOTO_FILTERS.filter(f => f.id !== "custom").map((frame) => (
                     <div
                       key={frame.id}
                       onClick={() => setSelectedFrame(frame.id)}
                       className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${
-                        selectedFrame === frame.id 
+                        selectedFilter === frame.id 
                           ? 'border-primary bg-primary/20' 
                           : 'border-white/20 bg-white/5 hover:border-white/40'
                       }`}
@@ -1099,7 +1099,7 @@ const PhotoFindKiosk = () => {
                         </div>
                         <div>
                           <p className="font-bold">{frame.name}</p>
-                          {selectedFrame === frame.id && (
+                          {selectedFilter === frame.id && (
                             <Check className="text-primary" size={18} />
                           )}
                         </div>
@@ -1113,7 +1113,7 @@ const PhotoFindKiosk = () => {
                       key={frame.id}
                       onClick={() => setSelectedFrame(frame.id)}
                       className={`cursor-pointer p-3 rounded-xl border-2 transition-all ${
-                        selectedFrame === frame.id 
+                        selectedFilter === frame.id 
                           ? 'border-primary bg-primary/20' 
                           : 'border-white/20 bg-white/5 hover:border-white/40'
                       }`}
@@ -1134,7 +1134,7 @@ const PhotoFindKiosk = () => {
                         <div>
                           <p className="font-bold">{frame.name}</p>
                           <p className="text-xs text-white/50">Personnalisé</p>
-                          {selectedFrame === frame.id && (
+                          {selectedFilter === frame.id && (
                             <Check className="text-primary" size={18} />
                           )}
                         </div>
@@ -1231,16 +1231,16 @@ const PhotoFindKiosk = () => {
             <p className="text-white/60 mb-4">Sélectionnez la taille de vos photos</p>
             
             {/* Frame indicator */}
-            {selectedFrame && selectedFrame !== "none" && (
+            {selectedFilter && selectedFilter !== "none" && (
               <div className="bg-primary/20 border border-primary/50 rounded-lg px-4 py-2 mb-6 inline-block">
-                <span className="text-primary">🖼️ Cadre : {PHOTO_FRAMES.find(f => f.id === selectedFrame)?.name || customFrames.find(f => f.id === selectedFrame)?.name || "Personnalisé"}</span>
+                <span className="text-primary">🖼️ Cadre : {PHOTO_FILTERS.find(f => f.id === selectedFilter)?.name || customFrames.find(f => f.id === selectedFilter)?.name || "Personnalisé"}</span>
               </div>
             )}
             
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
               {PRINT_FORMATS.map(format => {
                 const formatPricing = pricing.formats?.[format.id];
-                const hasFrame = selectedFrame && selectedFrame !== "none";
+                const hasFrame = selectedFilter && selectedFilter !== "none";
                 const unitPrice = formatPricing 
                   ? (hasFrame ? formatPricing.avec_cadre : formatPricing.sans_cadre) 
                   : (pricing.print_single || 5);
@@ -1279,7 +1279,7 @@ const PhotoFindKiosk = () => {
             <div className="bg-white/10 rounded-xl p-6 mb-6">
               <p className="text-white/60">Total pour {selectedPhotos.length} photo(s) en {selectedPrintFormat}</p>
               <p className="text-4xl font-bold text-primary">{calculatePrice("print")}€</p>
-              {selectedFrame && selectedFrame !== "none" && (
+              {selectedFilter && selectedFilter !== "none" && (
                 <p className="text-sm text-white/50 mt-2">Prix avec cadre inclus</p>
               )}
             </div>
@@ -1311,8 +1311,8 @@ const PhotoFindKiosk = () => {
             <div className="bg-white/10 rounded-xl p-6 mb-8">
               <p className="text-white/60">Total à payer</p>
               <p className="text-5xl font-bold text-primary">{calculatePrice()}€</p>
-              {selectedFrame !== "none" && (
-                <p className="text-sm text-white/50 mt-2">Cadre : {PHOTO_FRAMES.find(f => f.id === selectedFrame)?.name}</p>
+              {selectedFilter !== "none" && (
+                <p className="text-sm text-white/50 mt-2">Cadre : {PHOTO_FILTERS.find(f => f.id === selectedFilter)?.name}</p>
               )}
             </div>
             
@@ -1494,8 +1494,8 @@ const PhotoFindKiosk = () => {
               {deliveryMethod === "print" && selectedPrintFormat && (
                 <p className="text-sm text-white/50">Format : {selectedPrintFormat}</p>
               )}
-              {selectedFrame !== "none" && (
-                <p className="text-sm text-white/50">Cadre : {PHOTO_FRAMES.find(f => f.id === selectedFrame)?.name}</p>
+              {selectedFilter !== "none" && (
+                <p className="text-sm text-white/50">Cadre : {PHOTO_FILTERS.find(f => f.id === selectedFilter)?.name}</p>
               )}
             </div>
             
@@ -1528,7 +1528,7 @@ const PhotoFindKiosk = () => {
                         email: email || "kiosk@local",
                         amount: calculatePrice(),
                         payment_method: "cash",
-                        frame: selectedFrame,
+                        frame: selectedFilter,
                         delivery_method: "print",
                         print_format: selectedPrintFormat
                       });
@@ -1622,7 +1622,7 @@ const PhotoFindKiosk = () => {
                       amount: calculatePrice(),
                       payment_method: cashPaymentConfirmed ? "cash" : "kiosk",
                       delivery_method: "email",
-                      frame: selectedFrame
+                      frame: selectedFilter
                     });
                     
                     toast.success("Vos photos vous seront envoyées par email !");
