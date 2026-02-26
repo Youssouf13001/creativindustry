@@ -1451,7 +1451,7 @@ const ClientDashboard = () => {
                       
                       <div className="bg-white/5 rounded-lg p-4 mb-6">
                         <p className="text-white/60 text-center mb-2">Livre d'or : {newGuestbookName}</p>
-                        <p className="text-3xl font-bold text-primary text-center"{guestbookPrice}€</p>
+                        <p className="text-3xl font-bold text-primary text-center">{guestbookPrice}€</p>
                       </div>
                       
                       <Elements stripe={stripePromise} options={{ clientSecret: guestbookStripeClientSecret }}>
