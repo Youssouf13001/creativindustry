@@ -1670,7 +1670,7 @@ const ClientDashboard = () => {
                         </div>
                       </div>
                       
-                      {/* PayPal Payment Section */}
+                      {/* Payment Section */}
                       {remaining > 0 && (
                         <div className="mt-4 pt-4 border-t border-white/10">
                           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -1680,6 +1680,28 @@ const ClientDashboard = () => {
                               <span className="text-white/40 text-xs ml-2">(TVA 20% incluse)</span>
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
+                              {/* Stripe CB Button */}
+                              <button
+                                onClick={() => handleStripePayment(
+                                  "invoice", 
+                                  invoice.invoice_id, 
+                                  remaining,
+                                  `Facture N° ${invoice.invoice_number || invoice.invoice_id?.slice(-8)}`
+                                )}
+                                disabled={payingDocument?.docRef === invoice.invoice_id}
+                                className="bg-[#635bff] hover:bg-[#5851db] disabled:bg-gray-600 text-white px-4 py-2 text-sm rounded flex items-center gap-2 transition-colors"
+                              >
+                                {payingDocument?.docRef === invoice.invoice_id ? (
+                                  <>
+                                    <Loader size={16} className="animate-spin" /> Chargement...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CreditCard size={16} /> CB
+                                  </>
+                                )}
+                              </button>
+                              {/* PayPal Button */}
                               <button
                                 onClick={() => handlePayPalPayment(
                                   "invoice", 
@@ -1690,15 +1712,7 @@ const ClientDashboard = () => {
                                 disabled={payingDocument?.docRef === invoice.invoice_id}
                                 className="bg-[#0070ba] hover:bg-[#005ea6] disabled:bg-gray-600 text-white px-4 py-2 text-sm rounded flex items-center gap-2 transition-colors"
                               >
-                                {payingDocument?.docRef === invoice.invoice_id ? (
-                                  <>
-                                    <Loader size={16} className="animate-spin" /> Redirection...
-                                  </>
-                                ) : (
-                                  <>
-                                    <CreditCard size={16} /> Payer {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remaining)} avec PayPal
-                                  </>
-                                )}
+                                PayPal
                               </button>
                             </div>
                           </div>
