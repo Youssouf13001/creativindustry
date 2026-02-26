@@ -136,6 +136,7 @@ const AdminDashboard = () => {
   // Kiosk states (separate tab)
   const [kioskStats, setKioskStats] = useState({});
   const [loadingKioskStats, setLoadingKioskStats] = useState(false);
+  const [newCustomFrame, setNewCustomFrame] = useState({});
   // Chat state
   const [showChat, setShowChat] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
