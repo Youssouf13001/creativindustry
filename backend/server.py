@@ -7395,6 +7395,80 @@ async def get_stripe_public_config():
     return {"public_key": public_key}
 
 
+# ==================== CUSTOM FRAMES FOR KIOSK ====================
+
+class CustomFrameCreate(BaseModel):
+    name: str
+    color: str = "#D4AF37"
+    border: str = "8px solid"
+    decoration: Optional[str] = None
+    overlay_text: Optional[str] = None
+    overlay_text_color: str = "#ffffff"
+    overlay_text_size: str = "20px"
+    overlay_position: str = "bottom"  # top, bottom, center
+
+
+@api_router.get("/admin/photofind/events/{event_id}/frames")
+async def get_event_custom_frames(event_id: str, admin: dict = Depends(get_current_admin)):
+    """Get custom frames for an event"""
+    event = await db.photofind_events.find_one({"id": event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    return {"frames": event.get("custom_frames", [])}
+
+
+@api_router.post("/admin/photofind/events/{event_id}/frames")
+async def add_custom_frame(event_id: str, frame: CustomFrameCreate, admin: dict = Depends(get_current_admin)):
+    """Add a custom frame to an event"""
+    event = await db.photofind_events.find_one({"id": event_id})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    frame_id = f"custom_{str(uuid.uuid4())[:8]}"
+    frame_data = {
+        "id": frame_id,
+        "name": frame.name,
+        "color": frame.color,
+        "border": frame.border,
+        "decoration": frame.decoration,
+        "overlayText": frame.overlay_text,
+        "overlayTextColor": frame.overlay_text_color,
+        "overlayTextSize": frame.overlay_text_size,
+        "overlayPosition": frame.overlay_position,
+        "isCustom": True,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.photofind_events.update_one(
+        {"id": event_id},
+        {"$push": {"custom_frames": frame_data}}
+    )
+    
+    return {"success": True, "frame": frame_data}
+
+
+@api_router.delete("/admin/photofind/events/{event_id}/frames/{frame_id}")
+async def delete_custom_frame(event_id: str, frame_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete a custom frame from an event"""
+    await db.photofind_events.update_one(
+        {"id": event_id},
+        {"$pull": {"custom_frames": {"id": frame_id}}}
+    )
+    return {"success": True}
+
+
+# Public endpoint to get frames for an event (used by kiosk)
+@api_router.get("/public/photofind/{event_id}/frames")
+async def get_public_event_frames(event_id: str):
+    """Get custom frames for kiosk display"""
+    event = await db.photofind_events.find_one({"id": event_id, "is_active": True})
+    if not event:
+        return {"frames": []}
+    
+    return {"frames": event.get("custom_frames", [])}
+
+
 # Admin endpoint to get kiosk stats
 @api_router.get("/admin/photofind/events/{event_id}/kiosk-stats")
 async def get_kiosk_stats(event_id: str, admin: dict = Depends(get_current_admin)):
