@@ -194,6 +194,19 @@ const ClientDashboard = () => {
       }
     };
     loadStripeKey();
+    
+    // Load guestbook price
+    const loadGuestbookPrice = async () => {
+      try {
+        const res = await axios.get(`${API}/public/guestbook-price`);
+        if (res.data.price) {
+          setGuestbookPrice(res.data.price);
+        }
+      } catch (e) {
+        console.error("Failed to load guestbook price");
+      }
+    };
+    loadGuestbookPrice();
   }, []);
 
   const fetchData = async () => {
