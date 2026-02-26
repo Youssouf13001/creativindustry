@@ -1,0 +1,70 @@
+{
+  "summary": "PhotoFind Kiosk Pricing Feature - All backend and frontend tests passed. The format-based pricing (A4, 10x15, etc.) with cadre/sans cadre options is fully functional.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Kiosk Welcome Screen",
+        "issues": ["Shows legacy pack-based pricing (5€, 15€, 35€) instead of format-based pricing. This is acceptable since format selection happens later in the flow."]
+      }
+    ]
+  },
+  "features_verified": {
+    "backend_put_pricing_endpoint": {
+      "endpoint": "PUT /api/admin/photofind/events/{event_id}/pricing",
+      "status": "PASS",
+      "notes": "Successfully saves format-based pricing with avec_cadre/sans_cadre prices"
+    },
+    "backend_get_public_event": {
+      "endpoint": "GET /api/public/photofind/{event_id}",
+      "status": "PASS",
+      "notes": "Returns pricing with formats object containing per-format prices"
+    },
+    "admin_kiosk_section": {
+      "component": "AdminDashboard KIOSQUE tab",
+      "status": "PASS",
+      "notes": "Loads without errors, displays 'Tarifs par Événement' with format/frame pricing grid"
+    },
+    "kiosk_calculatePrice_function": {
+      "component": "PhotoFindKiosk.js calculatePrice()",
+      "status": "PASS",
+      "notes": "Uses pricing.formats[selectedPrintFormat].avec_cadre or .sans_cadre based on frame selection"
+    },
+    "kiosk_page_loading": {
+      "route": "/kiosk/test-kiosk-demo",
+      "status": "PASS",
+      "notes": "Page loads, shows event name, pricing cards, Commencer button works"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_photofind_pricing.py",
+    "/app/test_reports/pytest/pytest_results_pricing.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Good: calculatePrice function correctly handles format-based pricing at line 365-372",
+    "Good: AdminDashboard.js updateFormatPricing function properly updates nested pricing.formats object",
+    "Good: saveEventPricing function calls the correct backend endpoint with proper payload",
+    "Note: Welcome screen still shows legacy pricing (single/pack_5/all) - acceptable UX since user hasn't selected format yet"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_photofind_pricing.py - Created comprehensive test suite for pricing endpoints"
+  ],
+  "success_rate": {
+    "backend": "100% (7/7 tests passed)",
+    "frontend": "100% (all UI flows verified)"
+  },
+  "test_credentials": {
+    "admin_login": "testadmin@test.com / testpassword",
+    "test_event_id": "test-kiosk-demo"
+  },
+  "seed_data_creation": "test-kiosk-demo event exists with format-based pricing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "PhotoFind Kiosk format-based pricing is fully implemented and working. Backend endpoint PUT /api/admin/photofind/events/{event_id}/pricing saves pricing.formats with per-format sans_cadre/avec_cadre prices. Frontend AdminDashboard KIOSQUE tab shows pricing grid. PhotoFindKiosk.js calculatePrice() function uses format+frame pricing when print method is selected. Test file: /app/backend/tests/test_photofind_pricing.py"
+}
