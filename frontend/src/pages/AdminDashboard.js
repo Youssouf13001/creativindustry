@@ -700,6 +700,32 @@ const AdminDashboard = () => {
     }));
   };
 
+  // Update format-specific pricing (for print format + frame pricing)
+  const updateFormatPricing = (eventId, formatId, priceType, value) => {
+    setPhotofindEvents(prev => prev.map(evt => {
+      if (evt.id === eventId) {
+        const currentPricing = evt.pricing || {};
+        const currentFormats = currentPricing.formats || {};
+        const currentFormat = currentFormats[formatId] || {};
+        
+        return {
+          ...evt,
+          pricing: {
+            ...currentPricing,
+            formats: {
+              ...currentFormats,
+              [formatId]: {
+                ...currentFormat,
+                [priceType]: value
+              }
+            }
+          }
+        };
+      }
+      return evt;
+    }));
+  };
+
   // Save event pricing to backend
   const saveEventPricing = async (eventId) => {
     const event = photofindEvents.find(e => e.id === eventId);
