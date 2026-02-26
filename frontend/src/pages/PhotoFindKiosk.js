@@ -223,6 +223,193 @@ const PhotoFindKiosk = () => {
     return count * pricing.single;
   };
 
+  // Calculate print price (5€ per photo)
+  const calculatePrintPrice = () => {
+    return selectedPhotos.length * pricing.single;
+  };
+
+  // Go to frame selection after selecting photos
+  const proceedToFrames = () => {
+    if (selectedPhotos.length === 0) {
+      toast.error("Sélectionnez au moins une photo");
+      return;
+    }
+    setStep("frames");
+  };
+
+  // Go to payment choice after selecting frame
+  const proceedToPayment = () => {
+    setStep("payment-choice");
+  };
+
+  // Create PayPal order and get QR code
+  const createPayPalOrder = async () => {
+    setProcessing(true);
+    try {
+      const amount = calculatePrice();
+      const res = await axios.post(`${API}/public/photofind/${eventId}/create-paypal-order`, {
+        photo_ids: selectedPhotos,
+        amount: amount,
+        frame: selectedFrame,
+        return_url: `${window.location.origin}/kiosk/${eventId}?paypal_success=true`
+      });
+      
+      setPaypalOrderId(res.data.order_id);
+      setPaypalQrCode(res.data.qr_code_url || res.data.approval_url);
+      setStep("payment-paypal");
+      
+      // Start checking for payment confirmation
+      startPaymentCheck(res.data.order_id);
+    } catch (e) {
+      toast.error("Erreur lors de la création du paiement");
+      console.error(e);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Start polling for PayPal payment confirmation
+  const startPaymentCheck = (orderId) => {
+    setCheckingPayment(true);
+    paymentCheckInterval.current = setInterval(async () => {
+      try {
+        const res = await axios.get(`${API}/public/photofind/${eventId}/check-payment/${orderId}`);
+        if (res.data.status === "COMPLETED" || res.data.status === "APPROVED") {
+          clearInterval(paymentCheckInterval.current);
+          setCheckingPayment(false);
+          handlePayPalSuccess(orderId);
+        }
+      } catch (e) {
+        // Continue checking
+      }
+    }, 3000); // Check every 3 seconds
+  };
+
+  // Clean up payment check on unmount
+  useEffect(() => {
+    return () => {
+      if (paymentCheckInterval.current) {
+        clearInterval(paymentCheckInterval.current);
+      }
+    };
+  }, []);
+
+  // Handle successful PayPal payment
+  const handlePayPalSuccess = async (orderId) => {
+    setProcessing(true);
+    try {
+      // Capture the payment
+      const captureRes = await axios.post(`${API}/public/photofind/${eventId}/capture-paypal-order`, {
+        order_id: orderId,
+        photo_ids: selectedPhotos,
+        frame: selectedFrame,
+        email: email
+      });
+      
+      if (captureRes.data.success) {
+        toast.success("Paiement confirmé !");
+        // Auto-print
+        await autoPrintPhotos();
+        setStep("print-success");
+      } else {
+        toast.error("Erreur de paiement");
+        setStep("payment-choice");
+      }
+    } catch (e) {
+      toast.error("Erreur lors de la confirmation du paiement");
+      setStep("payment-choice");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Auto print after PayPal payment
+  const autoPrintPhotos = async () => {
+    try {
+      const printWindow = window.open("", "_blank");
+      const frame = PHOTO_FRAMES.find(f => f.id === selectedFrame) || PHOTO_FRAMES[0];
+      
+      let photosHtml = selectedPhotos.map(photoId => {
+        const photo = matchedPhotos.find(p => p.id === photoId);
+        if (!photo) return "";
+        
+        const frameStyle = frame.id !== "none" ? `
+          border: ${frame.border} ${frame.color};
+          padding: ${frame.id === "polaroid" ? "10px 10px 60px 10px" : "10px"};
+          background: ${frame.id === "polaroid" ? "#fff" : "transparent"};
+        ` : "";
+        
+        const decoration = frame.decoration ? `<div style="text-align: center; font-size: 24px; margin-top: 10px;">${frame.decoration}</div>` : "";
+        
+        return `
+          <div style="page-break-after: always; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: white;">
+            <div style="${frameStyle}">
+              <img src="${API}/public/photofind/${eventId}/photo/${photo.id}" 
+                   style="max-width: 100%; max-height: 80vh; object-fit: contain;" 
+                   crossorigin="anonymous" />
+            </div>
+            ${decoration}
+            ${frame.id === "polaroid" ? `<div style="font-family: 'Comic Sans MS', cursive; font-size: 18px; margin-top: -50px; text-align: center;">${event?.name || ''}</div>` : ''}
+          </div>
+        `;
+      }).join("");
+      
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Photos - ${event?.name || "PhotoFind"}</title>
+          <style>
+            @page { size: 4x6in; margin: 0; }
+            body { margin: 0; padding: 0; background: white; }
+          </style>
+        </head>
+        <body>
+          ${photosHtml}
+          <script>
+            let loadedImages = 0;
+            const images = document.querySelectorAll('img');
+            const totalImages = images.length;
+            
+            images.forEach(img => {
+              if (img.complete) {
+                loadedImages++;
+              } else {
+                img.onload = function() {
+                  loadedImages++;
+                  if (loadedImages === totalImages) {
+                    setTimeout(() => window.print(), 500);
+                  }
+                };
+              }
+            });
+            
+            if (loadedImages === totalImages) {
+              setTimeout(() => window.print(), 500);
+            }
+          </script>
+        </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      
+      // Log print job
+      await axios.post(`${API}/public/photofind/${eventId}/log-print`, {
+        photo_ids: selectedPhotos,
+        count: selectedPhotos.length
+      }).catch(() => {});
+      
+    } catch (e) {
+      console.error("Print error:", e);
+    }
+  };
+
+  // Handle cash payment (manual confirmation)
+  const handleCashPayment = () => {
+    setStep("payment-cash");
+  };
+
   // Handle payment (simplified - manual confirmation for now)
   const handlePayment = async () => {
     if (!email || !email.includes("@")) {
