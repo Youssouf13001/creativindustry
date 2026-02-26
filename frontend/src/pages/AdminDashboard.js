@@ -1974,6 +1974,16 @@ const AdminDashboard = () => {
     toast.success("Lien copié !");
   };
 
+  const copyKioskLink = (eventId) => {
+    const url = `${window.location.origin}/kiosk/${eventId}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Lien kiosque copié !");
+  };
+
+  const openKioskMode = (eventId) => {
+    window.open(`/kiosk/${eventId}`, '_blank', 'fullscreen=yes');
+  };
+
   const statusColors = {
     pending: "bg-yellow-500/20 text-yellow-500",
     confirmed: "bg-green-500/20 text-green-500",
