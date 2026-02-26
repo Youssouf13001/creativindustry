@@ -349,14 +349,23 @@ const PhotoFindKiosk = () => {
     );
   };
 
-  // Calculate price
-  const calculatePrice = () => {
+  // Calculate price based on delivery method (print or email)
+  const calculatePrice = (method = deliveryMethod) => {
     const count = selectedPhotos.length;
     if (count === 0) return 0;
-    if (count >= matchedPhotos.length && matchedPhotos.length >= 5) return pricing.all;
-    if (count >= 10) return pricing.pack_10;
-    if (count >= 5) return pricing.pack_5;
-    return count * pricing.single;
+    
+    const isPrint = method === "print";
+    
+    // Get the right pricing based on delivery method
+    const singlePrice = isPrint ? pricing.print_single : pricing.email_single;
+    const pack5Price = isPrint ? pricing.print_pack_5 : pricing.email_pack_5;
+    const pack10Price = isPrint ? pricing.print_pack_10 : pricing.email_pack_10;
+    const allPrice = isPrint ? pricing.print_all : pricing.email_all;
+    
+    if (count >= matchedPhotos.length && matchedPhotos.length >= 5) return allPrice;
+    if (count >= 10) return pack10Price;
+    if (count >= 5) return pack5Price;
+    return count * singlePrice;
   };
 
   // Calculate print price (5€ per photo)
