@@ -27,6 +27,16 @@ const PHOTO_FRAMES = [
   { id: "custom", name: "Personnalisé", color: "#1a1a2e", border: "10px solid", isCustom: true }
 ];
 
+// Print format definitions
+const PRINT_FORMATS = [
+  { id: "10x15", name: "10 x 15 cm", width: "10cm", height: "15cm", pageSize: "4in 6in" },
+  { id: "13x18", name: "13 x 18 cm", width: "13cm", height: "18cm", pageSize: "5in 7in" },
+  { id: "15x20", name: "15 x 20 cm", width: "15cm", height: "20cm", pageSize: "6in 8in" },
+  { id: "20x30", name: "20 x 30 cm", width: "20cm", height: "30cm", pageSize: "8in 12in" },
+  { id: "A4", name: "A4", width: "21cm", height: "29.7cm", pageSize: "A4" },
+  { id: "A5", name: "A5", width: "14.8cm", height: "21cm", pageSize: "A5" }
+];
+
 // Stripe Checkout Form Component
 const StripeCheckoutForm = ({ onSuccess, onCancel, amount }) => {
   const stripe = useStripe();
