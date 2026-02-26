@@ -488,6 +488,54 @@ const PhotoFindKiosk = () => {
     setStep("payment-cash");
   };
 
+  // Create Stripe payment intent
+  const createStripePayment = async () => {
+    setProcessing(true);
+    try {
+      const amount = calculatePrice();
+      const res = await axios.post(`${API}/public/photofind/${eventId}/create-stripe-payment`, {
+        photo_ids: selectedPhotos,
+        amount: amount,
+        frame: selectedFrame,
+        email: email
+      });
+      
+      setStripeClientSecret(res.data.client_secret);
+      setStripeOrderId(res.data.order_id);
+      setStep("payment-stripe");
+    } catch (e) {
+      toast.error("Erreur lors de la création du paiement");
+      console.error(e);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Handle successful Stripe payment
+  const handleStripeSuccess = async (paymentIntentId) => {
+    setProcessing(true);
+    try {
+      const res = await axios.post(`${API}/public/photofind/${eventId}/confirm-stripe-payment`, {
+        order_id: stripeOrderId,
+        payment_intent_id: paymentIntentId
+      });
+      
+      if (res.data.success) {
+        toast.success("Paiement CB confirmé !");
+        await autoPrintPhotos();
+        setStep("print-success");
+      } else {
+        toast.error("Erreur de confirmation");
+        setStep("payment-choice");
+      }
+    } catch (e) {
+      toast.error("Erreur lors de la confirmation");
+      setStep("payment-choice");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   // Handle payment (simplified - manual confirmation for now)
   const handlePayment = async () => {
     if (!email || !email.includes("@")) {
