@@ -144,6 +144,32 @@ const PhotoFindKiosk = () => {
     }, "image/jpeg", 0.9);
   };
 
+  // Handle photo import from file
+  const handlePhotoImport = async (file) => {
+    setSearching(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append("file", file, "selfie.jpg");
+      
+      const res = await axios.post(
+        `${API}/public/photofind/${eventId}/search`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      
+      const photos = res.data.photos || res.data.matches || [];
+      setMatchedPhotos(photos);
+      setSelectedPhotos(photos.map(p => p.id) || []);
+      stopCamera();
+      setStep("results");
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Aucune correspondance trouvée");
+    } finally {
+      setSearching(false);
+    }
+  };
+
   // Toggle photo selection
   const togglePhotoSelection = (photoId) => {
     setSelectedPhotos(prev => 
