@@ -126,8 +126,11 @@ const PhotoFindKiosk = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Frame selection
-  const [selectedFrame, setSelectedFrame] = useState("none");
+  const [selectedFilter, setSelectedFilter] = useState("none");
   const [customFrames, setCustomFrames] = useState([]);
+  
+  // Physical frame option (affects pricing)
+  const [withPhysicalFrame, setWithPhysicalFrame] = useState(false);
   
   // PayPal payment
   const [paypalOrderId, setPaypalOrderId] = useState(null);
