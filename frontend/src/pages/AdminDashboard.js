@@ -836,6 +836,18 @@ const AdminDashboard = () => {
     }
   };
 
+  // Save guestbook price
+  const saveGuestbookPrice = async () => {
+    try {
+      await axios.put(`${API}/admin/guestbook-price`, {
+        price: parseFloat(guestbookPrice)
+      }, { headers });
+      toast.success("Prix du livre d'or enregistré !");
+    } catch (e) {
+      toast.error("Erreur lors de la sauvegarde");
+    }
+  };
+
   // Fetch renewal requests
   const fetchRenewalRequests = async () => {
     setLoadingRenewals(true);
