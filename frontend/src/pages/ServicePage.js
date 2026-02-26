@@ -464,6 +464,27 @@ const ServicePage = ({ category }) => {
                   </button>
                 </div>
               </form>
+            ) : showStripeForm && stripePromise && stripeClientSecret ? (
+              /* Stripe Payment Form */
+              <div className="p-6">
+                <h3 className="font-primary font-semibold text-lg mb-4 text-center">Paiement par Carte Bancaire</h3>
+                <div className="bg-white/5 rounded-lg p-4 mb-6">
+                  <p className="text-white/60 text-center mb-2">Montant de l'acompte</p>
+                  <p className="text-3xl font-bold text-primary text-center">{depositAmount.toFixed(0)}€</p>
+                </div>
+                <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
+                  <StripeCardForm
+                    amount={depositAmount.toFixed(0)}
+                    clientSecret={stripeClientSecret}
+                    onSuccess={handleStripeSuccess}
+                    onCancel={() => {
+                      setShowStripeForm(false);
+                      setStripeClientSecret(null);
+                    }}
+                  />
+                </Elements>
+                <p className="text-center text-white/40 text-xs mt-4">🔒 Paiement sécurisé par Stripe</p>
+              </div>
             ) : (
               /* Success State */
               <div className="p-6 text-center">
