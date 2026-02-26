@@ -12441,7 +12441,7 @@ async def confirm_guestbook_stripe_payment(
                 "max_duration_audio": 60,
                 "payment_method": "Stripe",
                 "payment_id": payment_id,
-                "amount_paid": GUESTBOOK_PRICE,
+                "amount_paid": payment.get("amount", await get_guestbook_price()),
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             await db.guestbooks.insert_one(guestbook)
