@@ -61,7 +61,12 @@ const GuestbookPage = () => {
       
       if (messageType === "video" && videoPreviewRef.current) {
         videoPreviewRef.current.srcObject = stream;
-        videoPreviewRef.current.play();
+        // iOS requires explicit play after setting srcObject
+        try {
+          await videoPreviewRef.current.play();
+        } catch (playError) {
+          console.log("Video play error (may be normal on some devices):", playError);
+        }
       }
       
       const mediaRecorder = new MediaRecorder(stream, {
