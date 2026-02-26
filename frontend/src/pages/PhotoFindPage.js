@@ -375,7 +375,7 @@ const PhotoFindPage = () => {
       </div>
 
       {/* Purchase Modal */}
-      {showPurchase && (
+      {showPurchase && !showStripeForm && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="bg-card border border-white/10 rounded-xl p-6 max-w-md w-full">
             <h3 className="font-primary text-xl text-white mb-4">Finaliser la commande</h3>
@@ -410,20 +410,105 @@ const PhotoFindPage = () => {
               </div>
             </div>
             
-            <div className="flex gap-4">
+            <div className="space-y-3">
+              {/* Stripe CB Button */}
+              {stripePromise && (
+                <button
+                  onClick={async () => {
+                    if (!purchaseForm.name || !purchaseForm.email) {
+                      toast.error("Veuillez remplir tous les champs");
+                      return;
+                    }
+                    setPaymentLoading(true);
+                    try {
+                      const res = await axios.post(`${API}/photofind/${eventId}/create-stripe-payment`, {
+                        photo_ids: selectedPhotos,
+                        client_name: purchaseForm.name,
+                        client_email: purchaseForm.email,
+                        amount: calculatePrice()
+                      });
+                      if (res.data.client_secret) {
+                        setStripeClientSecret(res.data.client_secret);
+                        setStripePaymentId(res.data.payment_id);
+                        setShowStripeForm(true);
+                      }
+                    } catch (e) {
+                      toast.error(e.response?.data?.detail || "Erreur Stripe");
+                    } finally {
+                      setPaymentLoading(false);
+                    }
+                  }}
+                  disabled={paymentLoading}
+                  className="w-full px-4 py-3 bg-[#635bff] hover:bg-[#5851db] text-white font-bold rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {paymentLoading ? <Loader className="animate-spin" size={20} /> : <CreditCard size={20} />}
+                  Payer {calculatePrice()}€ par CB
+                </button>
+              )}
+              
+              {/* PayPal Button */}
+              <button
+                onClick={handlePurchase}
+                disabled={paymentLoading}
+                className="w-full px-4 py-3 bg-[#0070ba] hover:bg-[#005ea6] text-white font-bold rounded-lg disabled:opacity-50"
+              >
+                Payer {calculatePrice()}€ avec PayPal
+              </button>
+              
+              {/* Cancel */}
               <button
                 onClick={() => setShowPurchase(false)}
-                className="flex-1 px-4 py-3 bg-white/10 text-white rounded-lg"
+                className="w-full px-4 py-3 bg-white/10 text-white rounded-lg"
               >
                 Annuler
               </button>
-              <button
-                onClick={handlePurchase}
-                className="flex-1 px-4 py-3 bg-primary text-black font-bold rounded-lg"
-              >
-                Payer avec PayPal
-              </button>
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Stripe Payment Form */}
+      {showStripeForm && stripePromise && stripeClientSecret && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-white/10 rounded-xl p-6 max-w-md w-full">
+            <h3 className="font-primary text-xl text-white mb-4 text-center">Paiement par Carte Bancaire</h3>
+            
+            <div className="bg-background/50 p-4 rounded-lg mb-6 text-center">
+              <p className="text-white/60">{selectedPhotos.length} photo(s)</p>
+              <p className="font-primary text-2xl text-primary">{calculatePrice()}€</p>
+            </div>
+            
+            <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
+              <StripePhotoForm
+                amount={calculatePrice()}
+                clientSecret={stripeClientSecret}
+                onSuccess={async (paymentIntentId) => {
+                  try {
+                    const res = await axios.post(`${API}/photofind/${eventId}/confirm-stripe-payment`, {
+                      payment_id: stripePaymentId,
+                      payment_intent_id: paymentIntentId,
+                      photo_ids: selectedPhotos,
+                      client_name: purchaseForm.name,
+                      client_email: purchaseForm.email
+                    });
+                    if (res.data.success) {
+                      toast.success("Paiement confirmé ! Vérifiez votre email.");
+                      setShowStripeForm(false);
+                      setShowPurchase(false);
+                      setSelectedPhotos([]);
+                    }
+                  } catch (e) {
+                    toast.error("Erreur lors de la confirmation");
+                  }
+                }}
+                onCancel={() => {
+                  setShowStripeForm(false);
+                  setStripeClientSecret(null);
+                }}
+              />
+            </Elements>
+            
+            <p className="text-center text-white/40 text-xs mt-4">🔒 Paiement sécurisé par Stripe</p>
           </div>
         </div>
       )}
