@@ -46,6 +46,11 @@ French
 - [x] **Galerie Interactive** - Expérience immersive avec carrousel 3D CSS et vue grille (25 Fév 2026)
 - [x] **Options Premium Galeries** - Système de paiement PayPal pour 3D et téléchargement HD (25 Fév 2026)
 - [x] **Mode Kiosque PhotoFind** - Borne photo plein écran pour événements (26 Fév 2026)
+- [x] **Onglet Kiosque Admin** - Gestion séparée du mode kiosque dans l'admin (26 Fév 2026)
+- [x] **Cadres/Filtres Photos** - 5 styles (Mariage, Vintage, Polaroid, Fête, Sans cadre) + cadres personnalisés (26 Fév 2026)
+- [x] **Paiement PayPal Mobile Kiosque** - QR code pour payer sur téléphone + impression auto (26 Fév 2026)
+- [x] **Paiement Liquide/CB Kiosque** - Option paiement manuel avec confirmation (26 Fév 2026)
+- [x] **Popup PWA désactivé** - Plus de popup intrusif (26 Fév 2026)
 
 ### 🔴 Known Issues (P0 - BLOCKER)
 1. **Erreur `[object Object]`** - Soumission de témoignage en production (IONOS)
