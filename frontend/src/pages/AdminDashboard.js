@@ -3801,6 +3801,105 @@ const AdminDashboard = () => {
             {/* Kiosk Configuration */}
             <div className="mt-8 bg-white/5 rounded-lg p-6">
               <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <Image size={20} className="text-primary" />
+                Cadres Personnalisés
+              </h3>
+              <p className="text-white/60 text-sm mb-4">
+                Créez des cadres personnalisés pour vos événements (nom des mariés, date, logo...)
+              </p>
+              
+              {/* Frame creator form */}
+              <div className="bg-white/5 rounded-lg p-4 mb-4">
+                <h4 className="font-bold mb-3">Créer un nouveau cadre</h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm text-white/70">Nom du cadre</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Mariage Sophie & Thomas"
+                      value={newCustomFrame?.name || ""}
+                      onChange={(e) => setNewCustomFrame({...newCustomFrame, name: e.target.value})}
+                      className="w-full bg-white/10 border border-white/20 px-3 py-2 rounded mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-white/70">Texte à afficher sur la photo</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Sophie ❤️ Thomas - 15/03/2026"
+                      value={newCustomFrame?.overlayText || ""}
+                      onChange={(e) => setNewCustomFrame({...newCustomFrame, overlayText: e.target.value})}
+                      className="w-full bg-white/10 border border-white/20 px-3 py-2 rounded mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-white/70">Couleur du cadre</label>
+                    <div className="flex gap-2 mt-1">
+                      {["#D4AF37", "#FFFFFF", "#FF69B4", "#8B4513", "#4169E1", "#228B22"].map(color => (
+                        <div
+                          key={color}
+                          onClick={() => setNewCustomFrame({...newCustomFrame, color})}
+                          className={`w-8 h-8 rounded cursor-pointer border-2 ${newCustomFrame?.color === color ? 'border-primary' : 'border-transparent'}`}
+                          style={{backgroundColor: color}}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        value={newCustomFrame?.color || "#D4AF37"}
+                        onChange={(e) => setNewCustomFrame({...newCustomFrame, color: e.target.value})}
+                        className="w-8 h-8 rounded cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm text-white/70">Événement</label>
+                    <select
+                      value={newCustomFrame?.eventId || ""}
+                      onChange={(e) => setNewCustomFrame({...newCustomFrame, eventId: e.target.value})}
+                      className="w-full bg-white/10 border border-white/20 px-3 py-2 rounded mt-1"
+                    >
+                      <option value="">Sélectionner un événement</option>
+                      {photofindEvents.map(evt => (
+                        <option key={evt.id} value={evt.id}>{evt.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!newCustomFrame?.name || !newCustomFrame?.eventId) {
+                      toast.error("Nom et événement requis");
+                      return;
+                    }
+                    try {
+                      await axios.post(
+                        `${BACKEND_URL}/api/admin/photofind/events/${newCustomFrame.eventId}/frames`,
+                        {
+                          name: newCustomFrame.name,
+                          color: newCustomFrame.color || "#D4AF37",
+                          border: "8px solid",
+                          overlay_text: newCustomFrame.overlayText || null,
+                          overlay_text_color: "#ffffff"
+                        },
+                        { headers }
+                      );
+                      toast.success("Cadre créé !");
+                      setNewCustomFrame({});
+                      fetchAllKioskStats();
+                    } catch (e) {
+                      toast.error("Erreur lors de la création");
+                    }
+                  }}
+                  className="mt-4 bg-primary text-black px-6 py-2 font-bold hover:bg-primary/90"
+                >
+                  Créer le cadre
+                </button>
+              </div>
+            </div>
+
+            {/* Kiosk Technical Configuration */}
+            <div className="mt-8 bg-white/5 rounded-lg p-6">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                 <Settings size={20} className="text-primary" />
                 Configuration du Kiosque
               </h3>
