@@ -180,6 +180,21 @@ const ClientDashboard = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, navigate]);
 
+  // Load Stripe
+  useEffect(() => {
+    const loadStripeKey = async () => {
+      try {
+        const res = await axios.get(`${API}/public/stripe-config`);
+        if (res.data.publishable_key) {
+          setStripePromise(loadStripe(res.data.publishable_key));
+        }
+      } catch (e) {
+        console.error("Failed to load Stripe config");
+      }
+    };
+    loadStripeKey();
+  }, []);
+
   const fetchData = async () => {
     try {
       const [filesRes, galleriesRes, meRes, adminDocsRes, projectStatusRes] = await Promise.all([
