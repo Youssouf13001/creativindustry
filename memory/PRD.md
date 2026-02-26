@@ -45,23 +45,31 @@ French
 - [x] **Graphique espace disque** - Camembert d'utilisation stockage dans admin (25 Fév 2026)
 - [x] **Galerie Interactive** - Expérience immersive avec carrousel 3D CSS et vue grille (25 Fév 2026)
 - [x] **Options Premium Galeries** - Système de paiement PayPal pour 3D et téléchargement HD (25 Fév 2026)
+- [x] **Mode Kiosque PhotoFind** - Borne photo plein écran pour événements (26 Fév 2026)
 
 ### 🔴 Known Issues (P0 - BLOCKER)
 1. **Erreur `[object Object]`** - Soumission de témoignage en production (IONOS)
+2. **Déploiement IONOS cassé** - Erreurs npm install persistantes
 
 ### 🟠 Issues (P1-P2)
-2. Dashboard site `devis` - Statistiques à zéro (P1)
-3. Téléchargement factures PDF depuis admin (P1, vérification requise)
-4. Erreur 404 mise à jour statut projet IONOS (P2)
+3. Dashboard site `devis` - Statistiques à zéro (P1)
+4. Téléchargement factures PDF depuis admin (P1, vérification requise)
+5. Erreur 404 mise à jour statut projet IONOS (P2)
+6. Popup PWA répétitif (P1)
 
 ## Upcoming Tasks
+
+### P1 - Mode Kiosque avancé
+- Intégration terminal CB (SumUp) pour paiements sur borne
+- Intégration imprimante DNP pour impression directe
+- Upload photos par les invités
 
 ### P2 - Améliorations
 - Rappels automatiques (expiration comptes, RDV)
 - Paiement en plusieurs fois (3x/4x via PayPal)
 - Compression images côté serveur
 - Synchronisation données devis ↔ creativindustry
-- Refactoring backend/frontend (dette technique)
+- **Refactoring backend/frontend** (dette technique CRITIQUE - server.py et AdminDashboard.js sont des monolithes)
 
 ## Key API Endpoints
 
@@ -81,15 +89,28 @@ French
 - `POST /api/admin/galleries/{id}/music` - Upload musique galerie
 - `GET /api/public/galleries/{id}` - Vue publique galerie
 
+### PhotoFind Kiosk (NEW)
+- `GET /api/public/photofind/{eventId}` - Infos publiques d'un événement
+- `POST /api/public/photofind/{eventId}/search` - Recherche par selfie
+- `GET /api/public/photofind/{eventId}/photo/{photoId}` - Servir une photo
+- `POST /api/public/photofind/{eventId}/kiosk-purchase` - Créer un achat kiosque
+- `POST /api/public/photofind/{eventId}/log-print` - Logger une impression
+- `GET /api/admin/photofind/events/{eventId}/kiosk-stats` - Stats kiosque admin
+
 ## Database Collections
 - `guestbooks` - Livres d'or
 - `guestbook_messages` - Messages (texte/audio/vidéo)
 - `galleries` - Avec `music_url` pour musique diaporama
+- `photofind_events` - Événements PhotoFind
+- `photofind_photos` - Photos avec faces indexées
+- `photofind_kiosk_purchases` - Achats kiosque
+- `photofind_print_logs` - Logs d'impressions
 
 ## New Pages Created
 - `/livre-dor/:guestbookId` - Page publique pour laisser des messages
 - `/galerie/:galleryId` - Page publique pour voir une galerie
 - `/galerie3d/:galleryId` - Galerie interactive avec carrousel 3D CSS et vue grille
+- `/kiosk/:eventId` - **Mode Kiosque PhotoFind** (plein écran, sans header/footer)
 
 ## Key API Endpoints (Gallery 3D)
 - `GET /api/public/galleries/{gallery_id}` - Données publiques d'une galerie
@@ -115,6 +136,7 @@ French
 - qrcode (génération QR codes)
 - MediaRecorder API (enregistrement audio/vidéo)
 - AWS Rekognition (PhotoFind - reconnaissance faciale)
+- FFmpeg (génération de diaporamas vidéo)
 
 ## PWA Configuration
 - `manifest.json` - Icônes et métadonnées
@@ -122,4 +144,4 @@ French
 - `PWAInstallPrompt.js` - Composant d'installation
 
 ---
-*Last updated: February 25, 2026*
+*Last updated: February 26, 2026*
