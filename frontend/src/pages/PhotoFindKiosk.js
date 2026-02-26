@@ -4,6 +4,11 @@ import axios from "axios";
 import { Camera, Loader, Download, Printer, Mail, RefreshCw, X, Check, CreditCard, ArrowLeft, Maximize, Smartphone, QrCode, Image, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { API } from "../config/api";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
+// Initialize Stripe
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLIC_KEY);
 
 // Frame/Filter definitions
 const PHOTO_FRAMES = [
@@ -14,6 +19,75 @@ const PHOTO_FRAMES = [
   { id: "party", name: "Fête", color: "#FF69B4", border: "6px dashed", decoration: "🎉 🎊 ⭐" },
   { id: "custom", name: "Personnalisé", color: "#1a1a2e", border: "10px solid", isCustom: true }
 ];
+
+// Stripe Checkout Form Component
+const StripeCheckoutForm = ({ onSuccess, onCancel, amount }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setProcessing(true);
+    setError(null);
+
+    const { error: submitError, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: window.location.href,
+      },
+      redirect: "if_required"
+    });
+
+    if (submitError) {
+      setError(submitError.message);
+      setProcessing(false);
+    } else if (paymentIntent && paymentIntent.status === "succeeded") {
+      onSuccess(paymentIntent.id);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="bg-white rounded-xl p-6 mb-4">
+        <PaymentElement />
+      </div>
+      
+      {error && (
+        <div className="bg-red-500/20 text-red-400 p-3 rounded-lg mb-4">
+          {error}
+        </div>
+      )}
+      
+      <div className="flex gap-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 bg-white/10 hover:bg-white/20 px-6 py-4 rounded-xl"
+          disabled={processing}
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          disabled={!stripe || processing}
+          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-xl px-6 py-4 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {processing ? (
+            <Loader className="animate-spin" size={24} />
+          ) : (
+            <>
+              <CreditCard size={24} /> Payer {amount}€
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+};
 
 const PhotoFindKiosk = () => {
   const { eventId } = useParams();
