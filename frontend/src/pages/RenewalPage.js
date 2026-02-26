@@ -89,12 +89,15 @@ const RenewalPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   
-  const [step, setStep] = useState("options"); // options, processing, success, error
+  const [step, setStep] = useState("options"); // options, processing, success, error, stripe-form
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successData, setSuccessData] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState(null); // "paypal" or "stripe"
+  const [stripePromise, setStripePromise] = useState(null);
+  const [stripePaymentId, setStripePaymentId] = useState(null);
 
   const plans = [
     {
