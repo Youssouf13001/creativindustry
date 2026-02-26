@@ -12341,7 +12341,12 @@ async def post_media_message(
 
 # ==================== CLIENT GUESTBOOK PURCHASE ====================
 
-GUESTBOOK_PRICE = 200.00  # Price in EUR
+# Helper function to get guestbook price from settings
+async def get_guestbook_price():
+    settings = await db.settings.find_one({"key": "guestbook_price"}, {"_id": 0})
+    if settings and settings.get("value"):
+        return float(settings.get("value"))
+    return 200.00  # Default price
 
 class GuestbookPurchaseRequest(BaseModel):
     name: str
