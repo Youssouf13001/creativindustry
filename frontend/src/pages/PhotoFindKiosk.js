@@ -175,6 +175,19 @@ const PhotoFindKiosk = () => {
       }
     };
     fetchEvent();
+    
+    // Fetch custom frames for this event
+    const fetchFrames = async () => {
+      try {
+        const res = await axios.get(`${API}/public/photofind/${eventId}/frames`);
+        if (res.data.frames && res.data.frames.length > 0) {
+          setCustomFrames(res.data.frames);
+        }
+      } catch (e) {
+        // No custom frames available
+      }
+    };
+    fetchFrames();
   }, [eventId]);
 
   // Initialize camera
