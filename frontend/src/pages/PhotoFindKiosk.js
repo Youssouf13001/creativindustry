@@ -1219,41 +1219,60 @@ const PhotoFindKiosk = () => {
           <div className="w-full max-w-2xl text-center">
             <Printer className="mx-auto text-primary mb-4" size={60} />
             <h2 className="text-3xl font-bold mb-2">Choisissez le format d'impression</h2>
-            <p className="text-white/60 mb-8">Sélectionnez la taille de vos photos</p>
+            <p className="text-white/60 mb-4">Sélectionnez la taille de vos photos</p>
+            
+            {/* Frame indicator */}
+            {selectedFrame && selectedFrame !== "none" && (
+              <div className="bg-primary/20 border border-primary/50 rounded-lg px-4 py-2 mb-6 inline-block">
+                <span className="text-primary">🖼️ Cadre : {PHOTO_FRAMES.find(f => f.id === selectedFrame)?.name || customFrames.find(f => f.id === selectedFrame)?.name || "Personnalisé"}</span>
+              </div>
+            )}
             
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-              {PRINT_FORMATS.map(format => (
-                <div
-                  key={format.id}
-                  onClick={() => setSelectedPrintFormat(format.id)}
-                  className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                    selectedPrintFormat === format.id
-                      ? 'border-primary bg-primary/20'
-                      : 'border-white/20 bg-white/5 hover:border-white/40'
-                  }`}
-                >
-                  <div 
-                    className="mx-auto mb-3 bg-white/20 rounded flex items-center justify-center"
-                    style={{ 
-                      width: format.id === "A4" ? "42px" : format.id === "A5" ? "35px" : `${parseInt(format.width) * 2}px`,
-                      height: format.id === "A4" ? "60px" : format.id === "A5" ? "50px" : `${parseInt(format.height) * 2}px`,
-                      maxWidth: "60px",
-                      maxHeight: "80px"
-                    }}
+              {PRINT_FORMATS.map(format => {
+                const formatPricing = pricing.formats?.[format.id];
+                const hasFrame = selectedFrame && selectedFrame !== "none";
+                const unitPrice = formatPricing 
+                  ? (hasFrame ? formatPricing.avec_cadre : formatPricing.sans_cadre) 
+                  : (pricing.print_single || 5);
+                
+                return (
+                  <div
+                    key={format.id}
+                    onClick={() => setSelectedPrintFormat(format.id)}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                      selectedPrintFormat === format.id
+                        ? 'border-primary bg-primary/20'
+                        : 'border-white/20 bg-white/5 hover:border-white/40'
+                    }`}
                   >
-                    <span className="text-xs text-white/70">{format.id}</span>
+                    <div 
+                      className="mx-auto mb-3 bg-white/20 rounded flex items-center justify-center"
+                      style={{ 
+                        width: format.id === "A4" ? "42px" : format.id === "A5" ? "35px" : `${parseInt(format.width) * 2}px`,
+                        height: format.id === "A4" ? "60px" : format.id === "A5" ? "50px" : `${parseInt(format.height) * 2}px`,
+                        maxWidth: "60px",
+                        maxHeight: "80px"
+                      }}
+                    >
+                      <span className="text-xs text-white/70">{format.id}</span>
+                    </div>
+                    <p className="font-bold">{format.name}</p>
+                    <p className="text-primary font-bold text-lg mt-1">{unitPrice}€ /photo</p>
+                    {selectedPrintFormat === format.id && (
+                      <Check className="mx-auto mt-2 text-primary" size={20} />
+                    )}
                   </div>
-                  <p className="font-bold">{format.name}</p>
-                  {selectedPrintFormat === format.id && (
-                    <Check className="mx-auto mt-2 text-primary" size={20} />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
             
             <div className="bg-white/10 rounded-xl p-6 mb-6">
-              <p className="text-white/60">Total pour {selectedPhotos.length} photo(s)</p>
+              <p className="text-white/60">Total pour {selectedPhotos.length} photo(s) en {selectedPrintFormat}</p>
               <p className="text-4xl font-bold text-primary">{calculatePrice("print")}€</p>
+              {selectedFrame && selectedFrame !== "none" && (
+                <p className="text-sm text-white/50 mt-2">Prix avec cadre inclus</p>
+              )}
             </div>
             
             <div className="flex gap-4 justify-center">
