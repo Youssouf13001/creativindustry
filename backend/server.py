@@ -3898,6 +3898,106 @@ class ServicePaymentCreate(BaseModel):
     amount: float  # Deposit amount
     total_price: float  # Total service price
 
+@api_router.post("/stripe/create-service-payment")
+async def create_service_stripe_payment(data: ServicePaymentCreate):
+    """Create a Stripe payment for a service/formule booking (public endpoint)"""
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    stripe.api_key = stripe_secret
+    
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Montant invalide")
+    
+    amount_ttc = round(data.amount, 2)
+    
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=int(amount_ttc * 100),
+            currency="eur",
+            metadata={
+                "type": "service_booking",
+                "booking_id": data.booking_id,
+                "client_email": data.client_email,
+                "client_name": data.client_name,
+                "service_name": data.service_name,
+                "total_price": str(data.total_price)
+            }
+        )
+        
+        payment_id = str(uuid.uuid4())
+        await db.stripe_payments.insert_one({
+            "id": payment_id,
+            "type": "service_booking",
+            "stripe_payment_intent_id": intent.id,
+            "client_secret": intent.client_secret,
+            "booking_id": data.booking_id,
+            "client_email": data.client_email,
+            "client_name": data.client_name,
+            "service_name": data.service_name,
+            "amount": amount_ttc,
+            "total_price": data.total_price,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "payment_id": payment_id,
+            "client_secret": intent.client_secret,
+            "amount": amount_ttc
+        }
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
+@api_router.post("/stripe/confirm-service-payment")
+async def confirm_service_stripe_payment(payment_id: str = Body(...), payment_intent_id: str = Body(...)):
+    """Confirm a Stripe service payment"""
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    stripe.api_key = stripe_secret
+    
+    payment = await db.stripe_payments.find_one({"id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Paiement non trouvé")
+    
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        
+        if intent.status == "succeeded":
+            await db.stripe_payments.update_one(
+                {"id": payment_id},
+                {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+            )
+            
+            # Update booking status
+            booking_id = payment.get("booking_id")
+            if booking_id:
+                await db.bookings.update_one(
+                    {"id": booking_id},
+                    {"$set": {
+                        "payment_status": "deposit_paid",
+                        "deposit_paid": payment.get("amount", 0),
+                        "deposit_paid_at": datetime.now(timezone.utc).isoformat(),
+                        "payment_method": "Stripe"
+                    }}
+                )
+            
+            return {
+                "success": True,
+                "message": "Paiement confirmé ! Votre réservation est validée."
+            }
+        else:
+            return {"success": False, "message": f"Paiement non confirmé: {intent.status}"}
+            
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
 @api_router.post("/paypal/create-service-payment")
 async def create_service_paypal_payment(data: ServicePaymentCreate):
     """Create a PayPal payment for a service/formule booking (public endpoint)"""
