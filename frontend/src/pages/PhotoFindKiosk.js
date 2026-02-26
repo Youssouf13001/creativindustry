@@ -728,6 +728,7 @@ const PhotoFindKiosk = () => {
     setCashPaymentConfirmed(false);
     setDeliveryMethod(null);
     setSelectedFilter("none");
+    setWithPhysicalFrame(false);
     stopCamera();
   };
 
