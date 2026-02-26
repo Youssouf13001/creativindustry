@@ -1569,30 +1569,74 @@ const PhotoFindKiosk = () => {
               autoFocus
             />
             
-            <div className="bg-white/5 rounded-xl p-6 mb-8">
-              <p className="text-white/60">Montant à payer</p>
-              <p className="text-5xl font-bold text-primary">{calculatePrice()}€</p>
-            </div>
+            {/* Show payment info only if not already paid by cash */}
+            {!cashPaymentConfirmed && (
+              <div className="bg-white/5 rounded-xl p-6 mb-8">
+                <p className="text-white/60">Montant à payer</p>
+                <p className="text-5xl font-bold text-primary">{calculatePrice()}€</p>
+              </div>
+            )}
+            
+            {/* Show confirmation if already paid by cash */}
+            {cashPaymentConfirmed && (
+              <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6 mb-8">
+                <p className="text-green-400 flex items-center justify-center gap-2">
+                  <Check size={20} /> Paiement déjà effectué ({calculatePrice()}€)
+                </p>
+              </div>
+            )}
             
             <div className="flex gap-4 justify-center">
               <button
-                onClick={() => setStep("payment-choice")}
+                onClick={() => {
+                  if (cashPaymentConfirmed) {
+                    setCashPaymentConfirmed(false);
+                  }
+                  setStep("payment-choice");
+                }}
                 className="bg-white/10 hover:bg-white/20 px-6 py-4 rounded-xl flex items-center gap-2"
               >
                 <ArrowLeft size={20} /> Retour
               </button>
               
               <button
-                onClick={handlePayment}
+                onClick={async () => {
+                  if (!email || !email.includes("@")) {
+                    toast.error("Veuillez entrer une adresse email valide");
+                    return;
+                  }
+                  
+                  setProcessing(true);
+                  
+                  try {
+                    // Create purchase record
+                    await axios.post(`${API}/public/photofind/${eventId}/kiosk-purchase`, {
+                      photo_ids: selectedPhotos,
+                      email: email,
+                      amount: calculatePrice(),
+                      payment_method: cashPaymentConfirmed ? "cash" : "kiosk",
+                      delivery_method: "email",
+                      frame: selectedFrame
+                    });
+                    
+                    toast.success("Vos photos vous seront envoyées par email !");
+                    setCashPaymentConfirmed(false);
+                    setStep("success");
+                  } catch (e) {
+                    toast.error(e.response?.data?.detail || "Erreur lors de l'envoi");
+                  } finally {
+                    setProcessing(false);
+                  }
+                }}
                 disabled={processing || !email}
                 className="bg-green-600 hover:bg-green-700 text-white font-bold text-xl px-8 py-4 rounded-xl disabled:opacity-50 flex items-center gap-3"
               >
                 {processing ? (
                   <Loader className="animate-spin" size={24} />
                 ) : (
-                  <CreditCard size={24} />
+                  <Mail size={24} />
                 )}
-                Payer et recevoir
+                {cashPaymentConfirmed ? "Envoyer mes photos" : "Payer et recevoir"}
               </button>
             </div>
           </div>
