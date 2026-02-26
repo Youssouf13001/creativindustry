@@ -74,6 +74,12 @@ const ClientDashboard = () => {
   // PayPal payment state
   const [payingDocument, setPayingDocument] = useState(null);
   
+  // Stripe payment state
+  const [showStripeModal, setShowStripeModal] = useState(false);
+  const [stripeClientSecret, setStripeClientSecret] = useState(null);
+  const [stripePaymentId, setStripePaymentId] = useState(null);
+  const [stripePaymentDetails, setStripePaymentDetails] = useState(null);
+  
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
   const headers = { Authorization: `Bearer ${token}` };
