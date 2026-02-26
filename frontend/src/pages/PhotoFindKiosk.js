@@ -181,9 +181,20 @@ const PhotoFindKiosk = () => {
         const res = await axios.get(`${API}/public/photofind/${eventId}`);
         setEvent(res.data);
         if (res.data.pricing) {
-          // Normalize pricing fields (handle both single and per_photo)
+          // Load pricing with separate print/email prices
           const p = res.data.pricing;
           setPricing({
+            // Print pricing
+            print_single: p.print_single || p.single || p.per_photo || 5,
+            print_pack_5: p.print_pack_5 || p.pack_5 || 20,
+            print_pack_10: p.print_pack_10 || p.pack_10 || 35,
+            print_all: p.print_all || p.all || 50,
+            // Email pricing
+            email_single: p.email_single || Math.round((p.single || p.per_photo || 5) * 0.6) || 3,
+            email_pack_5: p.email_pack_5 || Math.round((p.pack_5 || 20) * 0.6) || 12,
+            email_pack_10: p.email_pack_10 || Math.round((p.pack_10 || 35) * 0.6) || 20,
+            email_all: p.email_all || Math.round((p.all || 50) * 0.6) || 30,
+            // Legacy fallback
             single: p.single || p.per_photo || 5,
             per_photo: p.per_photo || p.single || 5,
             pack_5: p.pack_5 || 15,
