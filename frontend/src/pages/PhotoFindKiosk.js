@@ -382,8 +382,23 @@ const PhotoFindKiosk = () => {
     setStep("frames");
   };
 
-  // Go to payment choice after selecting frame
-  const proceedToPayment = () => {
+  // Go to delivery method choice after selecting frame
+  const proceedToDeliveryChoice = () => {
+    setStep("delivery-choice");
+  };
+
+  // Go to payment choice after selecting delivery method
+  const proceedToPayment = (method) => {
+    setDeliveryMethod(method);
+    if (method === "print") {
+      setStep("print-format"); // Choose print format first
+    } else {
+      setStep("payment-choice");
+    }
+  };
+
+  // Go to payment after choosing print format
+  const proceedToPaymentFromFormat = () => {
     setStep("payment-choice");
   };
 
