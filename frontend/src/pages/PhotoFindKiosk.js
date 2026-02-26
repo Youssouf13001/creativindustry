@@ -217,12 +217,22 @@ const PhotoFindKiosk = () => {
   };
 
   // Print photos
+  // Calculate print price (5€ per photo)
+  const calculatePrintPrice = () => {
+    return selectedPhotos.length * 5;
+  };
+
   const handlePrint = async () => {
     if (selectedPhotos.length === 0) {
       toast.error("Sélectionnez au moins une photo");
       return;
     }
     
+    // Show confirmation step first
+    setStep("print-confirm");
+  };
+
+  const confirmPrint = async () => {
     setStep("printing");
     setProcessing(true);
     
@@ -234,9 +244,10 @@ const PhotoFindKiosk = () => {
         const photo = matchedPhotos.find(p => p.id === photoId);
         if (!photo) return "";
         return `
-          <div style="page-break-after: always; display: flex; align-items: center; justify-content: center; height: 100vh;">
+          <div style="page-break-after: always; display: flex; align-items: center; justify-content: center; height: 100vh; background: white;">
             <img src="${API}/public/photofind/${eventId}/photo/${photo.id}" 
-                 style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+                 style="max-width: 100%; max-height: 100%; object-fit: contain;" 
+                 crossorigin="anonymous" />
           </div>
         `;
       }).join("");
@@ -247,17 +258,34 @@ const PhotoFindKiosk = () => {
         <head>
           <title>Impression Photos - ${event?.name || "PhotoFind"}</title>
           <style>
-            @page { size: 8x10in; margin: 0; }
-            body { margin: 0; padding: 0; }
+            @page { size: 4x6in; margin: 0; }
+            body { margin: 0; padding: 0; background: white; }
             img { display: block; }
           </style>
         </head>
         <body>
           ${photosHtml}
           <script>
-            window.onload = function() {
-              window.print();
-              window.close();
+            // Wait for images to load before printing
+            let loadedImages = 0;
+            const images = document.querySelectorAll('img');
+            const totalImages = images.length;
+            
+            images.forEach(img => {
+              if (img.complete) {
+                loadedImages++;
+              } else {
+                img.onload = function() {
+                  loadedImages++;
+                  if (loadedImages === totalImages) {
+                    setTimeout(() => window.print(), 500);
+                  }
+                };
+              }
+            });
+            
+            if (loadedImages === totalImages) {
+              setTimeout(() => window.print(), 500);
             }
           </script>
         </body>
@@ -273,9 +301,14 @@ const PhotoFindKiosk = () => {
         count: selectedPhotos.length
       }).catch(() => {});
       
+      // Show success after short delay
+      setTimeout(() => {
+        setStep("print-success");
+        setProcessing(false);
+      }, 2000);
+      
     } catch (e) {
       toast.error("Erreur lors de l'impression");
-    } finally {
       setProcessing(false);
       setStep("results");
     }
