@@ -1182,12 +1182,180 @@ const ClientDashboard = () => {
                         </div>
                       </div>
                     ))}
+                    
+                    {/* Button to buy another guestbook */}
+                    <div 
+                      className="bg-card border border-dashed border-white/20 p-4 hover:border-primary transition-colors cursor-pointer flex flex-col items-center justify-center text-center min-h-[120px]"
+                      onClick={() => setShowGuestbookPurchase(true)}
+                    >
+                      <Plus className="text-primary mb-2" size={24} />
+                      <p className="text-white/60">Créer un autre livre d'or</p>
+                    </div>
                   </div>
                 ) : (
-                  <div className="text-center py-12 bg-card border border-white/10">
-                    <BookOpen size={48} className="mx-auto mb-4 text-white/30" />
-                    <p className="text-white/60 mb-2">Aucun livre d'or disponible</p>
-                    <p className="text-white/40 text-sm">Contactez votre photographe pour en créer un</p>
+                  /* Guestbook Purchase Offer */
+                  <div className="bg-gradient-to-br from-primary/10 to-purple-500/10 border border-primary/30 rounded-lg overflow-hidden">
+                    {/* Header */}
+                    <div className="bg-primary/20 p-6 text-center">
+                      <div className="text-5xl mb-3">📖</div>
+                      <h3 className="text-2xl font-bold mb-2">Livre d'Or Numérique</h3>
+                      <p className="text-white/70">Gardez les messages de vos invités pour toujours</p>
+                    </div>
+                    
+                    {/* Benefits */}
+                    <div className="p-6">
+                      <h4 className="font-bold mb-4 text-center">✨ Les avantages</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded">
+                          <div className="bg-green-500/20 p-2 rounded">
+                            <MessageCircle className="text-green-400" size={18} />
+                          </div>
+                          <div>
+                            <p className="font-medium">Messages texte</p>
+                            <p className="text-white/50 text-sm">Vos invités peuvent écrire leurs vœux</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded">
+                          <div className="bg-blue-500/20 p-2 rounded">
+                            <Video className="text-blue-400" size={18} />
+                          </div>
+                          <div>
+                            <p className="font-medium">Messages vidéo</p>
+                            <p className="text-white/50 text-sm">Jusqu'à 60 secondes de vidéo</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded">
+                          <div className="bg-purple-500/20 p-2 rounded">
+                            <Mic className="text-purple-400" size={18} />
+                          </div>
+                          <div>
+                            <p className="font-medium">Messages audio</p>
+                            <p className="text-white/50 text-sm">Enregistrements vocaux</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded">
+                          <div className="bg-yellow-500/20 p-2 rounded">
+                            <QrCode className="text-yellow-400" size={18} />
+                          </div>
+                          <div>
+                            <p className="font-medium">QR Code unique</p>
+                            <p className="text-white/50 text-sm">Partagez facilement avec vos invités</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded">
+                          <div className="bg-pink-500/20 p-2 rounded">
+                            <Shield className="text-pink-400" size={18} />
+                          </div>
+                          <div>
+                            <p className="font-medium">Modération</p>
+                            <p className="text-white/50 text-sm">Approuvez les messages avant affichage</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3 bg-white/5 p-3 rounded">
+                          <div className="bg-cyan-500/20 p-2 rounded">
+                            <Download className="text-cyan-400" size={18} />
+                          </div>
+                          <div>
+                            <p className="font-medium">Conservation illimitée</p>
+                            <p className="text-white/50 text-sm">Gardez vos souvenirs pour toujours</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Price */}
+                      <div className="text-center mb-6">
+                        <p className="text-white/60 text-sm mb-1">Prix unique</p>
+                        <p className="text-4xl font-bold text-primary">200€</p>
+                        <p className="text-white/40 text-xs">TVA incluse</p>
+                      </div>
+                      
+                      {/* CTA Button */}
+                      <button
+                        onClick={() => setShowGuestbookPurchase(true)}
+                        className="w-full bg-primary hover:bg-primary/90 text-black font-bold py-4 rounded-lg flex items-center justify-center gap-3 text-lg transition-colors"
+                        data-testid="buy-guestbook-btn"
+                      >
+                        <BookOpen size={24} /> Créer mon Livre d'Or
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Purchase Modal */}
+                {showGuestbookPurchase && (
+                  <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+                    <div className="bg-background border border-white/10 rounded-lg max-w-md w-full p-6">
+                      <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                        <BookOpen className="text-primary" size={24} /> Créer mon Livre d'Or
+                      </h3>
+                      
+                      <div className="space-y-4 mb-6">
+                        <div>
+                          <label className="block text-sm text-white/60 mb-1">Nom de l'événement *</label>
+                          <input
+                            type="text"
+                            value={newGuestbookName}
+                            onChange={(e) => setNewGuestbookName(e.target.value)}
+                            placeholder="Ex: Mariage Sophie & Pierre"
+                            className="w-full bg-white/5 border border-white/10 rounded px-4 py-3 focus:border-primary focus:outline-none"
+                            data-testid="guestbook-name-input"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-white/60 mb-1">Date de l'événement (optionnel)</label>
+                          <input
+                            type="date"
+                            value={newGuestbookEventDate}
+                            onChange={(e) => setNewGuestbookEventDate(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded px-4 py-3 focus:border-primary focus:outline-none"
+                            data-testid="guestbook-date-input"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white/5 rounded p-4 mb-6 text-center">
+                        <p className="text-white/60 text-sm">Total à payer</p>
+                        <p className="text-3xl font-bold text-primary">200€</p>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        {/* Stripe Button */}
+                        <button
+                          onClick={purchaseGuestbookStripe}
+                          disabled={guestbookPurchaseLoading || !newGuestbookName.trim()}
+                          className="w-full bg-[#635bff] hover:bg-[#5851db] disabled:bg-gray-600 text-white font-bold py-3 rounded flex items-center justify-center gap-2"
+                          data-testid="guestbook-stripe-btn"
+                        >
+                          {guestbookPurchaseLoading ? (
+                            <Loader className="animate-spin" size={20} />
+                          ) : (
+                            <CreditCard size={20} />
+                          )}
+                          Payer par Carte Bancaire
+                        </button>
+                        
+                        {/* PayPal Button */}
+                        <button
+                          onClick={purchaseGuestbookPayPal}
+                          disabled={guestbookPurchaseLoading || !newGuestbookName.trim()}
+                          className="w-full bg-[#0070ba] hover:bg-[#005ea6] disabled:bg-gray-600 text-white font-bold py-3 rounded flex items-center justify-center gap-2"
+                          data-testid="guestbook-paypal-btn"
+                        >
+                          Payer avec PayPal
+                        </button>
+                      </div>
+                      
+                      <button
+                        onClick={() => {
+                          setShowGuestbookPurchase(false);
+                          setNewGuestbookName("");
+                          setNewGuestbookEventDate("");
+                        }}
+                        className="w-full mt-4 text-white/60 hover:text-white py-2"
+                      >
+                        Annuler
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
