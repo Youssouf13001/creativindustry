@@ -162,7 +162,31 @@ const ServicePage = ({ category }) => {
         payment_method: paymentMethod
       });
       
-      if (paymentMethod === "paypal") {
+      if (paymentMethod === "stripe") {
+        // Create Stripe payment for the deposit
+        try {
+          const stripeRes = await axios.post(`${API}/stripe/create-service-payment`, {
+            booking_id: bookingRes.data.id,
+            client_email: buyFormData.client_email,
+            client_name: buyFormData.client_name,
+            service_name: selectedPackage.name,
+            amount: depositAmount,
+            total_price: priceTTC
+          });
+          
+          if (stripeRes.data.client_secret) {
+            setStripeClientSecret(stripeRes.data.client_secret);
+            setStripePaymentId(stripeRes.data.payment_id);
+            setShowStripeForm(true);
+            setBuyLoading(false);
+            return; // Don't close modal, show Stripe form
+          } else {
+            toast.error("Erreur Stripe: Configuration non reçue");
+          }
+        } catch (stripeError) {
+          toast.error(stripeError.response?.data?.detail || "Erreur lors du paiement CB");
+        }
+      } else if (paymentMethod === "paypal") {
         // Create PayPal payment for the deposit (TTC amount)
         setPaypalRedirecting(true);
         try {
@@ -196,6 +220,26 @@ const ServicePage = ({ category }) => {
       toast.error("Erreur lors de la réservation");
     } finally {
       setBuyLoading(false);
+    }
+  };
+
+  // Handle Stripe payment success
+  const handleStripeSuccess = async (paymentIntentId) => {
+    try {
+      const res = await axios.post(`${API}/stripe/confirm-service-payment`, {
+        payment_id: stripePaymentId,
+        payment_intent_id: paymentIntentId
+      });
+      
+      if (res.data.success) {
+        toast.success("Paiement confirmé ! Réservation validée.");
+        setShowStripeForm(false);
+        setBuySuccess(true);
+      } else {
+        toast.error(res.data.message || "Erreur lors de la confirmation");
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la confirmation");
     }
   };
 
