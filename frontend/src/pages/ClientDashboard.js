@@ -136,6 +136,12 @@ const ClientDashboard = () => {
   const [newGuestbookName, setNewGuestbookName] = useState("");
   const [newGuestbookEventDate, setNewGuestbookEventDate] = useState("");
   
+  // Stripe Promise for guestbook
+  const [stripePromise, setStripePromise] = useState(null);
+  const [showGuestbookStripeForm, setShowGuestbookStripeForm] = useState(false);
+  const [guestbookStripeClientSecret, setGuestbookStripeClientSecret] = useState(null);
+  const [guestbookStripePaymentId, setGuestbookStripePaymentId] = useState(null);
+  
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
   const headers = { Authorization: `Bearer ${token}` };
