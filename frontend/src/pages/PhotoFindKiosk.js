@@ -517,14 +517,33 @@ const PhotoFindKiosk = () => {
         `;
       }).join("");
       
+      // Get selected print format
+      const printFormat = PRINT_FORMATS.find(f => f.id === selectedPrintFormat) || PRINT_FORMATS[0];
+      
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
           <title>Photos - ${event?.name || "PhotoFind"}</title>
           <style>
-            @page { size: 4x6in; margin: 0; }
+            @page { size: ${printFormat.pageSize}; margin: 5mm; }
             body { margin: 0; padding: 0; background: white; }
+            .photo-page { 
+              page-break-after: always; 
+              display: flex; 
+              flex-direction: column; 
+              align-items: center; 
+              justify-content: center; 
+              height: 100vh;
+              width: 100%;
+              background: white;
+              box-sizing: border-box;
+            }
+            .photo-page img {
+              max-width: ${printFormat.width};
+              max-height: ${printFormat.height};
+              object-fit: contain;
+            }
           </style>
         </head>
         <body>
