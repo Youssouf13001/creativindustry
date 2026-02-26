@@ -3651,6 +3651,182 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Kiosk Tab - Separate management for kiosk mode */}
+        {activeTab === "kiosk" && (
+          <div data-testid="admin-kiosk-tab">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-primary font-bold text-xl flex items-center gap-2">
+                <Maximize size={24} className="text-primary" />
+                Gestion du Mode Kiosque
+              </h2>
+            </div>
+
+            {/* Kiosk Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+              <div className="bg-white/5 rounded-lg p-4">
+                <p className="text-white/60 text-sm">Événements actifs</p>
+                <p className="text-3xl font-bold text-primary">
+                  {photofindEvents.filter(e => e.is_active).length}
+                </p>
+              </div>
+              <div className="bg-white/5 rounded-lg p-4">
+                <p className="text-white/60 text-sm">Ventes kiosque totales</p>
+                <p className="text-3xl font-bold text-green-400">
+                  {Object.values(kioskStats).reduce((sum, s) => sum + (s.total_revenue || 0), 0)}€
+                </p>
+              </div>
+              <div className="bg-white/5 rounded-lg p-4">
+                <p className="text-white/60 text-sm">Photos vendues</p>
+                <p className="text-3xl font-bold text-blue-400">
+                  {Object.values(kioskStats).reduce((sum, s) => sum + (s.total_photos_sold || 0), 0)}
+                </p>
+              </div>
+              <div className="bg-white/5 rounded-lg p-4">
+                <p className="text-white/60 text-sm">Impressions</p>
+                <p className="text-3xl font-bold text-purple-400">
+                  {Object.values(kioskStats).reduce((sum, s) => sum + (s.total_printed || 0), 0)}
+                </p>
+              </div>
+            </div>
+
+            {/* Info Box */}
+            <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 mb-6">
+              <h3 className="font-bold text-primary mb-2">📋 Comment utiliser le mode Kiosque ?</h3>
+              <ol className="text-white/80 text-sm space-y-1">
+                <li>1. Créez un événement dans l'onglet <strong>PhotoFind</strong> et uploadez les photos</li>
+                <li>2. Revenez ici pour <strong>générer le lien kiosque</strong></li>
+                <li>3. Ouvrez le lien sur votre <strong>PC avec webcam + imprimante</strong></li>
+                <li>4. Les invités prennent un selfie → retrouvent leurs photos → impriment ou reçoivent par email</li>
+              </ol>
+            </div>
+
+            {loadingKioskStats ? (
+              <div className="flex justify-center py-12">
+                <Loader className="animate-spin text-primary" size={40} />
+              </div>
+            ) : photofindEvents.length === 0 ? (
+              <div className="text-center py-12 bg-white/5 rounded-lg">
+                <Maximize size={48} className="mx-auto text-white/30 mb-4" />
+                <p className="text-white/60 mb-4">Aucun événement disponible pour le kiosque</p>
+                <button
+                  onClick={() => setActiveTab("photofind")}
+                  className="bg-primary text-black px-6 py-2 font-bold hover:bg-primary/90"
+                >
+                  Créer un événement dans PhotoFind
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h3 className="font-bold text-lg">Événements disponibles pour le Kiosque</h3>
+                
+                {photofindEvents.map(event => (
+                  <div key={event.id} className="bg-white/5 rounded-lg p-4 border border-white/10">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                      {/* Event Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h4 className="font-bold text-lg">{event.name}</h4>
+                          {event.is_active ? (
+                            <span className="bg-green-500/20 text-green-400 text-xs px-2 py-1 rounded">Actif</span>
+                          ) : (
+                            <span className="bg-red-500/20 text-red-400 text-xs px-2 py-1 rounded">Inactif</span>
+                          )}
+                        </div>
+                        <p className="text-white/60 text-sm mb-2">{event.description || "Pas de description"}</p>
+                        <div className="flex gap-4 text-sm text-white/50">
+                          <span>📅 {event.event_date || "Date non définie"}</span>
+                          <span>📸 {event.photos_count || 0} photos</span>
+                          <span>👤 {event.faces_indexed || 0} visages</span>
+                        </div>
+                      </div>
+
+                      {/* Kiosk Stats for this event */}
+                      <div className="flex gap-4 text-center">
+                        <div className="bg-white/5 rounded px-3 py-2">
+                          <p className="text-xs text-white/50">Ventes</p>
+                          <p className="font-bold text-green-400">{kioskStats[event.id]?.total_revenue || 0}€</p>
+                        </div>
+                        <div className="bg-white/5 rounded px-3 py-2">
+                          <p className="text-xs text-white/50">Photos</p>
+                          <p className="font-bold text-blue-400">{kioskStats[event.id]?.total_photos_sold || 0}</p>
+                        </div>
+                        <div className="bg-white/5 rounded px-3 py-2">
+                          <p className="text-xs text-white/50">Impr.</p>
+                          <p className="font-bold text-purple-400">{kioskStats[event.id]?.total_printed || 0}</p>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => window.open(`/kiosk/${event.id}`, '_blank', 'fullscreen=yes')}
+                          className="bg-primary text-black px-4 py-2 font-bold text-sm hover:bg-primary/90 flex items-center gap-2"
+                          title="Ouvrir le kiosque en plein écran"
+                        >
+                          <Maximize size={16} /> Lancer Kiosque
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(`${window.location.origin}/kiosk/${event.id}`);
+                            toast.success("Lien kiosque copié !");
+                          }}
+                          className="bg-white/10 px-3 py-2 text-sm hover:bg-white/20 flex items-center gap-2"
+                          title="Copier le lien"
+                        >
+                          <Copy size={16} /> Copier lien
+                        </button>
+                        <a
+                          href={`${BACKEND_URL}/uploads/photofind/${event.id}/qr_code.png`}
+                          download={`QRCode_Kiosque_${event.name.replace(/\s+/g, '_')}.png`}
+                          className="bg-green-500/20 text-green-400 px-3 py-2 text-sm hover:bg-green-500/30 flex items-center gap-2"
+                          title="Télécharger QR Code"
+                        >
+                          <QrCode size={16} /> QR Code
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Kiosk URL Display */}
+                    <div className="mt-4 pt-4 border-t border-white/10">
+                      <p className="text-xs text-white/40 mb-1">URL du Kiosque :</p>
+                      <code className="bg-black/30 text-primary px-3 py-1 rounded text-sm block overflow-x-auto">
+                        {window.location.origin}/kiosk/{event.id}
+                      </code>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Kiosk Configuration */}
+            <div className="mt-8 bg-white/5 rounded-lg p-6">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <Settings size={20} className="text-primary" />
+                Configuration du Kiosque
+              </h3>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-bold mb-2">💻 Configuration PC Recommandée</h4>
+                  <ul className="text-white/70 text-sm space-y-1">
+                    <li>• Windows 10/11 avec Chrome</li>
+                    <li>• Webcam (ex: Logitech C920)</li>
+                    <li>• Imprimante photo (ex: DNP DS620)</li>
+                    <li>• Écran tactile (optionnel)</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-bold mb-2">🚀 Lancer Chrome en mode Kiosque</h4>
+                  <p className="text-white/60 text-sm mb-2">Créez un raccourci avec :</p>
+                  <code className="bg-black/50 text-xs p-2 rounded block overflow-x-auto text-green-400">
+                    chrome.exe --kiosk "https://votre-site.com/kiosk/EVENT_ID"
+                  </code>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Site Content Tab */}
         {activeTab === "content" && siteContent && (
           <div>
