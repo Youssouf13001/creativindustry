@@ -62,7 +62,7 @@ const ServicePage = ({ category }) => {
   const [showBuyModal, setShowBuyModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [bankDetails, setBankDetails] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState("paypal"); // "paypal" or "bank"
+  const [paymentMethod, setPaymentMethod] = useState("stripe"); // "stripe", "paypal" or "bank"
   const [buyFormData, setBuyFormData] = useState({
     client_name: "",
     client_email: "",
@@ -74,6 +74,27 @@ const ServicePage = ({ category }) => {
   const [buyLoading, setBuyLoading] = useState(false);
   const [buySuccess, setBuySuccess] = useState(false);
   const [paypalRedirecting, setPaypalRedirecting] = useState(false);
+  
+  // Stripe states
+  const [stripePromise, setStripePromise] = useState(null);
+  const [showStripeForm, setShowStripeForm] = useState(false);
+  const [stripeClientSecret, setStripeClientSecret] = useState(null);
+  const [stripePaymentId, setStripePaymentId] = useState(null);
+
+  // Load Stripe
+  useEffect(() => {
+    const loadStripeKey = async () => {
+      try {
+        const res = await axios.get(`${API}/public/stripe-config`);
+        if (res.data.publishable_key) {
+          setStripePromise(loadStripe(res.data.publishable_key));
+        }
+      } catch (e) {
+        console.error("Failed to load Stripe config");
+      }
+    };
+    loadStripeKey();
+  }, []);
 
   const categoryInfo = {
     wedding: {
