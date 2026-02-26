@@ -789,9 +789,13 @@ const PhotoFindKiosk = () => {
                       }`}
                     >
                       <img
-                        src={`${API}/public/photofind/${eventId}/photo/${photo.id}`}
+                        src={photo.url ? `${BACKEND_URL}${photo.url}` : `${BACKEND_URL}/uploads/photofind/${eventId}/${photo.filename}`}
                         alt=""
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to alternative URL format
+                          e.target.src = `${API}/public/photofind/${eventId}/photo/${photo.id}`;
+                        }}
                       />
                       {selectedPhotos.includes(photo.id) && (
                         <div className="absolute top-2 right-2 bg-primary rounded-full p-1">
