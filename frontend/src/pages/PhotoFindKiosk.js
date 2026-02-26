@@ -723,6 +723,9 @@ const PhotoFindKiosk = () => {
     setSelectedPhotos([]);
     setEmail("");
     setStep("welcome");
+    setCashPaymentConfirmed(false);
+    setDeliveryMethod(null);
+    setSelectedFrame("none");
     stopCamera();
   };
 
