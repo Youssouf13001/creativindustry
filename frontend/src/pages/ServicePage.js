@@ -338,7 +338,22 @@ const ServicePage = ({ category }) => {
                 {/* Payment Method Selection */}
                 <div className="mb-6">
                   <label className="text-sm text-white/60 block mb-3">Mode de paiement de l'acompte</label>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    {/* Carte Bancaire */}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("stripe")}
+                      className={`p-4 border-2 transition-all flex flex-col items-center gap-2 ${
+                        paymentMethod === "stripe" 
+                          ? "border-[#635bff] bg-[#635bff]/10" 
+                          : "border-white/20 hover:border-white/40"
+                      }`}
+                    >
+                      <CreditCard size={24} className={paymentMethod === "stripe" ? "text-[#635bff]" : "text-white/60"} />
+                      <span className={`font-bold text-sm ${paymentMethod === "stripe" ? "text-[#635bff]" : ""}`}>CB</span>
+                      <span className="text-xs text-white/50">Immédiat</span>
+                    </button>
+                    {/* PayPal */}
                     <button
                       type="button"
                       onClick={() => setPaymentMethod("paypal")}
@@ -349,9 +364,10 @@ const ServicePage = ({ category }) => {
                       }`}
                     >
                       <CreditCard size={24} className={paymentMethod === "paypal" ? "text-[#0070ba]" : "text-white/60"} />
-                      <span className={`font-bold ${paymentMethod === "paypal" ? "text-[#0070ba]" : ""}`}>PayPal</span>
-                      <span className="text-xs text-white/50">Paiement immédiat</span>
+                      <span className={`font-bold text-sm ${paymentMethod === "paypal" ? "text-[#0070ba]" : ""}`}>PayPal</span>
+                      <span className="text-xs text-white/50">Immédiat</span>
                     </button>
+                    {/* Virement */}
                     <button
                       type="button"
                       onClick={() => setPaymentMethod("bank")}
@@ -362,7 +378,7 @@ const ServicePage = ({ category }) => {
                       }`}
                     >
                       <Building2 size={24} className={paymentMethod === "bank" ? "text-primary" : "text-white/60"} />
-                      <span className={`font-bold ${paymentMethod === "bank" ? "text-primary" : ""}`}>Virement</span>
+                      <span className={`font-bold text-sm ${paymentMethod === "bank" ? "text-primary" : ""}`}>Virement</span>
                       <span className="text-xs text-white/50">Sous 48h</span>
                     </button>
                   </div>
