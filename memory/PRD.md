@@ -49,6 +49,7 @@ French
 - [x] **Onglet Kiosque Admin** - Gestion séparée du mode kiosque dans l'admin (26 Fév 2026)
 - [x] **Cadres/Filtres Photos** - 5 styles (Mariage, Vintage, Polaroid, Fête, Sans cadre) + cadres personnalisés (26 Fév 2026)
 - [x] **Paiement PayPal Mobile Kiosque** - QR code pour payer sur téléphone + impression auto (26 Fév 2026)
+- [x] **Paiement Stripe CB Kiosque** - Paiement par carte bancaire intégré avec Stripe (26 Fév 2026)
 - [x] **Paiement Liquide/CB Kiosque** - Option paiement manuel avec confirmation (26 Fév 2026)
 - [x] **Popup PWA désactivé** - Plus de popup intrusif (26 Fév 2026)
 
