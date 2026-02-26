@@ -789,10 +789,11 @@ const AdminDashboard = () => {
   const fetchBillingData = async () => {
     setLoadingBilling(true);
     try {
-      const [invoicesRes, pricingRes, purchasesRes] = await Promise.all([
+      const [invoicesRes, pricingRes, purchasesRes, guestbookPriceRes] = await Promise.all([
         axios.get(`${API}/admin/renewal-invoices`, { headers }),
         axios.get(`${API}/admin/gallery-pricing`, { headers }),
-        axios.get(`${API}/admin/gallery-purchases`, { headers })
+        axios.get(`${API}/admin/gallery-purchases`, { headers }),
+        axios.get(`${API}/admin/guestbook-price`, { headers }).catch(() => ({ data: { price: 200 } }))
       ]);
       
       setRenewalInvoices(invoicesRes.data.invoices || []);
@@ -803,6 +804,10 @@ const AdminDashboard = () => {
       
       if (pricingRes.data) {
         setGalleryPricing(pricingRes.data);
+      }
+      
+      if (guestbookPriceRes.data) {
+        setGuestbookPrice(guestbookPriceRes.data.price || 200);
       }
       
       setGalleryPurchases(purchasesRes.data.purchases || []);
