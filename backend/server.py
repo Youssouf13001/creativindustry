@@ -12740,6 +12740,42 @@ class GalleryPurchaseCreate(BaseModel):
     gallery_id: str
     option: str  # "gallery_3d", "video_slideshow", "hd_download", or "pack_complete"
 
+
+# ==================== GUESTBOOK PRICING ====================
+
+# Public: Get guestbook price
+@api_router.get("/public/guestbook-price")
+async def get_public_guestbook_price():
+    """Get current guestbook price for display"""
+    price = await get_guestbook_price()
+    return {"price": price}
+
+# Admin: Get guestbook price
+@api_router.get("/admin/guestbook-price")
+async def get_admin_guestbook_price(admin: dict = Depends(get_current_admin)):
+    """Get current guestbook price setting"""
+    price = await get_guestbook_price()
+    return {"price": price}
+
+# Admin: Update guestbook price
+@api_router.put("/admin/guestbook-price")
+async def update_guestbook_price(
+    price: float = Body(..., embed=True),
+    admin: dict = Depends(get_current_admin)
+):
+    """Update guestbook price"""
+    if price < 0:
+        raise HTTPException(status_code=400, detail="Le prix ne peut pas être négatif")
+    
+    await db.settings.update_one(
+        {"key": "guestbook_price"},
+        {"$set": {"key": "guestbook_price", "value": price}},
+        upsert=True
+    )
+    
+    return {"success": True, "price": price}
+
+
 # Admin: Get gallery pricing
 @api_router.get("/admin/gallery-pricing")
 async def get_gallery_pricing(credentials: HTTPAuthorizationCredentials = Depends(security)):
