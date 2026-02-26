@@ -31,6 +31,7 @@ import SharedGalleryPage from "./pages/SharedGalleryPage";
 import GuestbookPage from "./pages/GuestbookPage";
 import PhotoFindPage from "./pages/PhotoFindPage";
 import PhotoFindDownloadPage from "./pages/PhotoFindDownloadPage";
+import PhotoFindKiosk from "./pages/PhotoFindKiosk";
 import Gallery3DPage from "./pages/Gallery3DPage";
 
 function App() {

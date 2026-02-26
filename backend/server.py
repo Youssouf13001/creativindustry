@@ -6863,6 +6863,165 @@ async def download_photofind_zip(purchase_id: str, token: str):
         }
     )
 
+# ==================== PHOTOFIND KIOSK ENDPOINTS ====================
+
+@api_router.get("/public/photofind/{event_id}/photo/{photo_id}")
+async def serve_photofind_photo(event_id: str, photo_id: str):
+    """Serve a single PhotoFind photo"""
+    photo = await db.photofind_photos.find_one({"id": photo_id, "event_id": event_id})
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo non trouvée")
+    
+    filepath = PHOTOFIND_DIR / event_id / photo["filename"]
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Fichier non trouvé")
+    
+    return FileResponse(filepath, media_type="image/jpeg")
+
+
+class KioskPurchaseData(BaseModel):
+    photo_ids: List[str]
+    email: str
+    amount: float
+    payment_method: str = "kiosk"
+
+
+@api_router.post("/public/photofind/{event_id}/kiosk-purchase")
+async def create_kiosk_purchase(event_id: str, data: KioskPurchaseData):
+    """Create a kiosk purchase and send photos by email"""
+    event = await db.photofind_events.find_one({"id": event_id, "is_active": True})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    # Create purchase record
+    purchase_id = str(uuid.uuid4())
+    download_token = str(uuid.uuid4())[:8]
+    
+    purchase = {
+        "id": purchase_id,
+        "event_id": event_id,
+        "photo_ids": data.photo_ids,
+        "email": data.email,
+        "amount": data.amount,
+        "payment_method": data.payment_method,
+        "status": "pending",
+        "download_token": download_token,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.photofind_kiosk_purchases.insert_one(purchase)
+    
+    # Get photo URLs for email
+    photos = await db.photofind_photos.find(
+        {"event_id": event_id, "id": {"$in": data.photo_ids}},
+        {"_id": 0}
+    ).to_list(100)
+    
+    # Generate download link
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    download_url = f"{site_url}/photofind/download/{purchase_id}?token={download_token}"
+    
+    # Send email with download link
+    try:
+        email_html = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 15px;">
+            <h1 style="color: #D4AF37; text-align: center; margin-bottom: 20px;">📸 Vos photos sont prêtes !</h1>
+            <p style="color: #ffffff; text-align: center; font-size: 16px;">
+                Merci pour votre achat lors de l'événement <strong style="color: #D4AF37;">{event.get('name', 'PhotoFind')}</strong>
+            </p>
+            <div style="background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; margin: 20px 0; text-align: center;">
+                <p style="color: #ffffff; margin: 0 0 10px 0;">
+                    <strong>{len(data.photo_ids)}</strong> photo(s) • <strong>{data.amount}€</strong>
+                </p>
+                <a href="{download_url}" style="display: inline-block; background: #D4AF37; color: #000; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 15px;">
+                    📥 Télécharger mes photos
+                </a>
+            </div>
+            <p style="color: #888; text-align: center; font-size: 12px;">
+                Ce lien est valable pendant 7 jours.
+            </p>
+        </div>
+        """
+        send_email(data.email, f"📸 Vos photos - {event.get('name', 'PhotoFind')}", email_html)
+        logging.info(f"Kiosk purchase email sent to {data.email}")
+    except Exception as e:
+        logging.error(f"Failed to send kiosk email: {e}")
+    
+    # Send admin notification
+    try:
+        admin_html = f"""
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2 style="color: #D4AF37;">🎉 Nouvelle vente Kiosque PhotoFind !</h2>
+            <p><strong>Événement:</strong> {event.get('name', 'N/A')}</p>
+            <p><strong>Email client:</strong> {data.email}</p>
+            <p><strong>Photos:</strong> {len(data.photo_ids)}</p>
+            <p><strong>Montant:</strong> {data.amount}€</p>
+            <p><strong>Méthode:</strong> {data.payment_method}</p>
+        </div>
+        """
+        send_email(SMTP_EMAIL, f"🎉 Vente Kiosque - {data.amount}€", admin_html)
+    except:
+        pass
+    
+    return {
+        "success": True,
+        "purchase_id": purchase_id,
+        "download_url": download_url,
+        "message": "Photos envoyées par email !"
+    }
+
+
+class KioskPrintLog(BaseModel):
+    photo_ids: List[str]
+    count: int
+
+
+@api_router.post("/public/photofind/{event_id}/log-print")
+async def log_kiosk_print(event_id: str, data: KioskPrintLog):
+    """Log a print job from the kiosk"""
+    log = {
+        "id": str(uuid.uuid4()),
+        "event_id": event_id,
+        "photo_ids": data.photo_ids,
+        "count": data.count,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.photofind_print_logs.insert_one(log)
+    
+    return {"success": True, "logged": data.count}
+
+
+# Admin endpoint to get kiosk stats
+@api_router.get("/admin/photofind/events/{event_id}/kiosk-stats")
+async def get_kiosk_stats(event_id: str, admin: dict = Depends(get_current_admin)):
+    """Get kiosk statistics for an event"""
+    # Count purchases
+    purchases = await db.photofind_kiosk_purchases.find(
+        {"event_id": event_id},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    # Count prints
+    prints = await db.photofind_print_logs.find(
+        {"event_id": event_id},
+        {"_id": 0}
+    ).to_list(1000)
+    
+    total_revenue = sum(p.get("amount", 0) for p in purchases)
+    total_photos_sold = sum(len(p.get("photo_ids", [])) for p in purchases)
+    total_printed = sum(p.get("count", 0) for p in prints)
+    
+    return {
+        "total_purchases": len(purchases),
+        "total_revenue": total_revenue,
+        "total_photos_sold": total_photos_sold,
+        "total_printed": total_printed,
+        "recent_purchases": purchases[:10],
+        "recent_prints": prints[:10]
+    }
+
+
 # ==================== SEED DATA ====================
 
 @api_router.post("/seed")
