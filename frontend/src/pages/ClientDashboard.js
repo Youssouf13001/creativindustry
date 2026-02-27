@@ -148,6 +148,14 @@ const ClientDashboard = () => {
   const [generatingMontage, setGeneratingMontage] = useState(false);
   const [showMontageSection, setShowMontageSection] = useState(false);
   
+  // Direct payment states (pay invoices by CB)
+  const [selectedPaymentItems, setSelectedPaymentItems] = useState([]);
+  const [customPaymentAmount, setCustomPaymentAmount] = useState("");
+  const [paymentType, setPaymentType] = useState("full"); // "full", "deposit", "custom"
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [showDirectPaymentModal, setShowDirectPaymentModal] = useState(false);
+  const [directPaymentClientSecret, setDirectPaymentClientSecret] = useState(null);
+  
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
   const headers = { Authorization: `Bearer ${token}` };
