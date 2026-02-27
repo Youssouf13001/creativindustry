@@ -9248,8 +9248,19 @@ async def get_client_payments(client: dict = Depends(get_current_client)):
     total_devis = sum(d.get("total_amount", 0) for d in devis)
     
     # Also get invoices from creativindustry_devis database
-    # Connect to the devis database using the existing mongo client
-    devis_db = client["creativindustry_devis"]
+    # Create a separate connection to access the devis database
+    mongo_base_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+    # Remove database name from URL if present to connect to base MongoDB
+    if '/' in mongo_base_url.split('://')[-1]:
+        base_parts = mongo_base_url.rsplit('/', 1)
+        if '?' in base_parts[-1]:
+            # URL has database name and query params
+            mongo_base_url = base_parts[0] + '/?' + base_parts[-1].split('?')[1]
+        else:
+            mongo_base_url = base_parts[0]
+    
+    devis_client = AsyncIOMotorClient(mongo_base_url)
+    devis_db = devis_client["creativindustry_devis"]
     
     # Find invoices by client email or name (using correct field names)
     client_email = client.get("email", "").lower()
