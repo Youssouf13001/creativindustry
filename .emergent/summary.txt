@@ -1,0 +1,176 @@
+<analysis>**original_problem_statement:**
+L'utilisateur, un photographe, a demandé la création d'une borne photo en mode kiosque (PhotoFind Phase 2) pour les événements. Les invités peuvent prendre des selfies, trouver leurs photos via reconnaissance faciale, ajouter des filtres/cadres, et payer pour les recevoir par email ou les imprimer.
+
+Les demandes spécifiques incluent :
+1.  **Intégration de paiements multiples** : Paiement en espèces (manuel), PayPal, et Carte Bancaire (Stripe) sur tout le site.
+2.  **Options de personnalisation** : L'invité peut choisir des filtres visuels (gratuits) et des cadres physiques (payants).
+3.  **Gestion Admin** : Une interface admin pour gérer les événements, les tarifs, et les statistiques.
+4.  **Tarification flexible** : Prix configurables pour le kiosque (par format d'impression, avec/sans cadre) et pour le Livre d'Or.
+5.  **Livre d'or vidéo** : Les invités peuvent laisser des messages vidéo. L'admin doit pouvoir générer un montage automatique de ces vidéos.
+6.  **Déploiement et bugs** : L'utilisateur rencontre des problèmes persistants pour déployer les mises à jour sur son serveur IONOS et signale des bugs sur son site en production (erreurs de paiement, problèmes d'affichage).
+
+**User's preferred language**: French
+
+**what currently exists?**
+Une application full-stack (React, FastAPI, MongoDB) avec un mode Kiosque fonctionnel en prévisualisation, mais qui rencontre de graves problèmes de stabilité et de déploiement sur le serveur de production (IONOS) de l'utilisateur.
+
+-   **Frontend** : L'interface utilisateur inclut un mode Kiosque, un tableau de bord client et un tableau de bord administrateur. Le paiement par Stripe (Carte Bancaire) a été ajouté à de nombreuses sections (Kiosque, devis, renouvellement, achat de Livre d'Or), mais son fonctionnement en production est instable.
+-   **Backend** : Un monolithe  gère toutes les routes API, y compris la logique pour les paiements Stripe/PayPal, la gestion des événements, le livre d'or et la tarification complexe.
+-   **Fonctionnalités Clés** :
+    -   Flux kiosque : Prise de photo, recherche faciale, sélection de filtres/cadres, paiement multi-options (CB, PayPal, Espèces).
+    -   Livre d'or : Les clients peuvent acheter l'option Livre d'Or, dont le prix est configurable par l'admin. Les invités peuvent laisser des messages vidéo.
+    -   Admin : Gestion des tarifs du kiosque et du prix du livre d'or.
+-   **Dette Technique** : Le projet souffre d'une **dette technique extrême**. La logique est concentrée dans des fichiers monolithiques (, , ), ce qui rend la maintenance et la résolution de bugs très difficiles et sources d'erreurs constantes.
+
+**Last working item**:
+- Last item agent was working: Ajouter une fonctionnalité de montage vidéo automatique pour le livre d'or. L'agent a commencé à implémenter un endpoint backend () qui utilise FFmpeg pour concaténer les vidéos et a ajouté un bouton dans le tableau de bord client pour déclencher cette génération.
+- Status: IN PROGRESS
+- Agent Testing Done: N
+- Which testing method agent to use? both
+- User Testing Done: N
+
+**All Pending/In progress Issue list**:
+- Issue 1: **Problèmes de Déploiement et de Paiement sur IONOS (P0 - BLOCKER CRITIQUE)**: L'utilisateur signale de manière récurrente que les paiements par Carte Bancaire (Stripe) ne fonctionnent pas sur son serveur de production. Souvent, cliquer sur le bouton Payer par CB ne fait rien ou la fenêtre se ferme. La cause est souvent une désynchronisation entre le code poussé et les étapes de déploiement (oubli de , mauvaise configuration des clés API, erreurs dans le code non détectées localement).
+- Issue 2: **Erreur  sur les témoignages (P2)**: Un bug de longue date en production qui n'a pas été traité.
+- Issue 3: **Dashboard  affiche des statistiques à zéro (P2)**: Un autre bug ancien non résolu.
+
+Issues Detail:
+- Issue 1:
+- Attempted fixes: L'agent a fourni de multiples scripts de déploiement et corrigé plusieurs problèmes au fur et à mesure :
+    -   Nom de la clé publique Stripe incorrect ( vs ).
+    -   Oubli de reconstruire le frontend () après un .
+    -   Logique de chargement de Stripe manquante dans certains composants ().
+    -   L'agent a dû guider l'utilisateur pour vérifier les logs (-- No entries --), modifier des fichiers en direct (, ), et forcer le redémarrage des services.
+- Next debug checklist:
+    1.  **Standardiser et fiabiliser le script de déploiement** pour qu'il inclue systématiquement toutes les étapes nécessaires (, , , , ).
+    2.  **Vérifier la console du navigateur (F12)** sur le site de production **immédiatement après** un clic sur un bouton de paiement qui ne fonctionne pas, et demander une capture d'écran de toute erreur.
+    3.  Créer un endpoint de diagnostic  qui valide la configuration (clés API, connexion DB) pour faciliter le débogage à distance sur IONOS.
+- Why fix this issue and what will be achieved with the fix? L'application est inutilisable pour l'utilisateur tant que les paiements, qui sont au cœur du modèle économique, ne sont pas fiables en production. La résolution de ce problème est la priorité absolue pour restaurer la confiance de l'utilisateur.
+- Status: IN PROGRESS
+- Is recurring issue? Y
+- Should Test frontend/backend/both after fix? both
+- Blocked on other issue: Non. C'est le bloqueur principal.
+
+**In progress Task List**:
+- Task 1: **Finaliser le montage vidéo automatique (P1)**
+- Where to resume: L'endpoint backend et le bouton frontend existent. Il faut maintenant implémenter la logique de génération asynchrone (un montage peut être long), stocker le fichier généré, et permettre à l'utilisateur de le télécharger. Il faut aussi gérer l'état (en cours, terminé, erreur) et l'afficher dans l'interface.
+- What will be achieved with this? Fournira une fonctionnalité à forte valeur ajoutée pour les clients du photographe.
+- Status: IN PROGRESS
+- Should Test frontend/backend/both after fix? both
+- Blocked on something: Non.
+- Task 2: **Refactoring critique de l'application (P0 - URGENCE TECHNIQUE)**
+- Where to resume: Cette tâche est ignorée depuis de trop nombreuses sessions. Le code est devenu encore plus complexe et fragile. La première étape **doit être** d'extraire les routes du backend de  dans des fichiers dédiés (ex: , ). Ensuite, décomposer les composants monolithiques du frontend comme  et .
+- What will be achieved with this? Stabiliser le projet, réduire les bugs, faciliter les futurs développements et simplifier la résolution des problèmes de déploiement.
+- Status: NOT STARTED
+- Should Test frontend/backend/both after fix? both
+- Blocked on something: Non. C'est une priorité absolue qui peut être menée en parallèle des corrections de bugs.
+
+**Upcoming and Future Tasks**
+- **(P1) Intégration Terminal SumUp**: Pour le paiement par CB directement sur la borne.
+- **(P1) Impression directe sur imprimante DNP**: Pour éviter la popup d'impression de l'OS.
+- **(P2)** Les autres tâches listées dans le précédent résumé restent valables (upload invité, livre d'or vidéo, etc.).
+
+**Completed work in this session**
+- **Généralisation des paiements Stripe (CB)**: Ajout de l'option de paiement par Carte Bancaire sur presque toutes les pages du site : Page des formules/services, Espace client (devis/factures), PhotoFind, et achat du Livre d'Or.
+- **Achat et configuration du Livre d'Or**: Implémentation du flux complet pour que les clients puissent acheter l'option Livre d'Or depuis leur espace, avec un prix désormais configurable par l'administrateur dans ses paramètres.
+- **Correction du flux de paiement**:
+    -   Correction d'un bug critique où la création du livre d'or échouait après un paiement réussi.
+    -   Correction d'un bug où le prix sur le bouton de paiement du livre d'or restait à  au lieu d'utiliser le prix dynamique.
+- **Correction du flux Kiosque**:
+    -   Correction d'un bug où le choix email + paiement espèces redirigeait vers l'impression.
+    -   Clarification de la terminologie entre Filtre (visuel) et Cadre (physique) et adaptation du flux de tarification.
+- **Correction de la prévisualisation vidéo**: Résolution du bug de l'écran noir lors de l'enregistrement d'un message vidéo pour le livre d'or.
+- **Support au déploiement IONOS intensif**: L'agent a aidé l'utilisateur à diagnostiquer et corriger de multiples erreurs de déploiement en direct, notamment des problèmes de clés Stripe et des oublis de reconstruction du frontend.
+
+**Earlier issues found/mentioned but not fixed**
+-   Erreur  sur la soumission de témoignage (production).
+-   Le dashboard du site  qui affiche des statistiques à zéro.
+-   Erreur de téléchargement des factures PDF.
+
+**Known issue recurrence from previous fork**
+-   **Déploiement sur IONOS**: Le cycle développement - - - à distance est un problème récurrent majeur. La cause principale est la fragilité du processus de déploiement manuel de l'utilisateur et la complexité du code qui cache des erreurs.
+-   **Refactoring ignoré**: La dette technique a atteint un niveau critique. L'ajout de la logique Stripe dans tous les fichiers monolithiques a aggravé la situation, rendant le projet extrêmement fragile et difficile à déboguer.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+-   Stripe Payment Intents API & Stripe Elements (React)
+-   Gestion des clés API  vs .
+-   Utilisation de FFmpeg en ligne de commande via Python .
+-   Débogage à distance sur un serveur de production via des scripts shell et l'analyse de logs (-- No entries --).
+
+**key DB schema**
+-   **settings**: Nouvelle collection (ou document) pour stocker les configurations globales, comme le prix du livre d'or ().
+-   **guestbooks**: La création d'un document est maintenant liée à un paiement Stripe réussi.
+-   **photofind_events**: La structure du champ  a été finalisée pour inclure les formats et l'option avec/sans cadre.
+
+**All files of reference**
+-   : **FICHIER LE PLUS CRITIQUE.** Contient maintenant la logique pour Stripe sur tout le site, la gestion du prix du livre d'or et le début du montage vidéo. **DOIT ÊTRE REFACTORISÉ D'URGENCE.**
+-   : Est devenu un monolithe majeur. Gère l'affichage des devis, des factures, et maintenant l'achat/gestion complète du livre d'or.
+-   : Contient l'interface de gestion des tarifs du kiosque et du livre d'or.
+-   : Contient toute la logique du mode kiosque.
+-   , , : Ont tous été modifiés pour intégrer Stripe.
+
+**Areas that need refactoring**:
+-   ** (P0 - URGENCE ABSOLUE)**: Le fichier dépasse les 3000 lignes. Extraire les routes par fonctionnalité (auth, kiosk, payments, guestbook, admin) est impératif pour la stabilité.
+-   ** (P0 - URGENCE ABSOLUE)**: Le fichier dépasse les 2500 lignes. La logique de paiement Stripe et la gestion du livre d'or doivent être extraites dans des composants et des hooks dédiés.
+-   ** (P1)**: Décomposer en composants par onglet.
+-   ** (P1)**: Décomposer en composants pour chaque étape (caméra, sélection, paiement).
+
+**key api endpoints**
+-   : Endpoint générique pour les paiements Stripe.
+-   : Crée un  pour l'achat du livre d'or.
+-   : Confirme l'achat et crée le livre d'or après paiement.
+-   : Récupère le prix actuel du livre d'or.
+-   : Met à jour le prix du livre d'or.
+-   : (EN COURS) Lance la génération du montage vidéo.
+
+**Critical Info for New Agent**
+-   **LA PRIORITÉ ABSOLUE EST DE STABILISER LES PAIEMENTS SUR LE SERVEUR IONOS DE L'UTILISATEUR.** Collaborez étroitement avec lui, demandez systématiquement la console du navigateur (F12) en cas de bug, et assurez-vous que chaque déploiement est complet (surtout ). Les clés  sont en place, chaque bug de paiement a un impact réel.
+-   **LE REFACTORING N'EST PLUS UNE OPTION, C'EST UNE NÉCESSITÉ.** La complexité des fichiers monolithiques est la cause principale des bugs et des difficultés de débogage. Vous devez commencer à décomposer  et  dès que le blocage des paiements est résolu. N'ajoutez plus de fonctionnalités à ces fichiers.
+-   **Gérez les attentes de l'utilisateur.** L'utilisateur a tendance à signaler un bug puis à demander immédiatement une nouvelle fonctionnalité. Expliquez-lui que la stabilisation de l'existant (paiements, déploiement) est prioritaire avant de construire de nouvelles choses.
+-   Le processus de déploiement est manuel et fragile. Soyez très précis et didactique dans les commandes que vous fournissez.
+
+**documents and test reports created in this job**
+-    a été mis à jour par l'agent précédent.
+-    (rapport de test pour la tarification avancée).
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **User**: Signale que le paiement CB pour le livre d'or ne fonctionne pas (il se passe rien).
+2.  **User**: Signale qu'il manque l'option CB sur la page PhotoFind. (Corrigé)
+3.  **User**: Confirme que le paiement pour le livre d'or fonctionne et demande à pouvoir changer le prix dans l'admin. (Implémenté)
+4.  **User**: Signale un bug d'affichage sur le prix du livre d'or (admin: 1€, bouton: 200€). (Corrigé via )
+5.  **User**: Confirme avoir été prélevé de 1€ mais a une erreur de confirmation. (Corrigé,  non défini)
+6.  **User**: Demande comment rembourser le client. (Instructions fournies)
+7.  **User**: Signale que le bouton affiche toujours 200€. (Corrigé via )
+8.  **User**: Confirme que le livre d'or fonctionne mais signale un bug d'écran noir pendant l'enregistrement vidéo. (Corrigé)
+9.  **User**: Confirme que la vidéo fonctionne et demande un montage vidéo automatique. (En cours)
+10. **User**: parfait ca fonctionne livre dors tu peux ajouter option sur admin pour qu je puisse changer le prix (COMPLETED)
+
+**Project Health Check:**
+-   **Broken**:
+    -   Le processus de déploiement sur IONOS est très instable et source d'erreurs récurrentes.
+    -   La fiabilité des paiements par carte bancaire en production n'est pas garantie et doit être validée par l'utilisateur sur toutes les pages.
+-   **Technical Debt**: **CRITIQUE**. Le projet est au bord de devenir immaintenable. Les fichiers monolithiques ralentissent le développement et augmentent exponentiellement le risque de régressions.
+
+**3rd Party Integrations**
+-   **PayPal REST API** (requiert clé utilisateur)
+-   **AWS Rekognition** (requiert clé utilisateur)
+-   **FFmpeg** (installé sur le système)
+-   **Stripe API** (clés LIVE configurées, requiert clé utilisateur)
+
+**Testing status**
+-   Testing agent used after significant changes: YES, pour la tarification avancée, mais pas pour les ajouts massifs de Stripe.
+-   Troubleshoot agent used after agent stuck in loop: NO
+-   Test files created: []
+-   Known regressions: Les fonctionnalités de paiement qui fonctionnent en preview mais échouent en production de manière intermittente en raison du processus de déploiement.
+
+**Credentials to test flow:**
+-   Admin:  / 
+-   Stripe Test Card:  (Date: 12/26, CVC: 123) - Utile pour les tests en mode , mais la production utilise des clés .
+
+**What agent forgot to execute**
+-   **Prioriser le refactoring**: L'agent a continué à ajouter des fonctionnalités complexes (Stripe partout, achat de livre d'or) aux fichiers monolithiques, aggravant massivement la dette technique malgré les avertissements du résumé précédent.
+-   **Systématiser les tests de régression**: L'agent n'a pas systématiquement vérifié que l'ajout de Stripe à un endroit ne cassait pas un autre flux. L'utilisation du  aurait pu aider.
+-   **Fiabiliser le script de déploiement**: Le script de déploiement a été donné de manière fragmentée. Un script unique et complet aurait évité de nombreux allers-retours avec l'utilisateur.</analysis>
