@@ -39,6 +39,9 @@ from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 # Import models early to avoid circular imports
 from models.schemas import AdminCreate, AdminUpdate, AdminResponse
 
+# Import modular routes
+from routes.guestbook import router as guestbook_router
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
