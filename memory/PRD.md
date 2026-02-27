@@ -92,6 +92,8 @@ French
 - `POST /api/public/guestbooks/{id}/messages/media` - Poster audio/vidéo
 - `GET /api/client/guestbooks` - Livres d'or du client
 - `PUT /api/client/guestbook-messages/{id}/approve` - Client approuve
+- `POST /api/client/guestbook/{id}/generate-montage` - Générer montage vidéo
+- `GET /api/client/guestbook/{id}/montages` - Liste des montages créés
 
 ### Galerie
 - `POST /api/admin/galleries/{id}/music` - Upload musique galerie
