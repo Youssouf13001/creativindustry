@@ -4,9 +4,15 @@ Common dependencies for routes - Authentication, Database, etc.
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorClient
+from dotenv import load_dotenv
+from pathlib import Path
 import jwt
 import os
 from datetime import datetime, timezone
+
+# Load environment variables
+ROOT_DIR = Path(__file__).parent.parent
+load_dotenv(ROOT_DIR / '.env')
 
 # Security
 security = HTTPBearer()
@@ -16,8 +22,8 @@ SECRET_KEY = os.environ.get('JWT_SECRET', 'creativindustry-secret-key-2024')
 ALGORITHM = "HS256"
 
 # Database connection
-mongo_client = AsyncIOMotorClient(os.environ['MONGO_URL'])
-db = mongo_client[os.environ['DB_NAME']]
+mongo_client = AsyncIOMotorClient(os.environ.get('MONGO_URL', 'mongodb://localhost:27017'))
+db = mongo_client[os.environ.get('DB_NAME', 'test_database')]
 
 
 def verify_token(token: str):
