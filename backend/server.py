@@ -9251,22 +9251,23 @@ async def get_client_payments(client: dict = Depends(get_current_client)):
     # Connect to the devis database
     devis_db = mongo_client["creativindustry_devis"]
     
-    # Find invoices by client email or name
+    # Find invoices by client email or name (using correct field names)
     client_email = client.get("email", "").lower()
     client_name = client.get("name", "")
     
-    # Search in invoices collection
+    # Search in invoices collection with correct field names
     invoices_cursor = devis_db.invoices.find({
         "$or": [
-            {"client.email": {"$regex": client_email, "$options": "i"}},
-            {"client.name": {"$regex": f"^{client_name}$", "$options": "i"}}
+            {"client_email": {"$regex": client_email, "$options": "i"}},
+            {"client_name": {"$regex": f"^{client_name}$", "$options": "i"}}
         ]
     })
     invoices = await invoices_cursor.to_list(50)
     
-    total_invoices = sum(inv.get("total", 0) for inv in invoices)
+    # Use correct field names: total_ttc, acompte, reste_a_payer
+    total_invoices = sum(inv.get("total_ttc", inv.get("total", 0)) for inv in invoices)
     total_acompte = sum(inv.get("acompte", 0) for inv in invoices)
-    total_reste = sum(inv.get("resteAPayer", 0) for inv in invoices)
+    total_reste = sum(inv.get("reste_a_payer", inv.get("resteAPayer", 0)) for inv in invoices)
     
     # Combined total
     total_amount = total_devis + total_invoices
@@ -9282,7 +9283,7 @@ async def get_client_payments(client: dict = Depends(get_current_client)):
     # Total paid includes both recorded payments AND acomptes from invoices
     total_paid = total_paid_payments + total_acompte
     
-    # Remaining: use resteAPayer from invoices if available, otherwise calculate
+    # Remaining: use reste_a_payer from invoices if available, otherwise calculate
     if total_reste > 0:
         remaining = total_reste
     else:
