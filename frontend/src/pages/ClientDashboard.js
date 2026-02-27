@@ -1557,7 +1557,11 @@ const ClientDashboard = () => {
 
                 {/* Video Montage Section */}
                 <div className="bg-card border border-white/10 p-4 mb-6">
-                  <div className="flex items-center justify-between mb-4">
+                  <div 
+                    className="flex items-center justify-between cursor-pointer"
+                    onClick={() => setShowMontageSection(!showMontageSection)}
+                    data-testid="montage-section-toggle"
+                  >
                     <div className="flex items-center gap-3">
                       <div className="bg-purple-500/20 p-2 rounded">
                         <Video className="text-purple-400" size={20} />
@@ -1567,12 +1571,9 @@ const ClientDashboard = () => {
                         <p className="text-white/60 text-sm">Créez un montage de toutes les vidéos approuvées</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => setShowMontageSection(!showMontageSection)}
-                      className="text-white/60 hover:text-white"
-                    >
+                    <div className="text-white/60 hover:text-white">
                       {showMontageSection ? <ChevronLeft size={20} className="rotate-90" /> : <ChevronLeft size={20} className="-rotate-90" />}
-                    </button>
+                    </div>
                   </div>
                   
                   {showMontageSection && (
