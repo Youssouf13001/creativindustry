@@ -580,6 +580,8 @@ const ClientDashboard = () => {
     try {
       const res = await axios.get(`${API}/client/guestbooks/${guestbookId}`, { headers });
       setSelectedClientGuestbook(res.data);
+      // Also fetch montages
+      fetchMontages(guestbookId);
     } catch (e) {
       toast.error("Erreur lors du chargement");
     }
