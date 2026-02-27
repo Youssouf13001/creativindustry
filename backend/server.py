@@ -9247,17 +9247,36 @@ async def get_client_payments(client: dict = Depends(get_current_client)):
     
     total_devis = sum(d.get("total_amount", 0) for d in devis)
     
-    # Get all payments
+    # Also get invoices total (factures)
+    invoices = await db.client_invoices.find(
+        {"client_id": client["id"]},
+        {"_id": 0, "total_ttc": 1, "total_amount": 1, "acompte": 1, "reste_a_payer": 1}
+    ).to_list(50)
+    
+    total_invoices = sum(inv.get("total_ttc", inv.get("total_amount", 0)) for inv in invoices)
+    total_acompte = sum(inv.get("acompte", 0) for inv in invoices)
+    
+    # Combined total
+    total_amount = total_devis + total_invoices
+    
+    # Get all payments from client_payments collection
     payments = await db.client_payments.find(
         {"client_id": client["id"]},
         {"_id": 0}
     ).sort("payment_date", -1).to_list(100)
     
-    total_paid = sum(p.get("amount", 0) for p in payments)
-    remaining = total_devis - total_paid
+    total_paid_payments = sum(p.get("amount", 0) for p in payments)
+    
+    # Total paid includes both recorded payments AND acomptes from invoices
+    total_paid = total_paid_payments + total_acompte
+    remaining = total_amount - total_paid
+    
+    # If remaining is negative (overpaid), set to 0
+    if remaining < 0:
+        remaining = 0
     
     return {
-        "total_amount": total_devis,
+        "total_amount": total_amount,
         "total_paid": total_paid,
         "remaining": remaining,
         "payments": payments
