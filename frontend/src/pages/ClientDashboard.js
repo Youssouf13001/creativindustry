@@ -2612,6 +2612,118 @@ const ClientDashboard = () => {
               bankDetails={bankDetails}
             />
 
+            {/* Direct Payment Section - Only show if there's remaining balance */}
+            {myPayments.remaining > 0 && (
+              <div className="bg-card border border-white/10 overflow-hidden">
+                <div className="p-4 bg-gradient-to-r from-blue-500/20 to-transparent border-b border-white/10">
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                    <CreditCard className="text-blue-400" size={20} />
+                    Payer par Carte Bancaire
+                  </h3>
+                  <p className="text-white/60 text-sm mt-1">Réglez votre solde en toute sécurité</p>
+                </div>
+                <div className="p-4 space-y-4">
+                  {/* Payment Type Selection */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Full Payment */}
+                    <button
+                      onClick={() => setPaymentType("full")}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        paymentType === "full" 
+                          ? "border-primary bg-primary/10" 
+                          : "border-white/10 hover:border-white/30"
+                      }`}
+                      data-testid="payment-type-full"
+                    >
+                      <div className="text-center">
+                        <p className="font-bold text-lg mb-1">Solde Total</p>
+                        <p className="text-2xl font-bold text-primary">
+                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(myPayments.remaining)}
+                        </p>
+                        <p className="text-white/50 text-sm mt-1">Tout régler maintenant</p>
+                      </div>
+                    </button>
+                    
+                    {/* Deposit (30%) */}
+                    <button
+                      onClick={() => setPaymentType("deposit")}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        paymentType === "deposit" 
+                          ? "border-primary bg-primary/10" 
+                          : "border-white/10 hover:border-white/30"
+                      }`}
+                      data-testid="payment-type-deposit"
+                    >
+                      <div className="text-center">
+                        <p className="font-bold text-lg mb-1">Acompte 30%</p>
+                        <p className="text-2xl font-bold text-blue-400">
+                          {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(Math.ceil(myPayments.remaining * 0.30))}
+                        </p>
+                        <p className="text-white/50 text-sm mt-1">Caution / Réservation</p>
+                      </div>
+                    </button>
+                    
+                    {/* Custom Amount */}
+                    <button
+                      onClick={() => setPaymentType("custom")}
+                      className={`p-4 rounded-lg border-2 transition-all ${
+                        paymentType === "custom" 
+                          ? "border-primary bg-primary/10" 
+                          : "border-white/10 hover:border-white/30"
+                      }`}
+                      data-testid="payment-type-custom"
+                    >
+                      <div className="text-center">
+                        <p className="font-bold text-lg mb-1">Montant Libre</p>
+                        {paymentType === "custom" ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <input
+                              type="number"
+                              value={customPaymentAmount}
+                              onChange={(e) => setCustomPaymentAmount(e.target.value)}
+                              placeholder="0"
+                              className="w-24 text-center text-2xl font-bold bg-transparent border-b-2 border-primary text-primary focus:outline-none"
+                              min="1"
+                              max={myPayments.remaining}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <span className="text-xl text-primary">€</span>
+                          </div>
+                        ) : (
+                          <p className="text-2xl font-bold text-white/40">...€</p>
+                        )}
+                        <p className="text-white/50 text-sm mt-1">Choisir le montant</p>
+                      </div>
+                    </button>
+                  </div>
+                  
+                  {/* Pay Button */}
+                  <button
+                    onClick={initiateDirectPayment}
+                    disabled={processingPayment || (paymentType === "custom" && (!customPaymentAmount || parseFloat(customPaymentAmount) <= 0))}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 disabled:from-gray-600 disabled:to-gray-500 text-white font-bold py-4 rounded-lg flex items-center justify-center gap-3 transition-all"
+                    data-testid="pay-now-btn"
+                  >
+                    {processingPayment ? (
+                      <>
+                        <Loader className="animate-spin" size={20} />
+                        Traitement en cours...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard size={20} />
+                        Payer {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(calculatePaymentAmount())} par CB
+                      </>
+                    )}
+                  </button>
+                  
+                  <p className="text-white/40 text-xs text-center flex items-center justify-center gap-2">
+                    <Lock size={12} /> Paiement sécurisé par Stripe
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Payment History */}
             <div className="bg-card border border-white/10 overflow-hidden">
               <div className="p-4 bg-gradient-to-r from-green-500/20 to-transparent border-b border-white/10">
