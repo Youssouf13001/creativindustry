@@ -9239,7 +9239,7 @@ async def get_client_invoices(client: dict = Depends(get_current_client)):
 @api_router.get("/client/my-payments")
 async def get_client_payments(client: dict = Depends(get_current_client)):
     """Get all payments and summary for current client"""
-    # Get all devis for total amount
+    # Get all devis for total amount from creativindustry
     devis = await db.client_devis.find(
         {"client_id": client["id"]},
         {"_id": 0, "total_amount": 1, "devis_id": 1}
@@ -9247,14 +9247,26 @@ async def get_client_payments(client: dict = Depends(get_current_client)):
     
     total_devis = sum(d.get("total_amount", 0) for d in devis)
     
-    # Also get invoices total (factures)
-    invoices = await db.client_invoices.find(
-        {"client_id": client["id"]},
-        {"_id": 0, "total_ttc": 1, "total_amount": 1, "acompte": 1, "reste_a_payer": 1}
-    ).to_list(50)
+    # Also get invoices from creativindustry_devis database
+    # Connect to the devis database
+    devis_db = mongo_client["creativindustry_devis"]
     
-    total_invoices = sum(inv.get("total_ttc", inv.get("total_amount", 0)) for inv in invoices)
+    # Find invoices by client email or name
+    client_email = client.get("email", "").lower()
+    client_name = client.get("name", "")
+    
+    # Search in invoices collection
+    invoices_cursor = devis_db.invoices.find({
+        "$or": [
+            {"client.email": {"$regex": client_email, "$options": "i"}},
+            {"client.name": {"$regex": f"^{client_name}$", "$options": "i"}}
+        ]
+    })
+    invoices = await invoices_cursor.to_list(50)
+    
+    total_invoices = sum(inv.get("total", 0) for inv in invoices)
     total_acompte = sum(inv.get("acompte", 0) for inv in invoices)
+    total_reste = sum(inv.get("resteAPayer", 0) for inv in invoices)
     
     # Combined total
     total_amount = total_devis + total_invoices
@@ -9269,7 +9281,12 @@ async def get_client_payments(client: dict = Depends(get_current_client)):
     
     # Total paid includes both recorded payments AND acomptes from invoices
     total_paid = total_paid_payments + total_acompte
-    remaining = total_amount - total_paid
+    
+    # Remaining: use resteAPayer from invoices if available, otherwise calculate
+    if total_reste > 0:
+        remaining = total_reste
+    else:
+        remaining = total_amount - total_paid
     
     # If remaining is negative (overpaid), set to 0
     if remaining < 0:
