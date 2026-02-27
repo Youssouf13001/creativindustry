@@ -611,6 +611,43 @@ const ClientDashboard = () => {
     toast.success("Lien copié !");
   };
 
+  // Fetch montages for a guestbook
+  const fetchMontages = async (guestbookId) => {
+    try {
+      const res = await axios.get(`${API}/client/guestbook/${guestbookId}/montages`, { headers });
+      setMontages(res.data.montages || []);
+    } catch (e) {
+      console.error("Error fetching montages:", e);
+    }
+  };
+
+  // Generate video montage
+  const generateMontage = async (guestbookId) => {
+    setGeneratingMontage(true);
+    try {
+      const res = await axios.post(`${API}/client/guestbook/${guestbookId}/generate-montage`, {}, { headers });
+      if (res.data.success) {
+        toast.success(`Montage créé avec ${res.data.video_count} vidéos !`);
+        fetchMontages(guestbookId);
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la génération du montage");
+    } finally {
+      setGeneratingMontage(false);
+    }
+  };
+
+  // Download montage
+  const downloadMontage = (montage) => {
+    const url = `${BACKEND_URL}${montage.file_path}`;
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `montage_${montage.id}.mp4`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Fetch renewal invoices for the client
   const fetchRenewalInvoices = async () => {
     try {
