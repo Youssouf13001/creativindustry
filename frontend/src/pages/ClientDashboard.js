@@ -837,6 +837,84 @@ const ClientDashboard = () => {
 
   // Confirm Stripe guestbook payment
   // Handle PayPal return
+
+  // ==================== DIRECT PAYMENT FUNCTIONS ====================
+  
+  // Calculate payment amount based on selection
+  const calculatePaymentAmount = () => {
+    if (paymentType === "full") {
+      return myPayments.remaining || 0;
+    } else if (paymentType === "deposit") {
+      // 30% deposit
+      return Math.ceil((myPayments.remaining || 0) * 0.30);
+    } else if (paymentType === "custom") {
+      return parseFloat(customPaymentAmount) || 0;
+    }
+    return 0;
+  };
+  
+  // Initiate direct payment with Stripe
+  const initiateDirectPayment = async () => {
+    const amount = calculatePaymentAmount();
+    if (amount <= 0) {
+      toast.error("Veuillez sélectionner un montant valide");
+      return;
+    }
+    
+    if (amount > myPayments.remaining) {
+      toast.error("Le montant ne peut pas dépasser le reste à payer");
+      return;
+    }
+    
+    if (!stripePromise) {
+      toast.error("Stripe n'est pas encore chargé. Réessayez dans quelques secondes.");
+      return;
+    }
+    
+    setProcessingPayment(true);
+    
+    try {
+      const res = await axios.post(`${API}/client/direct-payment/create`, {
+        amount: amount,
+        payment_type: paymentType,
+        description: paymentType === "deposit" ? "Acompte 30%" : paymentType === "custom" ? "Paiement partiel" : "Solde total"
+      }, { headers });
+      
+      if (res.data.client_secret) {
+        setDirectPaymentClientSecret(res.data.client_secret);
+        setShowDirectPaymentModal(true);
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la création du paiement");
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+  
+  // Confirm direct payment
+  const confirmDirectPayment = async (paymentIntentId) => {
+    try {
+      const res = await axios.post(`${API}/client/direct-payment/confirm`, {
+        payment_intent_id: paymentIntentId,
+        amount: calculatePaymentAmount()
+      }, { headers });
+      
+      if (res.data.success) {
+        toast.success("Paiement effectué avec succès ! 🎉");
+        setShowDirectPaymentModal(false);
+        setDirectPaymentClientSecret(null);
+        setPaymentType("full");
+        setCustomPaymentAmount("");
+        // Refresh payment data
+        fetchDevisData();
+      } else {
+        toast.error(res.data.message || "Erreur lors de la confirmation");
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de la confirmation");
+    }
+  };
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentId = urlParams.get("paymentId");
