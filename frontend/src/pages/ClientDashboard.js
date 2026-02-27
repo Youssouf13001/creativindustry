@@ -143,6 +143,11 @@ const ClientDashboard = () => {
   const [guestbookStripePaymentId, setGuestbookStripePaymentId] = useState(null);
   const [guestbookPrice, setGuestbookPrice] = useState(200);
   
+  // Montage video states
+  const [montages, setMontages] = useState([]);
+  const [generatingMontage, setGeneratingMontage] = useState(false);
+  const [showMontageSection, setShowMontageSection] = useState(false);
+  
   const navigate = useNavigate();
   const token = localStorage.getItem("client_token");
   const headers = { Authorization: `Bearer ${token}` };
