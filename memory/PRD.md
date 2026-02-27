@@ -53,6 +53,7 @@ French
 - [x] **Paiement Liquide/CB Kiosque** - Option paiement manuel avec confirmation (26 Fév 2026)
 - [x] **Popup PWA désactivé** - Plus de popup intrusif (26 Fév 2026)
 - [x] **Tarification avancée Kiosque** - Prix par format (A4, 10x15) avec/sans cadre (26 Fév 2026)
+- [x] **Montage Vidéo Automatique Livre d'Or** - Génération FFmpeg des vidéos approuvées avec interface client (27 Fév 2026)
 
 ### 🔴 Known Issues (P0 - BLOCKER)
 1. **Erreur `[object Object]`** - Soumission de témoignage en production (IONOS)
