@@ -1555,6 +1555,109 @@ const ClientDashboard = () => {
                   </div>
                 </div>
 
+                {/* Video Montage Section */}
+                <div className="bg-card border border-white/10 p-4 mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-purple-500/20 p-2 rounded">
+                        <Video className="text-purple-400" size={20} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold">Montage Vidéo Automatique</h3>
+                        <p className="text-white/60 text-sm">Créez un montage de toutes les vidéos approuvées</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowMontageSection(!showMontageSection)}
+                      className="text-white/60 hover:text-white"
+                    >
+                      {showMontageSection ? <ChevronLeft size={20} className="rotate-90" /> : <ChevronLeft size={20} className="-rotate-90" />}
+                    </button>
+                  </div>
+                  
+                  {showMontageSection && (
+                    <div className="space-y-4">
+                      {/* Generate button */}
+                      {(() => {
+                        const videoMessages = selectedClientGuestbook.messages?.filter(m => m.message_type === "video" && m.is_approved) || [];
+                        return (
+                          <div className="bg-white/5 rounded-lg p-4">
+                            <p className="text-sm text-white/60 mb-3">
+                              {videoMessages.length} vidéo{videoMessages.length > 1 ? 's' : ''} approuvée{videoMessages.length > 1 ? 's' : ''} disponible{videoMessages.length > 1 ? 's' : ''}
+                            </p>
+                            <button
+                              onClick={() => generateMontage(selectedClientGuestbook.id)}
+                              disabled={generatingMontage || videoMessages.length === 0}
+                              className="w-full bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                              data-testid="generate-montage-btn"
+                            >
+                              {generatingMontage ? (
+                                <>
+                                  <Loader className="animate-spin" size={20} />
+                                  Génération en cours...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles size={20} />
+                                  Générer un nouveau montage
+                                </>
+                              )}
+                            </button>
+                            {videoMessages.length === 0 && (
+                              <p className="text-yellow-500/80 text-xs mt-2 text-center">
+                                Approuvez d'abord des vidéos pour créer un montage
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      
+                      {/* Existing montages */}
+                      {montages.length > 0 && (
+                        <div>
+                          <h4 className="font-medium text-sm text-white/80 mb-3">Montages créés ({montages.length})</h4>
+                          <div className="space-y-2">
+                            {montages.map((montage) => (
+                              <div 
+                                key={montage.id} 
+                                className="bg-white/5 rounded-lg p-3 flex items-center justify-between"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="bg-purple-500/20 p-2 rounded">
+                                    <Play className="text-purple-400" size={16} />
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-sm">Montage du {new Date(montage.created_at).toLocaleDateString('fr-FR')}</p>
+                                    <p className="text-white/50 text-xs">{montage.video_count} vidéo{montage.video_count > 1 ? 's' : ''}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <a
+                                    href={`${BACKEND_URL}${montage.file_path}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-white/10 hover:bg-white/20 p-2 rounded transition-colors"
+                                    title="Voir"
+                                  >
+                                    <Eye size={16} />
+                                  </a>
+                                  <button
+                                    onClick={() => downloadMontage(montage)}
+                                    className="bg-primary/20 hover:bg-primary/30 text-primary p-2 rounded transition-colors"
+                                    title="Télécharger"
+                                  >
+                                    <Download size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Messages */}
                 <h3 className="font-bold mb-4">Messages ({selectedClientGuestbook.messages?.length || 0})</h3>
                 
