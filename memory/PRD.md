@@ -111,6 +111,7 @@ French
 ## Database Collections
 - `guestbooks` - Livres d'or
 - `guestbook_messages` - Messages (texte/audio/vidéo)
+- `guestbook_montages` - Montages vidéo générés
 - `galleries` - Avec `music_url` pour musique diaporama
 - `photofind_events` - Événements PhotoFind
 - `photofind_photos` - Photos avec faces indexées
