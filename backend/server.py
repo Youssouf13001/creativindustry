@@ -12629,6 +12629,130 @@ async def confirm_guestbook_paypal_payment(
         raise HTTPException(status_code=500, detail=f"Erreur PayPal: {str(e)}")
 
 
+# ==================== DIRECT PAYMENT (CB) FOR INVOICES ====================
+
+class DirectPaymentCreate(BaseModel):
+    amount: float
+    payment_type: str = "full"  # "full", "deposit", "custom"
+    description: Optional[str] = None
+
+class DirectPaymentConfirm(BaseModel):
+    payment_intent_id: str
+    amount: float
+
+@api_router.post("/client/direct-payment/create")
+async def create_direct_payment(data: DirectPaymentCreate, client: dict = Depends(get_current_client)):
+    """Create a Stripe payment for direct invoice payment"""
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    if data.amount <= 0:
+        raise HTTPException(status_code=400, detail="Le montant doit être supérieur à 0")
+    
+    stripe.api_key = stripe_secret
+    
+    try:
+        intent = stripe.PaymentIntent.create(
+            amount=int(data.amount * 100),  # Convert to cents
+            currency="eur",
+            metadata={
+                "type": "direct_payment",
+                "client_id": client["id"],
+                "payment_type": data.payment_type,
+                "description": data.description or f"Paiement {data.payment_type}"
+            }
+        )
+        
+        payment_id = str(uuid.uuid4())
+        await db.direct_payments.insert_one({
+            "id": payment_id,
+            "type": "direct_payment",
+            "stripe_payment_intent_id": intent.id,
+            "client_secret": intent.client_secret,
+            "client_id": client["id"],
+            "amount": data.amount,
+            "payment_type": data.payment_type,
+            "description": data.description,
+            "status": "pending",
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return {
+            "success": True,
+            "payment_id": payment_id,
+            "client_secret": intent.client_secret,
+            "amount": data.amount
+        }
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
+@api_router.post("/client/direct-payment/confirm")
+async def confirm_direct_payment(data: DirectPaymentConfirm, client: dict = Depends(get_current_client)):
+    """Confirm a direct payment and record it"""
+    stripe_secret = os.environ.get("STRIPE_SECRET_KEY")
+    if not stripe_secret:
+        raise HTTPException(status_code=500, detail="Stripe non configuré")
+    
+    stripe.api_key = stripe_secret
+    
+    try:
+        # Verify the payment intent
+        intent = stripe.PaymentIntent.retrieve(data.payment_intent_id)
+        
+        if intent.status == "succeeded":
+            # Find the pending payment
+            pending = await db.direct_payments.find_one({
+                "stripe_payment_intent_id": data.payment_intent_id,
+                "client_id": client["id"]
+            })
+            
+            if pending:
+                # Update the payment status
+                await db.direct_payments.update_one(
+                    {"id": pending["id"]},
+                    {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat()}}
+                )
+            
+            # Record the payment in client_payments
+            payment_id = str(uuid.uuid4())
+            payment_record = {
+                "payment_id": payment_id,
+                "client_id": client["id"],
+                "amount": data.amount,
+                "payment_date": datetime.now(timezone.utc).isoformat(),
+                "payment_method": "Carte bancaire (Stripe)",
+                "payment_type": pending.get("payment_type", "direct") if pending else "direct",
+                "description": pending.get("description", "Paiement CB") if pending else "Paiement CB",
+                "stripe_payment_intent_id": data.payment_intent_id,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            await db.client_payments.insert_one(payment_record)
+            
+            # Also update client's total payments if tracking exists
+            client_record = await db.clients.find_one({"id": client["id"]})
+            if client_record:
+                current_paid = client_record.get("total_paid", 0)
+                await db.clients.update_one(
+                    {"id": client["id"]},
+                    {"$set": {"total_paid": current_paid + data.amount}}
+                )
+            
+            return {
+                "success": True,
+                "payment_id": payment_id,
+                "message": "Paiement enregistré avec succès !"
+            }
+        
+        return {"success": False, "message": "Paiement non confirmé"}
+        
+    except stripe.error.StripeError as e:
+        logging.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur Stripe: {str(e)}")
+
+
 # ==================== CLIENT GUESTBOOK ROUTES ====================
 
 @api_router.get("/client/guestbooks")
