@@ -12728,7 +12728,7 @@ async def client_delete_message(message_id: str, credentials: HTTPAuthorizationC
 @api_router.post("/client/guestbook/{guestbook_id}/generate-montage")
 async def generate_guestbook_montage(
     guestbook_id: str,
-    music_url: Optional[str] = Body(None),
+    music_url: Optional[str] = Body(None, embed=True),
     client: dict = Depends(get_current_client)
 ):
     """Generate a video montage from all approved video messages"""
