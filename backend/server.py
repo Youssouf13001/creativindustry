@@ -12743,7 +12743,7 @@ async def generate_guestbook_montage(
     # Get all approved video messages
     messages = await db.guestbook_messages.find({
         "guestbook_id": guestbook_id,
-        "type": "video",
+        "message_type": "video",
         "is_approved": True
     }).sort("created_at", 1).to_list(100)
     
