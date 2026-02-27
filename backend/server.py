@@ -9248,8 +9248,8 @@ async def get_client_payments(client: dict = Depends(get_current_client)):
     total_devis = sum(d.get("total_amount", 0) for d in devis)
     
     # Also get invoices from creativindustry_devis database
-    # Connect to the devis database
-    devis_db = mongo_client["creativindustry_devis"]
+    # Connect to the devis database using the existing mongo client
+    devis_db = client["creativindustry_devis"]
     
     # Find invoices by client email or name (using correct field names)
     client_email = client.get("email", "").lower()
