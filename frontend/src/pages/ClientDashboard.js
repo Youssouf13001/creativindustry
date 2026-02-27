@@ -1577,7 +1577,7 @@ const ClientDashboard = () => {
                   </div>
                   
                   {showMontageSection && (
-                    <div className="space-y-4">
+                    <div className="space-y-4 mt-4">
                       {/* Generate button */}
                       {(() => {
                         const videoMessages = selectedClientGuestbook.messages?.filter(m => m.message_type === "video" && m.is_approved) || [];
