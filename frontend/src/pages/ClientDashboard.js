@@ -3324,6 +3324,38 @@ const ClientDashboard = () => {
         </div>
       )}
 
+      {/* Direct Payment Modal */}
+      {showDirectPaymentModal && stripePromise && directPaymentClientSecret && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-background border border-white/10 rounded-lg max-w-md w-full p-6">
+            <h3 className="text-xl font-bold mb-4 text-center">Paiement par Carte Bancaire</h3>
+            
+            <div className="bg-white/5 rounded-lg p-4 mb-6">
+              <p className="text-white/60 text-center mb-2">
+                {paymentType === "full" ? "Solde total" : paymentType === "deposit" ? "Acompte 30%" : "Paiement partiel"}
+              </p>
+              <p className="text-3xl font-bold text-primary text-center">
+                {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(calculatePaymentAmount())}
+              </p>
+            </div>
+            
+            <Elements stripe={stripePromise} options={{ clientSecret: directPaymentClientSecret }}>
+              <StripeGuestbookForm
+                amount={calculatePaymentAmount()}
+                clientSecret={directPaymentClientSecret}
+                onSuccess={confirmDirectPayment}
+                onCancel={() => {
+                  setShowDirectPaymentModal(false);
+                  setDirectPaymentClientSecret(null);
+                }}
+              />
+            </Elements>
+            
+            <p className="text-center text-white/40 text-xs mt-4">🔒 Paiement sécurisé par Stripe</p>
+          </div>
+        </div>
+      )}
+
       {/* Client Chat Widget */}
       <ClientChat />
 
