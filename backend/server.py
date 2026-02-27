@@ -13746,6 +13746,9 @@ async def create_admin_slideshow(
 
 app.include_router(api_router)
 
+# Include modular routers
+app.include_router(guestbook_router, prefix="/api")
+
 # Mount static files for uploads
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
