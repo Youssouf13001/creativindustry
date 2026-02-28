@@ -1359,15 +1359,48 @@ const ClientDashboard = () => {
                             )}
                             
                             {/* Special action buttons for client */}
-                            {item.status === "in_progress" && item.type === "music_request" && (
-                              <div className="mt-3 flex gap-2 flex-wrap">
+                            {item.status === "in_progress" && item.type === "photos_selection" && (
+                              <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                                <p className="text-white/80 text-sm mb-3">
+                                  📸 Sélectionnez vos 40 photos préférées dans votre galerie puis envoyez-les nous.
+                                </p>
                                 <button
-                                  onClick={() => handleMusicResponse("no_music")}
-                                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white/80 rounded-lg text-sm flex items-center gap-2 transition-colors"
-                                  data-testid="no-music-btn"
+                                  onClick={() => {
+                                    setActiveTab("galleries");
+                                    toast.info("Sélectionnez vos 40 photos dans votre galerie");
+                                  }}
+                                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors"
+                                  data-testid="select-photos-btn"
                                 >
-                                  <span>🎵</span> Nous n'avons pas de musique
+                                  <Image size={16} /> Aller à ma galerie pour sélectionner
                                 </button>
+                              </div>
+                            )}
+                            
+                            {item.status === "in_progress" && item.type === "music_request" && (
+                              <div className="mt-4 p-4 bg-pink-500/10 border border-pink-500/30 rounded-lg">
+                                <p className="text-white/80 text-sm mb-3">
+                                  🎵 Envoyez-nous votre musique de mariage (MP3 ou WAV)
+                                </p>
+                                <div className="flex gap-2 flex-wrap">
+                                  <label className="px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-sm flex items-center gap-2 cursor-pointer transition-colors">
+                                    <Music size={16} /> 
+                                    <span>Uploader ma musique</span>
+                                    <input
+                                      type="file"
+                                      accept="audio/mp3,audio/wav,audio/mpeg,.mp3,.wav"
+                                      className="hidden"
+                                      onChange={(e) => handleMusicUpload(e.target.files[0])}
+                                    />
+                                  </label>
+                                  <button
+                                    onClick={() => handleMusicResponse("no_music")}
+                                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white/80 rounded-lg text-sm flex items-center gap-2 transition-colors"
+                                    data-testid="no-music-btn"
+                                  >
+                                    Nous n'avons pas de musique
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
