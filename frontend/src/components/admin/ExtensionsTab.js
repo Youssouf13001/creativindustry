@@ -98,6 +98,49 @@ const ExtensionsTab = ({
         Extensions de compte
       </h2>
 
+      {/* SMS Configuration Status */}
+      <div className={`rounded-xl p-4 border ${smsConfigured ? 'bg-green-500/10 border-green-500/30' : 'bg-yellow-500/10 border-yellow-500/30'}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <MessageSquare className={`w-5 h-5 ${smsConfigured ? 'text-green-400' : 'text-yellow-400'}`} />
+            <div>
+              <p className={`font-medium ${smsConfigured ? 'text-green-400' : 'text-yellow-400'}`}>
+                {smsConfigured ? '✅ Notifications SMS activées (Brevo)' : '⚠️ SMS non configuré'}
+              </p>
+              <p className="text-sm text-white/60">
+                {smsConfigured 
+                  ? 'Les clients reçoivent des SMS lors des mises à jour de projet' 
+                  : 'Ajoutez BREVO_API_KEY dans le backend pour activer les SMS'}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* SMS Test Section */}
+        {smsConfigured && (
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-white/60 text-sm mb-2">Tester l'envoi de SMS :</p>
+            <div className="flex gap-2">
+              <input
+                type="tel"
+                placeholder="Ex: +33612345678"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder:text-white/30"
+              />
+              <button
+                onClick={handleTestSms}
+                disabled={sendingSms}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-2 disabled:opacity-50"
+              >
+                {sendingSms ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                Envoyer test
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Info */}
       <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
         <p className="text-blue-400 text-sm">
