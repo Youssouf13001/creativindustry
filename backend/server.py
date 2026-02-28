@@ -10983,6 +10983,55 @@ async def client_music_response(
     return {"success": True, "message": "Réponse enregistrée"}
 
 
+@api_router.post("/client/upload-music")
+async def upload_client_music(
+    music_file: UploadFile = File(...),
+    client: dict = Depends(get_current_client)
+):
+    """Client uploads their wedding music"""
+    # Validate file type
+    allowed_types = ['audio/mp3', 'audio/wav', 'audio/mpeg']
+    if music_file.content_type not in allowed_types and not music_file.filename.lower().endswith(('.mp3', '.wav')):
+        raise HTTPException(status_code=400, detail="Format non supporté. Utilisez MP3 ou WAV.")
+    
+    # Create client music folder
+    client_music_dir = UPLOADS_DIR / "client_music" / client["id"]
+    client_music_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generate filename
+    file_ext = Path(music_file.filename).suffix.lower() or ".mp3"
+    safe_name = f"music_{datetime.now().strftime('%Y%m%d_%H%M%S')}{file_ext}"
+    file_path = client_music_dir / safe_name
+    
+    # Save file
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(music_file.file, buffer)
+    
+    # Update project with music info
+    music_url = f"/uploads/client_music/{client['id']}/{safe_name}"
+    
+    await db.client_projects.update_one(
+        {"client_id": client["id"]},
+        {
+            "$set": {
+                "music_response": "uploaded",
+                "music_file": music_url,
+                "music_filename": music_file.filename,
+                "music_uploaded_at": datetime.now(timezone.utc).isoformat()
+            }
+        },
+        upsert=True
+    )
+    
+    logging.info(f"Client {client['name']} uploaded music: {music_file.filename}")
+    
+    return {
+        "success": True,
+        "message": "Musique uploadée avec succès",
+        "music_url": music_url
+    }
+
+
 async def send_project_step_email(client: dict, step_info: dict, current_step: int, total_steps: int):
     """Send email to client when project step changes"""
     if not SMTP_EMAIL or not SMTP_PASSWORD:
