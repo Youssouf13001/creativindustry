@@ -10907,7 +10907,18 @@ async def update_client_project(client_id: str, data: dict, admin: dict = Depend
                     else:
                         current_step_info = next((s for s in PROJECT_STEPS if s["step"] == new_step), None)
                         if current_step_info:
-                            email_sent = await send_project_step_email(client, current_step_info, new_step, total_steps)
+                            step_type = current_step_info.get("type", "standard")
+                            if step_type == "photos_selection":
+                                # Special email for photo selection request
+                                email_sent = await send_photo_selection_email(client, current_step_info, new_step, total_steps)
+                            elif step_type == "music_request":
+                                # Special email for music request
+                                email_sent = await send_music_request_email(client, current_step_info, new_step, total_steps)
+                            elif step_type == "delivery":
+                                # Delivery email with attachment
+                                email_sent = await send_delivery_email_with_attachment(client, current_step_info, new_step, total_steps)
+                            else:
+                                email_sent = await send_project_step_email(client, current_step_info, new_step, total_steps)
                 except Exception as e:
                     logging.error(f"Failed to send project step email: {e}")
         
