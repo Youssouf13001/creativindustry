@@ -6888,6 +6888,81 @@ const AdminDashboard = () => {
         {/* Extensions Tab */}
         {activeTab === "extensions" && (
           <div className="space-y-6">
+            {/* SMS Campaign Panel */}
+            <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-6">
+              <h3 className="text-green-400 font-bold text-lg mb-4 flex items-center gap-2">
+                <MessageSquare size={20} /> Campagne SMS
+              </h3>
+              <textarea 
+                id="sms-campaign-message"
+                placeholder="Votre message (160 caractères max)..."
+                maxLength={160}
+                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white mb-4 h-24 resize-none"
+              />
+              
+              <p className="text-white/60 text-sm mb-2">Sélectionner les clients :</p>
+              <div className="max-h-48 overflow-y-auto bg-white/5 rounded-lg p-2 mb-4 border border-white/10">
+                {clients && clients.length > 0 ? clients.map(c => (
+                  <label key={c.id} className="flex items-center gap-2 p-2 hover:bg-white/10 rounded cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="sms-client-checkbox accent-green-500" 
+                      data-client-id={c.id} 
+                      defaultChecked={!!c.phone} 
+                      disabled={!c.phone} 
+                    />
+                    <span className={c.phone ? "text-white" : "text-white/40"}>
+                      {c.name || c.email} {c.phone ? `(${c.phone})` : "(pas de téléphone)"}
+                    </span>
+                  </label>
+                )) : <p className="text-white/40 text-center py-2">Aucun client</p>}
+              </div>
+              
+              <div className="flex gap-2">
+                <button 
+                  onClick={async () => {
+                    const msg = document.getElementById("sms-campaign-message").value;
+                    if (!msg) return alert("Entrez un message");
+                    const checks = document.querySelectorAll(".sms-client-checkbox:checked");
+                    const ids = [...checks].map(c => c.dataset.clientId);
+                    if (ids.length === 0) return alert("Sélectionnez au moins 1 client");
+                    if (!window.confirm(`Envoyer à ${ids.length} client(s) ?`)) return;
+                    try {
+                      const res = await fetch(`${API}/admin/sms/campaign`, {
+                        method: "POST",
+                        headers: {"Content-Type": "application/json", "Authorization": `Bearer ${token}`},
+                        body: JSON.stringify({message: msg, client_ids: ids})
+                      });
+                      const data = await res.json();
+                      alert(`SMS envoyés: ${data.sent} | Échecs: ${data.failed} | Sans tél: ${data.no_phone}`);
+                    } catch(e) { alert("Erreur: " + e.message); }
+                  }}
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
+                >
+                  Envoyer aux sélectionnés
+                </button>
+                <button 
+                  onClick={async () => {
+                    const msg = document.getElementById("sms-campaign-message").value;
+                    if (!msg) return alert("Entrez un message");
+                    if (!window.confirm("Envoyer à TOUS les clients avec numéro ?")) return;
+                    try {
+                      const res = await fetch(`${API}/admin/sms/campaign`, {
+                        method: "POST",
+                        headers: {"Content-Type": "application/json", "Authorization": `Bearer ${token}`},
+                        body: JSON.stringify({message: msg})
+                      });
+                      const data = await res.json();
+                      alert(`SMS envoyés: ${data.sent} | Échecs: ${data.failed} | Sans tél: ${data.no_phone}`);
+                    } catch(e) { alert("Erreur: " + e.message); }
+                  }}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition"
+                >
+                  Envoyer à tous
+                </button>
+              </div>
+            </div>
+
             <div className="flex justify-between items-center">
               <h2 className="font-primary font-bold text-xl">💳 Gestion des Extensions</h2>
               <div className="flex gap-3">
