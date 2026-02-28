@@ -112,6 +112,61 @@ const ProjectTracker = ({ token, clients = [] }) => {
             </div>
           </div>
 
+          {/* Client Submissions - Music & Photos */}
+          {clientProject && (clientProject.music_response || clientProject.selected_photos_count > 0) && (
+            <div className="bg-white/5 border border-white/10 rounded-lg p-4 space-y-3">
+              <h4 className="font-medium text-white flex items-center gap-2">
+                <FileText size={18} /> Éléments reçus du client
+              </h4>
+              
+              {/* Music Info */}
+              {clientProject.music_response && (
+                <div className="flex items-center justify-between p-3 bg-pink-500/10 border border-pink-500/30 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Music className="text-pink-400" size={20} />
+                    <div>
+                      <p className="font-medium text-white">
+                        {clientProject.music_response === "no_music" 
+                          ? "Pas de musique" 
+                          : clientProject.music_response === "uploaded"
+                          ? "Musique reçue"
+                          : clientProject.music_response}
+                      </p>
+                      {clientProject.music_filename && (
+                        <p className="text-white/60 text-sm">{clientProject.music_filename}</p>
+                      )}
+                    </div>
+                  </div>
+                  {clientProject.music_file && (
+                    <a
+                      href={`${window.location.origin}${clientProject.music_file}`}
+                      download
+                      className="px-3 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-lg text-sm flex items-center gap-2"
+                    >
+                      <Download size={16} /> Télécharger
+                    </a>
+                  )}
+                </div>
+              )}
+              
+              {/* Photos Selection Info */}
+              {clientProject.selected_photos_count > 0 && (
+                <div className="flex items-center justify-between p-3 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Image className="text-purple-400" size={20} />
+                    <div>
+                      <p className="font-medium text-white">Photos sélectionnées</p>
+                      <p className="text-white/60 text-sm">{clientProject.selected_photos_count} photos choisies par le client</p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm">
+                    {clientProject.selected_photos_count}/40
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {loading ? (
             <div className="text-center py-8 text-white/60">Chargement...</div>
           ) : (
