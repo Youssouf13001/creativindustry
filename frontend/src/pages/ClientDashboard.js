@@ -673,6 +673,48 @@ const ClientDashboard = () => {
     }
   };
 
+  // Handle music upload
+  const handleMusicUpload = async (file) => {
+    if (!file) return;
+    
+    // Validate file type
+    const allowedTypes = ['audio/mp3', 'audio/wav', 'audio/mpeg'];
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(mp3|wav)$/i)) {
+      toast.error("Format non supporté. Utilisez MP3 ou WAV.");
+      return;
+    }
+    
+    // Validate file size (max 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Fichier trop volumineux (max 50MB)");
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append("music_file", file);
+    
+    try {
+      toast.loading("Upload en cours...", { id: "music-upload" });
+      const res = await axios.post(`${API}/client/upload-music`, formData, {
+        headers: {
+          ...headers,
+          "Content-Type": "multipart/form-data"
+        }
+      });
+      
+      if (res.data.success) {
+        toast.success("Musique envoyée avec succès ! 🎵", { id: "music-upload" });
+        // Refresh project status
+        const projectRes = await axios.get(`${API}/client/project-progress`, { headers });
+        if (projectRes.data && projectRes.data.steps) {
+          setProjectStatus(projectRes.data.steps);
+        }
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de l'upload", { id: "music-upload" });
+    }
+  };
+
   // Fetch renewal invoices for the client
   const fetchRenewalInvoices = async () => {
     try {
