@@ -658,6 +658,21 @@ const ClientDashboard = () => {
     document.body.removeChild(link);
   };
 
+  // Handle music response (no music)
+  const handleMusicResponse = async (response) => {
+    try {
+      await axios.post(`${API}/client/music-response`, { response }, { headers });
+      toast.success("Merci pour votre réponse ! Nous utiliserons une musique libre de droits.");
+      // Refresh project status
+      const projectRes = await axios.get(`${API}/client/project-progress`, { headers });
+      if (projectRes.data && projectRes.data.steps) {
+        setProjectStatus(projectRes.data.steps);
+      }
+    } catch (e) {
+      toast.error("Erreur lors de l'envoi de la réponse");
+    }
+  };
+
   // Fetch renewal invoices for the client
   const fetchRenewalInvoices = async () => {
     try {
