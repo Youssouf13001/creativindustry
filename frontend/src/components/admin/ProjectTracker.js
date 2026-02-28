@@ -21,8 +21,22 @@ const ProjectTracker = ({ token, clients = [] }) => {
   const [clientProject, setClientProject] = useState(null);
   const [loading, setLoading] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [smsConfigured, setSmsConfigured] = useState(false);
 
   const headers = { Authorization: `Bearer ${token}` };
+
+  // Check SMS configuration on mount
+  useEffect(() => {
+    const checkSmsStatus = async () => {
+      try {
+        const res = await axios.get(`${API}/admin/sms/status`, { headers });
+        setSmsConfigured(res.data.configured);
+      } catch (e) {
+        console.error("SMS status check failed:", e);
+      }
+    };
+    if (token) checkSmsStatus();
+  }, [token]);
 
   const loadClientProject = async (clientId) => {
     if (!clientId) {
