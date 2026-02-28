@@ -11086,6 +11086,330 @@ async def send_project_completed_email(client: dict):
         return False
 
 
+async def send_photo_selection_email(client: dict, step_info: dict, current_step: int, total_steps: int):
+    """Send email requesting 40 photos selection from client"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        return False
+    
+    client_email = client.get("email")
+    client_name = client.get("name", "Client")
+    
+    if not client_email:
+        return False
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    progress_percentage = int((current_step / total_steps) * 100)
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); padding: 30px; text-align: center;">
+                <h1 style="margin: 0; color: #fff; font-size: 24px;">📸 Sélection de vos photos</h1>
+            </div>
+            <div style="padding: 30px;">
+                <p style="font-size: 18px; margin-bottom: 10px;">Bonjour {client_name},</p>
+                <p style="color: #ccc; margin-bottom: 20px;">
+                    Vos photos ont été retouchées avec soin ! Pour créer votre montage personnalisé, 
+                    nous avons besoin de votre sélection.
+                </p>
+                
+                <!-- Request Box -->
+                <div style="background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); color: #fff; padding: 25px; border-radius: 10px; margin: 25px 0; text-align: center;">
+                    <p style="margin: 0; font-size: 48px;">📷</p>
+                    <p style="margin: 10px 0 0 0; font-size: 24px; font-weight: bold;">40 Photos</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">à sélectionner pour votre montage</p>
+                </div>
+                
+                <p style="color: #ccc; margin-bottom: 20px;">
+                    <strong>Comment procéder :</strong><br>
+                    1. Connectez-vous à votre espace client<br>
+                    2. Parcourez votre galerie photos<br>
+                    3. Sélectionnez vos 40 photos préférées<br>
+                    4. Validez votre sélection
+                </p>
+                
+                <!-- Progress Bar -->
+                <div style="background-color: #333; border-radius: 10px; height: 20px; overflow: hidden; margin: 20px 0;">
+                    <div style="background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); height: 100%; width: {progress_percentage}%;"></div>
+                </div>
+                <p style="text-align: center; color: #8B5CF6; font-size: 18px; font-weight: bold;">Étape {current_step}/{total_steps}</p>
+                
+                <a href="{site_url}/client/login" style="display: inline-block; background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); color: #fff; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 10px;">
+                    Sélectionner mes photos →
+                </a>
+            </div>
+            <div style="padding: 20px; background-color: #222; text-align: center; border-top: 1px solid #333;">
+                <p style="margin: 0; font-size: 12px; color: #666;">CREATIVINDUSTRY France</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"📸 Sélectionnez vos 40 photos pour le montage - CREATIVINDUSTRY"
+    
+    try:
+        result = send_email(client_email, subject, html_content)
+        if result:
+            logging.info(f"Photo selection email sent to {client_email}")
+        return result
+    except Exception as e:
+        logging.error(f"Failed to send photo selection email: {e}")
+        return False
+
+
+async def send_music_request_email(client: dict, step_info: dict, current_step: int, total_steps: int):
+    """Send email requesting wedding music from client"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        return False
+    
+    client_email = client.get("email")
+    client_name = client.get("name", "Client")
+    
+    if not client_email:
+        return False
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    progress_percentage = int((current_step / total_steps) * 100)
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #EC4899 0%, #BE185D 100%); padding: 30px; text-align: center;">
+                <h1 style="margin: 0; color: #fff; font-size: 24px;">🎵 Votre musique de mariage</h1>
+            </div>
+            <div style="padding: 30px;">
+                <p style="font-size: 18px; margin-bottom: 10px;">Bonjour {client_name},</p>
+                <p style="color: #ccc; margin-bottom: 20px;">
+                    Pour finaliser votre montage vidéo, nous avons besoin de votre musique de mariage.
+                </p>
+                
+                <!-- Music Box -->
+                <div style="background: linear-gradient(135deg, #EC4899 0%, #BE185D 100%); color: #fff; padding: 25px; border-radius: 10px; margin: 25px 0; text-align: center;">
+                    <p style="margin: 0; font-size: 48px;">🎶</p>
+                    <p style="margin: 10px 0 0 0; font-size: 20px; font-weight: bold;">Envoyez-nous votre musique</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">Format MP3 ou WAV recommandé</p>
+                </div>
+                
+                <p style="color: #ccc; margin-bottom: 20px;">
+                    Connectez-vous à votre espace client pour télécharger votre musique.<br><br>
+                    <strong>Pas de musique ?</strong> Vous pouvez indiquer que vous n'avez pas de musique spécifique 
+                    et nous utiliserons une musique libre de droits adaptée à votre montage.
+                </p>
+                
+                <!-- Progress Bar -->
+                <div style="background-color: #333; border-radius: 10px; height: 20px; overflow: hidden; margin: 20px 0;">
+                    <div style="background: linear-gradient(135deg, #EC4899 0%, #BE185D 100%); height: 100%; width: {progress_percentage}%;"></div>
+                </div>
+                <p style="text-align: center; color: #EC4899; font-size: 18px; font-weight: bold;">Étape {current_step}/{total_steps}</p>
+                
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <a href="{site_url}/client/login" style="display: inline-block; background: linear-gradient(135deg, #EC4899 0%, #BE185D 100%); color: #fff; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 10px;">
+                        Envoyer ma musique →
+                    </a>
+                </div>
+            </div>
+            <div style="padding: 20px; background-color: #222; text-align: center; border-top: 1px solid #333;">
+                <p style="margin: 0; font-size: 12px; color: #666;">CREATIVINDUSTRY France</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"🎵 Envoyez-nous votre musique de mariage - CREATIVINDUSTRY"
+    
+    try:
+        result = send_email(client_email, subject, html_content)
+        if result:
+            logging.info(f"Music request email sent to {client_email}")
+        return result
+    except Exception as e:
+        logging.error(f"Failed to send music request email: {e}")
+        return False
+
+
+async def send_delivery_email_with_attachment(client: dict, step_info: dict, current_step: int, total_steps: int):
+    """Send delivery email with end-of-project letter attachment"""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        return False
+    
+    client_email = client.get("email")
+    client_name = client.get("name", "Client")
+    
+    if not client_email:
+        return False
+    
+    site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
+    
+    # Generate end-of-project letter PDF
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.colors import HexColor
+    import io
+    
+    # Create PDF
+    pdf_buffer = io.BytesIO()
+    c = canvas.Canvas(pdf_buffer, pagesize=A4)
+    width, height = A4
+    
+    # Header
+    c.setFillColor(HexColor("#D4AF37"))
+    c.rect(0, height - 100, width, 100, fill=True, stroke=False)
+    
+    c.setFillColor(HexColor("#000000"))
+    c.setFont("Helvetica-Bold", 24)
+    c.drawCentredString(width / 2, height - 60, "CREATIVINDUSTRY")
+    
+    c.setFont("Helvetica", 12)
+    c.drawCentredString(width / 2, height - 85, "Courrier de fin de projet")
+    
+    # Content
+    c.setFillColor(HexColor("#333333"))
+    y_position = height - 150
+    
+    c.setFont("Helvetica", 12)
+    c.drawString(50, y_position, f"Date : {datetime.now().strftime('%d/%m/%Y')}")
+    y_position -= 40
+    
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(50, y_position, f"À l'attention de : {client_name}")
+    y_position -= 40
+    
+    c.setFont("Helvetica", 12)
+    lines = [
+        "Cher(e) client(e),",
+        "",
+        "Nous avons le plaisir de vous informer que votre projet est maintenant terminé.",
+        "",
+        "Vous pouvez dès à présent accéder à l'ensemble de vos fichiers depuis votre",
+        "espace client sur notre site.",
+        "",
+        "Nous vous remercions pour votre confiance et espérons avoir l'occasion de",
+        "collaborer à nouveau avec vous à l'avenir.",
+        "",
+        "Pour toute question ou demande complémentaire, n'hésitez pas à nous contacter.",
+        "",
+        "",
+        "Cordialement,",
+        "",
+        "L'équipe CREATIVINDUSTRY",
+        f"{site_url}",
+    ]
+    
+    for line in lines:
+        c.drawString(50, y_position, line)
+        y_position -= 20
+    
+    # Footer
+    c.setFillColor(HexColor("#D4AF37"))
+    c.rect(0, 0, width, 40, fill=True, stroke=False)
+    c.setFillColor(HexColor("#000000"))
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(width / 2, 15, "CREATIVINDUSTRY France - Votre partenaire audiovisuel")
+    
+    c.save()
+    pdf_buffer.seek(0)
+    pdf_content = pdf_buffer.getvalue()
+    
+    html_content = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; padding: 20px; margin: 0;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #2a2a2a; border-radius: 10px; overflow: hidden;">
+            <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px; text-align: center;">
+                <h1 style="margin: 0; color: #fff; font-size: 28px;">🎁 Livraison de votre projet !</h1>
+            </div>
+            <div style="padding: 30px;">
+                <p style="font-size: 18px; margin-bottom: 20px;">Bonjour {client_name},</p>
+                
+                <p style="color: #ccc; margin-bottom: 20px; font-size: 16px;">
+                    <strong style="color: #22c55e;">Excellente nouvelle !</strong> Votre projet est prêt et disponible 
+                    dans votre espace client.
+                </p>
+                
+                <!-- Delivery Box -->
+                <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #fff; padding: 25px; border-radius: 10px; margin: 25px 0; text-align: center;">
+                    <p style="margin: 0; font-size: 48px;">🎉</p>
+                    <p style="margin: 10px 0 0 0; font-size: 24px; font-weight: bold;">Projet Livré</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">Vos fichiers sont disponibles</p>
+                </div>
+                
+                <p style="color: #ccc; margin-bottom: 20px;">
+                    📎 <strong>Pièce jointe :</strong> Vous trouverez ci-joint votre courrier de fin de projet.
+                </p>
+                
+                <p style="color: #ccc; margin-bottom: 20px;">
+                    Connectez-vous à votre espace client pour télécharger vos fichiers.
+                </p>
+                
+                <a href="{site_url}/client/login" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #fff; padding: 15px 30px; text-decoration: none; font-weight: bold; border-radius: 5px; margin-top: 10px;">
+                    Accéder à mon projet →
+                </a>
+                
+                <p style="color: #888; margin-top: 30px; font-size: 14px;">
+                    Merci pour votre confiance ! N'hésitez pas à nous laisser un avis sur notre travail.
+                </p>
+            </div>
+            <div style="padding: 20px; background-color: #222; text-align: center; border-top: 1px solid #333;">
+                <p style="margin: 0; font-size: 12px; color: #666;">CREATIVINDUSTRY France</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    subject = f"🎁 Livraison de votre projet - CREATIVINDUSTRY"
+    
+    try:
+        # Send email with attachment
+        result = send_email_with_attachment(
+            client_email, 
+            subject, 
+            html_content, 
+            pdf_content,
+            f"Courrier_Fin_Projet_{client_name.replace(' ', '_')}.pdf"
+        )
+        if result:
+            logging.info(f"Delivery email with attachment sent to {client_email}")
+        return result
+    except Exception as e:
+        logging.error(f"Failed to send delivery email: {e}")
+        return False
+
+
+def send_email_with_attachment(to_email: str, subject: str, html_content: str, attachment_content: bytes, attachment_name: str):
+    """Send email with PDF attachment"""
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+    from email.mime.application import MIMEApplication
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = f"CREATIVINDUSTRY <{SMTP_EMAIL}>"
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        
+        # Attach HTML content
+        msg.attach(MIMEText(html_content, 'html', 'utf-8'))
+        
+        # Attach PDF
+        pdf_attachment = MIMEApplication(attachment_content, _subtype='pdf')
+        pdf_attachment.add_header('Content-Disposition', 'attachment', filename=attachment_name)
+        msg.attach(pdf_attachment)
+        
+        # Send
+        with smtplib.SMTP_SSL('smtp.ionos.fr', 465) as server:
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+        
+        return True
+    except Exception as e:
+        logging.error(f"Email with attachment error: {e}")
+        return False
+
+
 # ==================== EMAIL NOTIFICATION FUNCTIONS ====================
 
 async def send_task_assignment_email(collaborator: dict, task: dict, assigner_name: str):
