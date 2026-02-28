@@ -10936,7 +10936,51 @@ async def get_client_project_progress(client: dict = Depends(get_current_client)
         # Return default with all steps pending
         steps_with_status = [{**s, "status": "pending"} for s in PROJECT_STEPS]
         return {"client_id": client["id"], "current_step": 0, "steps": steps_with_status}
+    
+    # Ensure steps include type information
+    current_step = project.get("current_step", 0)
+    steps = []
+    for step_info in PROJECT_STEPS:
+        step_num = step_info["step"]
+        status = "completed" if step_num < current_step else ("in_progress" if step_num == current_step else "pending")
+        steps.append({
+            "step": step_num,
+            "label": step_info["label"],
+            "description": step_info["description"],
+            "type": step_info.get("type", "standard"),
+            "status": status
+        })
+    
+    project["steps"] = steps
     return project
+
+
+@api_router.post("/client/music-response")
+async def client_music_response(
+    response: str = Body(..., embed=True),
+    client: dict = Depends(get_current_client)
+):
+    """Client responds about music (no music available)"""
+    project = await db.client_projects.find_one({"client_id": client["id"]})
+    
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet non trouvé")
+    
+    # Update project with music response
+    await db.client_projects.update_one(
+        {"client_id": client["id"]},
+        {
+            "$set": {
+                "music_response": response,
+                "music_responded_at": datetime.now(timezone.utc).isoformat()
+            }
+        }
+    )
+    
+    # Notify admin about the music response (optional)
+    logging.info(f"Client {client['name']} ({client['email']}) responded: {response}")
+    
+    return {"success": True, "message": "Réponse enregistrée"}
 
 
 async def send_project_step_email(client: dict, step_info: dict, current_step: int, total_steps: int):
