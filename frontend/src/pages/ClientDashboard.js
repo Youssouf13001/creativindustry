@@ -1342,6 +1342,19 @@ const ClientDashboard = () => {
                             {item.description && (
                               <p className="text-white/60 text-sm">{item.description}</p>
                             )}
+                            
+                            {/* Special action buttons for client */}
+                            {item.status === "in_progress" && item.type === "music_request" && (
+                              <div className="mt-3 flex gap-2 flex-wrap">
+                                <button
+                                  onClick={() => handleMusicResponse("no_music")}
+                                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white/80 rounded-lg text-sm flex items-center gap-2 transition-colors"
+                                  data-testid="no-music-btn"
+                                >
+                                  <span>🎵</span> Nous n'avons pas de musique
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
