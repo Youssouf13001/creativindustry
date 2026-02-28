@@ -295,9 +295,20 @@ const ProjectTracker = ({ token, clients = [] }) => {
               <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 flex items-start gap-3">
                 <Send className="w-5 h-5 text-primary mt-0.5" />
                 <div>
-                  <p className="text-white font-medium">Notification automatique</p>
+                  <p className="text-white font-medium">Notifications automatiques</p>
                   <p className="text-white/60 text-sm">
                     Un email est envoyé automatiquement au client à chaque changement d'étape.
+                    {smsConfigured && selectedClient?.phone && (
+                      <span className="block mt-1 text-green-400">
+                        <Phone size={14} className="inline mr-1" />
+                        SMS également envoyé au {selectedClient.phone}
+                      </span>
+                    )}
+                    {smsConfigured && !selectedClient?.phone && (
+                      <span className="block mt-1 text-yellow-400">
+                        ⚠️ Ce client n'a pas de numéro de téléphone - SMS non envoyé
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
