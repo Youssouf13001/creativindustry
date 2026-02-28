@@ -73,7 +73,13 @@ const ProjectTracker = ({ token, clients = [] }) => {
         { headers }
       );
       setClientProject(res.data.project);
-      toast.success(`Étape mise à jour ! Email envoyé à ${selectedClient.email}`);
+      
+      // Build notification message
+      let notifMsg = `Étape mise à jour !`;
+      if (res.data.email_sent) notifMsg += ` Email envoyé.`;
+      if (res.data.sms_sent) notifMsg += ` SMS envoyé.`;
+      
+      toast.success(notifMsg);
     } catch (error) {
       console.error("Project update error:", error.response?.data || error);
       toast.error(error.response?.data?.detail || "Erreur lors de la mise à jour");
