@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
-import { CreditCard, Clock, Check, X, User, Loader } from "lucide-react";
+import { CreditCard, Clock, Check, X, User, Loader, MessageSquare, Phone, Send } from "lucide-react";
 import { toast } from "sonner";
 import { API } from "../../config/api";
 
@@ -10,6 +10,42 @@ const ExtensionsTab = ({
   onRefresh
 }) => {
   const [processingId, setProcessingId] = useState(null);
+  const [smsConfigured, setSmsConfigured] = useState(false);
+  const [testPhone, setTestPhone] = useState("");
+  const [sendingSms, setSendingSms] = useState(false);
+
+  // Check SMS status
+  useEffect(() => {
+    const checkSmsStatus = async () => {
+      try {
+        const res = await axios.get(`${API}/admin/sms/status`, { headers });
+        setSmsConfigured(res.data.configured);
+      } catch (e) {
+        console.error("SMS status check failed:", e);
+      }
+    };
+    checkSmsStatus();
+  }, []);
+
+  const handleTestSms = async () => {
+    if (!testPhone) {
+      toast.error("Entrez un numéro de téléphone");
+      return;
+    }
+    setSendingSms(true);
+    try {
+      const res = await axios.post(`${API}/admin/sms/test`, { phone_number: testPhone }, { headers });
+      if (res.data.success) {
+        toast.success("SMS de test envoyé !");
+      } else {
+        toast.error(res.data.message || "Échec de l'envoi");
+      }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Erreur lors de l'envoi du SMS");
+    } finally {
+      setSendingSms(false);
+    }
+  };
 
   const handleApproveExtension = async (orderId) => {
     setProcessingId(orderId);
