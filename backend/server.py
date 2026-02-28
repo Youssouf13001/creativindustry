@@ -14402,6 +14402,65 @@ async def create_admin_slideshow(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== SMS ENDPOINTS ====================
+
+class SMSTestRequest(BaseModel):
+    phone_number: str
+
+class SMSManualRequest(BaseModel):
+    phone_number: str
+    message: str
+
+@api_router.post("/admin/sms/test")
+async def test_sms_endpoint(data: SMSTestRequest, admin: dict = Depends(get_current_admin)):
+    """Send a test SMS to verify Brevo configuration"""
+    result = send_test_sms(data.phone_number)
+    return result
+
+@api_router.post("/admin/sms/send")
+async def send_manual_sms(data: SMSManualRequest, admin: dict = Depends(get_current_admin)):
+    """Send a manual SMS to a client"""
+    from services.sms_service import send_sms
+    
+    success = send_sms(data.phone_number, data.message)
+    return {
+        "success": success,
+        "message": "SMS envoyé avec succès" if success else "Échec de l'envoi du SMS",
+        "phone": data.phone_number
+    }
+
+@api_router.post("/admin/sms/notify-client/{client_id}")
+async def notify_client_sms(client_id: str, message: str = Body(..., embed=True), admin: dict = Depends(get_current_admin)):
+    """Send a custom SMS notification to a specific client"""
+    from services.sms_service import send_sms
+    
+    client = await db.clients.find_one({"id": client_id}, {"_id": 0})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client non trouvé")
+    
+    phone = client.get("phone")
+    if not phone:
+        raise HTTPException(status_code=400, detail="Ce client n'a pas de numéro de téléphone")
+    
+    success = send_sms(phone, message)
+    return {
+        "success": success,
+        "client_name": client.get("name"),
+        "phone": phone,
+        "message": "SMS envoyé avec succès" if success else "Échec de l'envoi du SMS"
+    }
+
+@api_router.get("/admin/sms/status")
+async def get_sms_status(admin: dict = Depends(get_current_admin)):
+    """Check if SMS service is configured"""
+    import os
+    brevo_key = os.environ.get('BREVO_API_KEY', '')
+    return {
+        "configured": bool(brevo_key),
+        "provider": "Brevo" if brevo_key else None
+    }
+
+
 app.include_router(api_router)
 
 # Include modular routers
