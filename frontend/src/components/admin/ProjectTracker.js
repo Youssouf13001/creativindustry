@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { ChevronRight, Check, Clock, Circle, Send, User } from "lucide-react";
+import { ChevronRight, Check, Clock, Circle, Send, User, Music, Image, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { API } from "../../config/api";
 
 const PROJECT_STEPS = [
-  { step: 1, label: "Vidage des cartes mémoire", description: "Transfert de vos fichiers en cours" },
-  { step: 2, label: "Sauvegarde sur nos serveurs", description: "Vos fichiers sont sauvegardés en sécurité" },
-  { step: 3, label: "Tri et sélection", description: "Sélection des meilleures prises" },
-  { step: 4, label: "Retouche / Montage", description: "Édition et retouche en cours" },
-  { step: 5, label: "Vérification qualité", description: "Contrôle qualité final" },
-  { step: 6, label: "Livraison", description: "Votre projet est prêt !" },
+  { step: 1, label: "Vidage des cartes mémoire", description: "Transfert de vos fichiers en cours", type: "standard" },
+  { step: 2, label: "Sauvegarde sur nos serveurs", description: "Vos fichiers sont sauvegardés en sécurité", type: "standard" },
+  { step: 3, label: "Tri et sélection", description: "Sélection des meilleures prises", type: "standard" },
+  { step: 4, label: "Retouche / Montage", description: "Édition et retouche en cours", type: "standard" },
+  { step: 5, label: "Photos déposées sur votre espace", description: "Vos photos ont été déposées sur votre espace client", type: "standard" },
+  { step: 6, label: "Sélection des 40 photos", description: "Merci de nous retourner vos 40 photos préférées pour le montage", type: "photos_selection" },
+  { step: 7, label: "Musique de mariage", description: "Envoyez-nous votre musique de mariage pour le montage", type: "music_request" },
+  { step: 8, label: "Vérification qualité", description: "Contrôle qualité final", type: "standard" },
+  { step: 9, label: "Livraison", description: "Votre projet est prêt !", type: "delivery" },
 ];
 
 const ProjectTracker = ({ token, clients = [] }) => {
