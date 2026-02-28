@@ -69,7 +69,7 @@ const ProjectTracker = ({ token, clients = [] }) => {
   };
 
   const currentStep = clientProject?.current_step || 0;
-  const progressPercentage = currentStep > 0 ? Math.round((currentStep / PROJECT_STEPS.length) * 100) : 0;
+  const progressPercentage = Math.min(100, currentStep > 0 ? Math.round((currentStep / PROJECT_STEPS.length) * 100) : 0);
 
   return (
     <div className="space-y-6">
