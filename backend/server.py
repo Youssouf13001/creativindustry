@@ -42,6 +42,15 @@ from models.schemas import AdminCreate, AdminUpdate, AdminResponse
 # Import modular routes
 from routes.guestbook import router as guestbook_router
 
+# Import SMS service
+from services.sms_service import (
+    send_project_status_sms,
+    send_project_completion_sms,
+    send_action_required_sms,
+    send_new_file_sms,
+    send_test_sms
+)
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
