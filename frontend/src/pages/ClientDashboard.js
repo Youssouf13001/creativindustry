@@ -1407,17 +1407,17 @@ const ClientDashboard = () => {
                             {item.status === "in_progress" && item.type === "photos_selection" && (
                               <div className="mt-4 p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg">
                                 <p className="text-white/80 text-sm mb-3">
-                                  📸 Sélectionnez vos 40 photos préférées dans votre galerie puis envoyez-les nous.
+                                  📸 Sélectionnez vos 40 photos préférées dans vos transferts puis envoyez-les nous.
                                 </p>
                                 <button
                                   onClick={() => {
-                                    setActiveTab("galleries");
-                                    toast.info("Sélectionnez vos 40 photos dans votre galerie");
+                                    setActiveTab("transfers");
+                                    toast.info("Sélectionnez vos 40 photos dans vos transferts");
                                   }}
                                   className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm flex items-center gap-2 transition-colors"
                                   data-testid="select-photos-btn"
                                 >
-                                  <Image size={16} /> Aller à ma galerie pour sélectionner
+                                  <Image size={16} /> Aller à mes transferts pour sélectionner
                                 </button>
                               </div>
                             )}
