@@ -1,177 +1,98 @@
-# CREATIVINDUSTRY - Product Requirements Document
+# PhotoFind - Borne Photo & Portail Client
 
 ## Original Problem Statement
-Site vitrine pour photographe avec espace client/admin comprenant :
-- Système de gestion de projet
-- Chat d'équipe
-- Notifications par e-mail
-- Système de témoignages
-- Popup d'accueil
-- Page d'actualités
-- Expiration de compte personnalisée
-- Système de renouvellement payant avec PayPal
+Application de borne photo "mode kiosque" (PhotoFind) pour les événements de photographe, avec un portail client complet incluant:
+- Mode Kiosque: Prise de selfies, recherche faciale, filtres/cadres, paiement multi-options
+- Portail Client: Espace paiement, suivi de projet détaillé
+- Livre d'or Vidéo: Messages vidéo des invités avec montage automatique
+- Gestion Admin: Interface complète pour gérer tarifs, événements, projets
 
 ## User's Preferred Language
 French
 
 ## Core Architecture
-- **Frontend**: React + TailwindCSS + Shadcn/UI + Recharts
-- **Backend**: FastAPI + Python
-- **Database**: MongoDB
-- **Hosting**: IONOS (production)
+- **Frontend**: React (port 3000)
+- **Backend**: FastAPI (port 8001)
+- **Database**: MongoDB (creativindustry + creativindustry_devis)
 
 ## What's Been Implemented
 
-### ✅ Completed Features
-- [x] Système d'authentification admin avec MFA
-- [x] Gestion des clients (CRUD)
-- [x] Système de fichiers client
-- [x] Portfolio avec photos/vidéos/stories
-- [x] Système de réservation
-- [x] Système de rendez-vous avec emails
-- [x] Chat d'équipe
-- [x] Galeries photo avec sélection client
-- [x] Newsletter
-- [x] Système de témoignages - Page publique + modération admin
-- [x] Popup d'accueil avec vidéo gérable depuis admin
-- [x] Page d'actualités - Publications, likes, commentaires avec modération
-- [x] Expiration de compte personnalisée
-- [x] Système de renouvellement PayPal avec activation automatique
-- [x] Système de facturation avec PDF
-- [x] Application de TVA 20% sur tous les paiements
-- [x] **PWA (Progressive Web App)** - Installation mobile, notifications push
-- [x] **Galerie améliorée** - Diaporama, musique, partage social, QR code
-- [x] **Livre d'or digital** - Messages texte/audio/vidéo des invités via QR code
-- [x] **Graphique espace disque** - Camembert d'utilisation stockage dans admin (25 Fév 2026)
-- [x] **Galerie Interactive** - Expérience immersive avec carrousel 3D CSS et vue grille (25 Fév 2026)
-- [x] **Options Premium Galeries** - Système de paiement PayPal pour 3D et téléchargement HD (25 Fév 2026)
-- [x] **Mode Kiosque PhotoFind** - Borne photo plein écran pour événements (26 Fév 2026)
-- [x] **Onglet Kiosque Admin** - Gestion séparée du mode kiosque dans l'admin (26 Fév 2026)
-- [x] **Cadres/Filtres Photos** - 5 styles (Mariage, Vintage, Polaroid, Fête, Sans cadre) + cadres personnalisés (26 Fév 2026)
-- [x] **Paiement PayPal Mobile Kiosque** - QR code pour payer sur téléphone + impression auto (26 Fév 2026)
-- [x] **Paiement Stripe CB Kiosque** - Paiement par carte bancaire intégré avec Stripe (26 Fév 2026)
-- [x] **Paiement Liquide/CB Kiosque** - Option paiement manuel avec confirmation (26 Fév 2026)
-- [x] **Popup PWA désactivé** - Plus de popup intrusif (26 Fév 2026)
-- [x] **Tarification avancée Kiosque** - Prix par format (A4, 10x15) avec/sans cadre (26 Fév 2026)
-- [x] **Montage Vidéo Automatique Livre d'Or** - Génération FFmpeg des vidéos approuvées avec interface client (27 Fév 2026)
+### Completed Features
+1. **Mode Kiosque PhotoFind**
+   - Prise de selfies avec reconnaissance faciale (AWS Rekognition)
+   - Recherche de photos par visage
+   - Filtres et cadres personnalisables
+   - Paiement multi-options (CB Stripe, PayPal, Espèces)
 
-### 🔴 Known Issues (P0 - BLOCKER)
-1. **Erreur `[object Object]`** - Soumission de témoignage en production (IONOS)
-2. **Déploiement IONOS cassé** - Erreurs npm install persistantes
+2. **Portail Client**
+   - Authentification clients
+   - Onglet "Mes Paiements" - synchronisation avec base externe
+   - Suivi de projet dynamique avec étapes interactives
+   - Upload de musique et sélection de photos
 
-### 🟠 Issues (P1-P2)
-3. Dashboard site `devis` - Statistiques à zéro (P1)
-4. Téléchargement factures PDF depuis admin (P1, vérification requise)
-5. Erreur 404 mise à jour statut projet IONOS (P2)
-6. Popup PWA répétitif (P1)
+3. **Livre d'Or Vidéo**
+   - Enregistrement de messages vidéo par les invités
+   - Montage automatique via FFmpeg
+   - Téléchargement du montage final
 
-## Upcoming Tasks
+4. **Dashboard Admin**
+   - Gestion complète des clients, tarifs, événements
+   - Suivi de projet avec notifications
+   - Gestion des témoignages, actualités, portfolio
 
-### P1 - Mode Kiosque avancé
-- Intégration terminal CB (SumUp) pour paiements sur borne
-- Intégration imprimante DNP pour impression directe
-- Upload photos par les invités
+5. **Notifications**
+   - Emails automatiques (SMTP IONOS)
+   - **SMS Brevo** (Implémenté le 28/02/2025)
+     - Notifications automatiques lors des mises à jour de projet
+     - API: `/api/admin/sms/test`, `/api/admin/sms/send`, `/api/admin/sms/status`
 
-### P2 - Améliorations
-- Rappels automatiques (expiration comptes, RDV)
-- Paiement en plusieurs fois (3x/4x via PayPal)
-- Compression images côté serveur
-- Synchronisation données devis ↔ creativindustry
-- **Refactoring backend/frontend** (dette technique CRITIQUE - server.py et AdminDashboard.js sont des monolithes)
+### 3rd Party Integrations
+- **Stripe**: Paiements CB (clés LIVE configurées)
+- **PayPal REST API**: Paiements PayPal
+- **AWS Rekognition**: Reconnaissance faciale
+- **FFmpeg**: Traitement vidéo
+- **Brevo (Sendinblue)**: Notifications SMS transactionnelles
 
-## Key API Endpoints
+## Technical Debt (CRITICAL)
+- `/app/backend/server.py`: >13,000 lignes - REFACTORING URGENT
+- `/app/frontend/src/pages/ClientDashboard.js`: >2,500 lignes - À décomposer
+- Routes dupliquées entre server.py et routes/guestbook.py
 
-### Livre d'or
-- `POST /api/admin/guestbooks` - Créer un livre d'or
-- `GET /api/admin/guestbooks` - Liste des livres d'or (admin)
-- `GET /api/admin/guestbooks/{id}` - Détails avec messages
-- `PUT /api/admin/guestbook-messages/{id}/approve` - Approuver message
-- `DELETE /api/admin/guestbook-messages/{id}` - Supprimer message
-- `GET /api/public/guestbooks/{id}` - Vue publique
-- `POST /api/public/guestbooks/{id}/messages/text` - Poster message texte
-- `POST /api/public/guestbooks/{id}/messages/media` - Poster audio/vidéo
-- `GET /api/client/guestbooks` - Livres d'or du client
-- `PUT /api/client/guestbook-messages/{id}/approve` - Client approuve
-- `POST /api/client/guestbook/{id}/generate-montage` - Générer montage vidéo
-- `GET /api/client/guestbook/{id}/montages` - Liste des montages créés
+## Upcoming Tasks (P0-P1)
+1. **P0: Refactoring backend** - Extraire les routes en modules
+2. **P0: Refactoring frontend** - Décomposer ClientDashboard.js
+3. **P1: Intégration Terminal SumUp** - Paiement CB sur borne
+4. **P1: Impression directe DNP** - Éviter popup d'impression
 
-### Galerie
-- `POST /api/admin/galleries/{id}/music` - Upload musique galerie
-- `GET /api/public/galleries/{id}` - Vue publique galerie
+## Known Issues
+- Erreur `[object Object]` sur les témoignages (production)
+- Dashboard devis affiche des statistiques à zéro
+- Déploiement IONOS fragile (processus manuel)
 
-### PhotoFind Kiosk (NEW)
-- `GET /api/public/photofind/{eventId}` - Infos publiques d'un événement (avec pricing.formats)
-- `POST /api/public/photofind/{eventId}/search` - Recherche par selfie
-- `GET /api/public/photofind/{eventId}/photo/{photoId}` - Servir une photo
-- `POST /api/public/photofind/{eventId}/kiosk-purchase` - Créer un achat kiosque
-- `POST /api/public/photofind/{eventId}/log-print` - Logger une impression
-- `GET /api/admin/photofind/events/{eventId}/kiosk-stats` - Stats kiosque admin
-- `PUT /api/admin/photofind/events/{eventId}/pricing` - Sauvegarder tarification avancée (formats + cadres)
+## Key Files
+- `/app/backend/server.py` - Monolithe backend principal
+- `/app/backend/services/sms_service.py` - Service SMS Brevo
+- `/app/backend/routes/guestbook.py` - Routes livre d'or (extrait)
+- `/app/frontend/src/pages/ClientDashboard.js` - Dashboard client
+- `/app/frontend/src/components/admin/ProjectTracker.js` - Suivi projet admin
 
-## Database Collections
-- `guestbooks` - Livres d'or
-- `guestbook_messages` - Messages (texte/audio/vidéo)
-- `guestbook_montages` - Montages vidéo générés
-- `galleries` - Avec `music_url` pour musique diaporama
-- `photofind_events` - Événements PhotoFind
-- `photofind_photos` - Photos avec faces indexées
-- `photofind_kiosk_purchases` - Achats kiosque
-- `photofind_print_logs` - Logs d'impressions
+## Environment Variables
+### Backend (.env)
+- MONGO_URL, DB_NAME
+- SMTP_HOST, SMTP_PORT, SMTP_EMAIL, SMTP_PASSWORD
+- STRIPE_PUBLIC_KEY, STRIPE_SECRET_KEY
+- PAYPAL_CLIENT_ID, PAYPAL_SECRET
+- AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+- **BREVO_API_KEY** - Notifications SMS
 
-## New Pages Created
-- `/livre-dor/:guestbookId` - Page publique pour laisser des messages
-- `/galerie/:galleryId` - Page publique pour voir une galerie
-- `/galerie3d/:galleryId` - Galerie interactive avec carrousel 3D CSS et vue grille
-- `/kiosk/:eventId` - **Mode Kiosque PhotoFind** (plein écran, sans header/footer)
+### Frontend (.env)
+- REACT_APP_BACKEND_URL
+- REACT_APP_STRIPE_PUBLIC_KEY
 
-## Key API Endpoints (Gallery 3D)
-- `GET /api/public/galleries/{gallery_id}` - Données publiques d'une galerie
-- `GET /api/public/galleries/{gallery_id}/image/{photo_id}` - Servir une image inline
-- `GET /api/admin/galleries/{gallery_id}/3d-info` - Infos galerie 3D + QR code base64
-- `GET /api/admin/galleries/{gallery_id}/qrcode-3d` - Télécharger QR code PNG
+## Test Credentials
+- Admin: testadmin@test.com / testpassword
+- Client: client@test.com / testpassword
+- Stripe Test: 4242 4242 4242 4242
 
-## Key API Endpoints (Gallery Premium Options)
-- `GET /api/admin/gallery-pricing` - Récupérer les tarifs
-- `PUT /api/admin/gallery-pricing` - Modifier les tarifs
-- `GET /api/admin/gallery-purchases` - Historique des ventes
-- `GET /api/client/gallery/{gallery_id}/options` - Statut des options pour un client
-- `POST /api/client/gallery/purchase` - Créer un paiement PayPal
-- `POST /api/client/gallery/execute-payment` - Valider le paiement
-- `GET /api/client/gallery/{gallery_id}/download-hd` - Télécharger toutes les photos HD en ZIP
-- `GET /api/client/gallery/{gallery_id}/download-hd/{photo_id}` - Télécharger une photo HD
-
-## 3rd Party Integrations
-- IONOS SMTP (emails)
-- PayPal REST API (paiements)
-- openpyxl (export Excel)
-- reportlab (génération PDF)
-- qrcode (génération QR codes)
-- MediaRecorder API (enregistrement audio/vidéo)
-- AWS Rekognition (PhotoFind - reconnaissance faciale)
-- FFmpeg (génération de diaporamas vidéo)
-
-## PWA Configuration
-- `manifest.json` - Icônes et métadonnées
-- `sw.js` - Service worker avec caching
-- `PWAInstallPrompt.js` - Composant d'installation
-
-## Tarification Kiosque (Structure)
-```json
-{
-  "pricing": {
-    "formats": {
-      "10x15": {"sans_cadre": 5, "avec_cadre": 8},
-      "13x18": {"sans_cadre": 6, "avec_cadre": 10},
-      "A5": {"sans_cadre": 8, "avec_cadre": 12},
-      "A4": {"sans_cadre": 10, "avec_cadre": 20}
-    },
-    "email_single": 3,
-    "email_pack_5": 12,
-    "email_pack_10": 20,
-    "email_all": 30
-  }
-}
-```
-
----
-*Last updated: February 26, 2026*
+## Last Update
+28 Février 2025 - Intégration SMS Brevo complète et testée
