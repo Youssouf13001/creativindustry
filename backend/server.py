@@ -10851,6 +10851,16 @@ async def get_client_project(client_id: str, admin: dict = Depends(get_current_a
     project = await db.client_projects.find_one({"client_id": client_id}, {"_id": 0})
     if not project:
         return {"client_id": client_id, "current_step": 0, "steps": PROJECT_STEPS}
+    
+    # Add selected photos count from galleries
+    selected_photos_count = 0
+    galleries = await db.galleries.find({"client_id": client_id}, {"selected_photos": 1}).to_list(10)
+    for gallery in galleries:
+        if gallery.get("selected_photos"):
+            selected_photos_count += len(gallery.get("selected_photos", []))
+    
+    project["selected_photos_count"] = selected_photos_count
+    
     return project
 
 
