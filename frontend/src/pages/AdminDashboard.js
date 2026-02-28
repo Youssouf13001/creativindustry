@@ -8954,12 +8954,22 @@ const AdminDashboard = () => {
                                 ({(file.size_bytes / (1024 * 1024)).toFixed(2)} MB)
                               </span>
                             </div>
-                            <button 
-                              onClick={() => deleteClientTransferFile(file.id)}
-                              className="text-red-400 hover:text-red-300 ml-2"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                            <div className="flex items-center gap-2 ml-2">
+                              <a
+                                href={`${window.location.origin}${file.file_path}`}
+                                download={file.original_name}
+                                className="text-primary hover:text-primary/80"
+                                title="Télécharger"
+                              >
+                                <Download size={14} />
+                              </a>
+                              <button 
+                                onClick={() => deleteClientTransferFile(file.id)}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
