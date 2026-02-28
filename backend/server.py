@@ -11054,7 +11054,7 @@ async def send_project_step_email(client: dict, step_info: dict, current_step: i
         return False
     
     site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
-    progress_percentage = int((current_step / total_steps) * 100)
+    progress_percentage = min(100, int((current_step / total_steps) * 100))
     
     # Build progress bar HTML
     steps_html = ""
@@ -11201,7 +11201,7 @@ async def send_photo_selection_email(client: dict, step_info: dict, current_step
         return False
     
     site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
-    progress_percentage = int((current_step / total_steps) * 100)
+    progress_percentage = min(100, int((current_step / total_steps) * 100))
     
     html_content = f"""
     <html>
@@ -11274,7 +11274,7 @@ async def send_music_request_email(client: dict, step_info: dict, current_step: 
         return False
     
     site_url = os.environ.get('SITE_URL', 'https://creativindustry.com')
-    progress_percentage = int((current_step / total_steps) * 100)
+    progress_percentage = min(100, int((current_step / total_steps) * 100))
     
     html_content = f"""
     <html>
