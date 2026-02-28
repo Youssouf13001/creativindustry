@@ -453,12 +453,15 @@ const ClientDashboard = () => {
       toast.error("Veuillez sélectionner au moins une photo");
       return;
     }
+    if (selectedPhotos.length !== 40) {
+      toast.warning(`Vous avez sélectionné ${selectedPhotos.length} photos. Nous recommandons 40 photos pour le montage.`);
+    }
     try {
       await axios.put(`${API}/client/galleries/${selectedGallery.id}/validate`, {
         selected_photo_ids: selectedPhotos
       }, { headers });
       setIsValidated(true);
-      toast.success("Sélection validée ! Nous allons préparer vos photos.");
+      toast.success(`${selectedPhotos.length} photos validées ! Nous allons préparer votre montage.`);
     } catch (e) {
       toast.error("Erreur lors de la validation");
     }
