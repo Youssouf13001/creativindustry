@@ -10916,6 +10916,7 @@ async def update_client_project(client_id: str, data: dict, admin: dict = Depend
         
         # Send email notification if step changed (non-blocking)
         email_sent = False
+        sms_sent = False
         if new_step != old_step and new_step > 0:
             client = await db.clients.find_one({"id": client_id}, {"_id": 0})
             if client and client.get("email"):
@@ -10923,25 +10924,44 @@ async def update_client_project(client_id: str, data: dict, admin: dict = Depend
                     if new_step > total_steps:
                         # Project completed email
                         email_sent = await send_project_completed_email(client)
+                        # Send SMS for completion
+                        if client.get("phone"):
+                            sms_sent = send_project_completion_sms(client.get("phone"), client.get("name", "Client"))
                     else:
                         current_step_info = next((s for s in PROJECT_STEPS if s["step"] == new_step), None)
                         if current_step_info:
                             step_type = current_step_info.get("type", "standard")
+                            step_label = current_step_info.get("label", "")
+                            
                             if step_type == "photos_selection":
                                 # Special email for photo selection request
                                 email_sent = await send_photo_selection_email(client, current_step_info, new_step, total_steps)
+                                # SMS for action required
+                                if client.get("phone"):
+                                    sms_sent = send_action_required_sms(client.get("phone"), client.get("name", "Client"), "Sélectionnez vos 40 photos préférées")
                             elif step_type == "music_request":
                                 # Special email for music request
                                 email_sent = await send_music_request_email(client, current_step_info, new_step, total_steps)
+                                # SMS for action required
+                                if client.get("phone"):
+                                    sms_sent = send_action_required_sms(client.get("phone"), client.get("name", "Client"), "Envoyez-nous votre musique de mariage")
                             elif step_type == "delivery":
                                 # Delivery email with attachment
                                 email_sent = await send_delivery_email_with_attachment(client, current_step_info, new_step, total_steps)
+                                # SMS for delivery
+                                if client.get("phone"):
+                                    progress_pct = int((new_step / total_steps) * 100) if total_steps > 0 else 100
+                                    sms_sent = send_project_status_sms(client.get("phone"), client.get("name", "Client"), step_label, "completed", progress_pct)
                             else:
                                 email_sent = await send_project_step_email(client, current_step_info, new_step, total_steps)
+                                # Send SMS for standard step update
+                                if client.get("phone"):
+                                    progress_pct = int((new_step / total_steps) * 100) if total_steps > 0 else 0
+                                    sms_sent = send_project_status_sms(client.get("phone"), client.get("name", "Client"), step_label, "in_progress", progress_pct)
                 except Exception as e:
                     logging.error(f"Failed to send project step email: {e}")
         
-        return {"success": True, "project": project_data, "email_sent": email_sent}
+        return {"success": True, "project": project_data, "email_sent": email_sent, "sms_sent": sms_sent}
     except Exception as e:
         logging.error(f"Error updating client project: {e}")
         raise HTTPException(status_code=500, detail=str(e))
