@@ -245,9 +245,17 @@ const ContractEditor = ({ token, onClose, existingTemplate = null, onSaved }) =>
                 ))}
               </div>
               {addingField && (
-                <p className="text-amber-400 text-xs mt-2 text-center">
-                  Cliquez sur le PDF pour placer le champ
-                </p>
+                <div className="mt-3 p-3 bg-amber-500/20 border border-amber-500/50 rounded-lg">
+                  <p className="text-amber-400 text-sm text-center font-medium">
+                    👆 Cliquez sur le PDF pour placer le champ
+                  </p>
+                  <button
+                    onClick={() => setAddingField(null)}
+                    className="mt-2 w-full text-xs text-white/60 hover:text-white"
+                  >
+                    Annuler
+                  </button>
+                </div>
               )}
             </div>
 
