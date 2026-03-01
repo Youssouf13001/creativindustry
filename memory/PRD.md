@@ -2,7 +2,7 @@
 
 ## Original Problem Statement
 Application de borne photo "mode kiosque" (PhotoFind) pour les événements de photographe, avec un portail client complet incluant:
-- Mode Kiosque: Prise de selfies, recherche faciale, filtres/cadres, paiement multi-options
+- Mode Kiosque: Prise de selfies, reconnaissance faciale, filtres/cadres, paiement multi-options
 - Portail Client: Espace paiement, suivi de projet détaillé
 - Livre d'or Vidéo: Messages vidéo des invités avec montage automatique
 - Gestion Admin: Interface complète pour gérer tarifs, événements, projets
@@ -17,64 +17,61 @@ French
 
 ## What's Been Implemented
 
-### Completed Features
-1. **Mode Kiosque PhotoFind**
-   - Prise de selfies avec reconnaissance faciale (AWS Rekognition)
-   - Recherche de photos par visage
-   - Filtres et cadres personnalisables
-   - Paiement multi-options (CB Stripe, PayPal, Espèces)
+### Session du 1er Mars 2025
 
-2. **Portail Client**
-   - Authentification clients
-   - Onglet "Mes Paiements" - synchronisation avec base externe
-   - Suivi de projet dynamique avec étapes interactives
-   - Upload de musique et sélection de photos
+#### 1. Intégration SMS Brevo ✅
+- Service SMS créé (`/backend/services/sms_service.py`)
+- Routes API SMS (`/backend/routes/sms.py`):
+  - `GET /api/admin/sms/status` - Vérifier si SMS configuré
+  - `POST /api/admin/sms/test` - Envoyer SMS de test
+  - `POST /api/admin/sms/campaign` - Envoyer campagne SMS
+  - `POST /api/admin/sms/send-to-client/{client_id}` - SMS à un client
+- Clé API Brevo configurée dans `.env`
+- Crédits SMS prépayés (200 SMS achetés)
 
-3. **Livre d'Or Vidéo**
-   - Enregistrement de messages vidéo par les invités
-   - Montage automatique via FFmpeg
-   - Téléchargement du montage final
+#### 2. SMS Automatiques sur Suivi de Projet ✅
+- Intégration dans `server.py` endpoint `/admin/client-project/{client_id}`
+- SMS envoyé automatiquement quand:
+  - Une étape du projet change
+  - Une action client est requise (photos, musique)
+  - Le projet est terminé
 
-4. **Dashboard Admin**
-   - Gestion complète des clients, tarifs, événements
-   - Suivi de projet avec notifications
-   - Gestion des témoignages, actualités, portfolio
+#### 3. Campagnes SMS dans Admin ✅
+- Interface dans onglet "Extensions"
+- Sélection de clients avec checkboxes
+- Envoi aux sélectionnés ou à tous
+- Affichage du résultat (envoyés/échecs/sans téléphone)
 
-5. **Notifications**
-   - Emails automatiques (SMTP IONOS)
-   - **SMS Brevo** (Implémenté le 28/02/2025)
-     - Notifications automatiques lors des mises à jour de projet
-     - API: `/api/admin/sms/test`, `/api/admin/sms/send`, `/api/admin/sms/status`
+#### 4. Nouveau Design Premium Borne PhotoFind ✅
+- Fond doré avec particules scintillantes (image générée)
+- Icône caméra avec bordure et effet lumineux dorés
+- Titre "Trouvez vos photos !" en dégradé doré
+- Bouton "Commencer" premium doré
+- Cartes de prix avec bordures dorées et reflets
+- Logo "CreativIndustry France" en bas à gauche
+- Nom de l'événement affiché en haut
 
-### 3rd Party Integrations
-- **Stripe**: Paiements CB (clés LIVE configurées)
+### Fonctionnalités Précédentes
+- Mode Kiosque PhotoFind avec reconnaissance faciale (AWS Rekognition)
+- Portail de paiement client (Stripe)
+- Synchronisation factures depuis base externe
+- Suivi de projet dynamique
+- Livre d'or vidéo avec montage automatique (FFmpeg)
+- Dashboard admin complet
+
+## 3rd Party Integrations
+- **Stripe**: Paiements CB
 - **PayPal REST API**: Paiements PayPal
 - **AWS Rekognition**: Reconnaissance faciale
 - **FFmpeg**: Traitement vidéo
-- **Brevo (Sendinblue)**: Notifications SMS transactionnelles
+- **Brevo (Sendinblue)**: Notifications SMS (NOUVEAU)
 
-## Technical Debt (CRITICAL)
-- `/app/backend/server.py`: >13,000 lignes - REFACTORING URGENT
-- `/app/frontend/src/pages/ClientDashboard.js`: >2,500 lignes - À décomposer
-- Routes dupliquées entre server.py et routes/guestbook.py
-
-## Upcoming Tasks (P0-P1)
-1. **P0: Refactoring backend** - Extraire les routes en modules
-2. **P0: Refactoring frontend** - Décomposer ClientDashboard.js
-3. **P1: Intégration Terminal SumUp** - Paiement CB sur borne
-4. **P1: Impression directe DNP** - Éviter popup d'impression
-
-## Known Issues
-- Erreur `[object Object]` sur les témoignages (production)
-- Dashboard devis affiche des statistiques à zéro
-- Déploiement IONOS fragile (processus manuel)
-
-## Key Files
-- `/app/backend/server.py` - Monolithe backend principal
-- `/app/backend/services/sms_service.py` - Service SMS Brevo
-- `/app/backend/routes/guestbook.py` - Routes livre d'or (extrait)
-- `/app/frontend/src/pages/ClientDashboard.js` - Dashboard client
-- `/app/frontend/src/components/admin/ProjectTracker.js` - Suivi projet admin
+## Key Files Modified This Session
+- `/backend/services/sms_service.py` - Service SMS Brevo
+- `/backend/routes/sms.py` - Routes API SMS
+- `/backend/server.py` - Import SMS + endpoints
+- `/frontend/src/pages/AdminDashboard.js` - Interface campagnes SMS
+- `/frontend/src/pages/PhotoFindKiosk.js` - Nouveau design premium
 
 ## Environment Variables
 ### Backend (.env)
@@ -85,14 +82,21 @@ French
 - AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 - **BREVO_API_KEY** - Notifications SMS
 
-### Frontend (.env)
-- REACT_APP_BACKEND_URL
-- REACT_APP_STRIPE_PUBLIC_KEY
+## URLs Importantes
+- Borne: `https://creativindustry.com/kiosk/{event-id}`
+- Admin: `https://creativindustry.com/admin/dashboard`
 
 ## Test Credentials
 - Admin: testadmin@test.com / testpassword
 - Client: client@test.com / testpassword
-- Stripe Test: 4242 4242 4242 4242
+
+## Upcoming Tasks
+- Intégration Terminal SumUp (paiement CB sur borne)
+- Impression directe DNP (éviter popup)
+
+## Technical Debt
+- `/backend/server.py` - >13,000 lignes (refactoring urgent)
+- `/frontend/src/pages/ClientDashboard.js` - >2,500 lignes
 
 ## Last Update
-28 Février 2025 - Intégration SMS Brevo complète et testée
+1er Mars 2025 - SMS Brevo + Campagnes SMS + Design Premium Borne
