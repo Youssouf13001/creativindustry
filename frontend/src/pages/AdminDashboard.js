@@ -2442,6 +2442,7 @@ const AdminDashboard = () => {
             { id: "bookings", label: "Réservations" },
             { id: "clients", label: "Clients" },
             { id: "extensions", label: "💳 Extensions" },
+            { id: "contracts", label: "📋 Contrats" },
             { id: "billing", label: "🧾 Facturation" },
             { id: "newsletter", label: "📧 Newsletter" },
             { id: "kiosk", label: "🖥️ Kiosque" },
