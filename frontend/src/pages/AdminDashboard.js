@@ -6,6 +6,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import TaskManager from "../components/admin/TaskManager";
 import ProjectTracker from "../components/admin/ProjectTracker";
 import TeamChat from "../components/admin/TeamChat";
+import ContractsTab from "../components/admin/ContractsTab";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 import AdminChat from "../components/AdminChat";
