@@ -82,6 +82,36 @@ const ContractEditor = ({ token, onClose, existingTemplate = null, onSaved }) =>
     toast.success('Champ ajouté ! Cliquez dessus pour le configurer.');
   };
 
+  // Gérer le déplacement des champs par drag
+  const handleFieldDragStart = (e, fieldId) => {
+    e.stopPropagation();
+    setDraggingField(fieldId);
+  };
+
+  const handleFieldDrag = (e) => {
+    if (!draggingField || !pdfContainerRef.current) return;
+    
+    const rect = pdfContainerRef.current.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    // Limiter les valeurs entre 0 et 100
+    const clampedX = Math.max(0, Math.min(100, x));
+    const clampedY = Math.max(0, Math.min(100, y));
+    
+    setFields(fields.map(f => 
+      f.id === draggingField 
+        ? { ...f, x: clampedX, y: clampedY } 
+        : f
+    ));
+  };
+
+  const handleFieldDragEnd = () => {
+    if (draggingField) {
+      setDraggingField(null);
+    }
+  };
+
   const updateField = (fieldId, updates) => {
     setFields(fields.map(f => f.id === fieldId ? { ...f, ...updates } : f));
   };
