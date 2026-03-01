@@ -302,9 +302,12 @@ const ContractEditor = ({ token, onClose, existingTemplate = null, onSaved }) =>
                 {/* Couche overlay transparente pour capturer les clics */}
                 <div
                   onClick={handlePdfClick}
+                  onMouseMove={handleFieldDrag}
+                  onMouseUp={handleFieldDragEnd}
+                  onMouseLeave={handleFieldDragEnd}
                   className="absolute inset-0 z-10"
                   style={{ 
-                    cursor: addingField ? 'crosshair' : 'default',
+                    cursor: addingField ? 'crosshair' : (draggingField ? 'grabbing' : 'default'),
                     background: 'transparent'
                   }}
                   data-testid="pdf-click-overlay"
@@ -313,14 +316,21 @@ const ContractEditor = ({ token, onClose, existingTemplate = null, onSaved }) =>
                 {/* Field overlays - positionnés au-dessus de la couche de clic */}
                 {fields.map((field) => {
                   const fieldType = fieldTypes.find(t => t.type === field.type);
+                  const Icon = fieldType?.icon || Type;
+                  const isSelected = selectedField === field.id;
+                  const isDragging = draggingField === field.id;
+                  
                   return (
                     <div
                       key={field.id}
                       onClick={(e) => { e.stopPropagation(); setSelectedField(field.id); }}
-                      className={`absolute border-2 rounded cursor-pointer transition-all z-20 ${
-                        selectedField === field.id
-                          ? 'border-amber-400 bg-amber-400/30'
-                          : `border-blue-400/50 bg-blue-400/20 hover:border-blue-400`
+                      onMouseDown={(e) => handleFieldDragStart(e, field.id)}
+                      className={`absolute border-2 rounded transition-all z-20 ${
+                        isSelected
+                          ? 'border-amber-400 bg-amber-400/30 shadow-lg shadow-amber-400/20'
+                          : isDragging 
+                            ? 'border-green-400 bg-green-400/30'
+                            : 'border-blue-400/50 bg-blue-400/20 hover:border-blue-400'
                       }`}
                       style={{
                         left: `${field.x}%`,
@@ -328,11 +338,20 @@ const ContractEditor = ({ token, onClose, existingTemplate = null, onSaved }) =>
                         width: `${field.width}px`,
                         height: `${field.height}px`,
                         transform: 'translate(-50%, -50%)',
+                        cursor: isDragging ? 'grabbing' : 'grab',
                       }}
                       data-testid={`contract-field-${field.id}`}
                     >
-                      <span className="absolute -top-5 left-0 text-xs text-white bg-slate-800 px-1 rounded whitespace-nowrap">
+                      {/* Icône du type de champ */}
+                      <Icon 
+                        size={field.type === 'checkbox' ? 14 : 12} 
+                        className={`absolute top-1/2 left-1 -translate-y-1/2 ${isSelected ? 'text-amber-400' : 'text-blue-400'}`} 
+                      />
+                      {/* Label du champ */}
+                      <span className="absolute -top-6 left-0 text-xs text-white bg-slate-800/90 px-2 py-0.5 rounded whitespace-nowrap flex items-center gap-1">
+                        <span className={`w-2 h-2 rounded-full ${fieldType?.color || 'bg-blue-500'}`}></span>
                         {field.label}
+                        {field.required && <span className="text-red-400">*</span>}
                       </span>
                     </div>
                   );
