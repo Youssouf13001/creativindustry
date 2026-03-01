@@ -8,6 +8,7 @@ import ClientChat from "../components/ClientChat";
 import { DevisPreview, InvoicePreview } from "../components/DocumentPreview";
 import { PaymentSummaryCard } from "../components/DevisInvoiceCards";
 import GallerySlideshowModal from "../components/GallerySlideshowModal";
+import ClientContracts from "../components/client/ClientContracts";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
