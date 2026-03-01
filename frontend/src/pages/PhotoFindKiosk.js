@@ -782,11 +782,26 @@ const PhotoFindKiosk = () => {
         
         {/* Step: Welcome */}
         {step === "welcome" && (
-          <div className="text-center max-w-2xl mx-auto">
-            <div className="mb-8">
-              <Camera className="mx-auto text-primary mb-6" size={120} />
-              <h2 className="text-5xl font-bold mb-4">Trouvez vos photos !</h2>
-              <p className="text-xl text-white/70">
+          <div className="text-center max-w-4xl mx-auto relative">
+            {/* Decorative background elements */}
+            <div className="absolute inset-0 -z-10 overflow-hidden">
+              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+              <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}} />
+            </div>
+            
+            {/* Main content */}
+            <div className="mb-10">
+              <div className="relative inline-block mb-8">
+                <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full scale-150" />
+                <div className="relative bg-gradient-to-br from-primary to-amber-500 p-6 rounded-full">
+                  <Camera className="text-black" size={80} />
+                </div>
+              </div>
+              
+              <h2 className="text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-amber-400 to-primary bg-clip-text text-transparent">
+                Trouvez vos photos !
+              </h2>
+              <p className="text-2xl text-white/70 max-w-xl mx-auto">
                 Prenez un selfie et retrouvez instantanément toutes les photos où vous apparaissez.
               </p>
             </div>
@@ -796,24 +811,38 @@ const PhotoFindKiosk = () => {
                 setStep("camera");
                 startCamera();
               }}
-              className="bg-primary hover:bg-primary/90 text-black font-bold text-2xl px-12 py-6 rounded-xl transition-all transform hover:scale-105"
+              className="group relative bg-gradient-to-r from-primary to-amber-500 text-black font-bold text-3xl px-16 py-8 rounded-2xl transition-all transform hover:scale-105 shadow-2xl shadow-primary/30 hover:shadow-primary/50"
             >
-              📸 Commencer
+              <span className="relative z-10 flex items-center gap-3">
+                <Camera size={36} /> Commencer
+              </span>
+              <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
             </button>
             
-            <div className="mt-12 grid grid-cols-3 gap-6 text-center">
-              <div className="bg-white/5 p-6 rounded-xl">
-                <p className="text-3xl font-bold text-primary">{pricing.single}€</p>
-                <p className="text-white/60">par photo</p>
+            <div className="mt-16 grid grid-cols-3 gap-8 text-center">
+              <div className="bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-sm p-8 rounded-2xl border border-white/10 hover:border-primary/50 transition-all hover:scale-105">
+                <p className="text-4xl font-bold text-primary mb-2">{pricing.single}€</p>
+                <p className="text-white/60 text-lg">par photo</p>
               </div>
-              <div className="bg-white/5 p-6 rounded-xl border border-primary/50">
-                <p className="text-3xl font-bold text-primary">{pricing.pack_5}€</p>
-                <p className="text-white/60">pack 5 photos</p>
+              <div className="bg-gradient-to-b from-primary/20 to-primary/5 backdrop-blur-sm p-8 rounded-2xl border-2 border-primary/50 hover:border-primary transition-all hover:scale-105 relative">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-black text-xs font-bold px-3 py-1 rounded-full">POPULAIRE</div>
+                <p className="text-4xl font-bold text-primary mb-2">{pricing.pack_5}€</p>
+                <p className="text-white/60 text-lg">pack 5 photos</p>
               </div>
-              <div className="bg-primary/20 p-6 rounded-xl border-2 border-primary">
-                <p className="text-3xl font-bold text-primary">{pricing.all}€</p>
-                <p className="text-white/60">toutes vos photos</p>
+              <div className="bg-gradient-to-b from-amber-500/20 to-amber-500/5 backdrop-blur-sm p-8 rounded-2xl border-2 border-amber-500/50 hover:border-amber-500 transition-all hover:scale-105">
+                <p className="text-4xl font-bold text-amber-400 mb-2">{pricing.all}€</p>
+                <p className="text-white/60 text-lg">toutes vos photos</p>
               </div>
+            </div>
+            
+            {/* Footer branding */}
+            <div className="mt-16 pt-8 border-t border-white/10">
+              <p className="text-white/40 text-sm tracking-widest uppercase">
+                Une innovation
+              </p>
+              <p className="text-2xl font-bold bg-gradient-to-r from-primary to-amber-400 bg-clip-text text-transparent">
+                CREATIVINDUSTRY France
+              </p>
             </div>
           </div>
         )}
