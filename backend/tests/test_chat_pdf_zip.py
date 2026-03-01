@@ -8,7 +8,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://kiosk-staging-1.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://photokiosk-contracts.preview.emergentagent.com').rstrip('/')
 
 # Test data
 ADMIN_EMAIL = f"test_admin_chat_{uuid.uuid4().hex[:8]}@creativindustry.fr"
