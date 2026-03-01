@@ -257,25 +257,36 @@ const ContractEditor = ({ token, onClose, existingTemplate = null, onSaved }) =>
             {pdfUrl ? (
               <div
                 ref={pdfContainerRef}
-                onClick={handlePdfClick}
                 className={`relative bg-white mx-auto shadow-2xl ${addingField ? 'cursor-crosshair' : ''}`}
                 style={{ width: '100%', maxWidth: '800px', aspectRatio: '0.707' }}
               >
-                {/* PDF iframe */}
+                {/* PDF iframe - affichage uniquement */}
                 <iframe
                   src={`${API.replace('/api', '')}${pdfUrl}`}
-                  className="w-full h-full pointer-events-none"
+                  className="w-full h-full"
+                  style={{ pointerEvents: 'none' }}
                   title="PDF Preview"
                 />
                 
-                {/* Field overlays */}
+                {/* Couche overlay transparente pour capturer les clics */}
+                <div
+                  onClick={handlePdfClick}
+                  className="absolute inset-0 z-10"
+                  style={{ 
+                    cursor: addingField ? 'crosshair' : 'default',
+                    background: 'transparent'
+                  }}
+                  data-testid="pdf-click-overlay"
+                />
+                
+                {/* Field overlays - positionnés au-dessus de la couche de clic */}
                 {fields.map((field) => {
                   const fieldType = fieldTypes.find(t => t.type === field.type);
                   return (
                     <div
                       key={field.id}
                       onClick={(e) => { e.stopPropagation(); setSelectedField(field.id); }}
-                      className={`absolute border-2 rounded cursor-pointer transition-all ${
+                      className={`absolute border-2 rounded cursor-pointer transition-all z-20 ${
                         selectedField === field.id
                           ? 'border-amber-400 bg-amber-400/30'
                           : `border-blue-400/50 bg-blue-400/20 hover:border-blue-400`
@@ -287,6 +298,7 @@ const ContractEditor = ({ token, onClose, existingTemplate = null, onSaved }) =>
                         height: `${field.height}px`,
                         transform: 'translate(-50%, -50%)',
                       }}
+                      data-testid={`contract-field-${field.id}`}
                     >
                       <span className="absolute -top-5 left-0 text-xs text-white bg-slate-800 px-1 rounded whitespace-nowrap">
                         {field.label}
