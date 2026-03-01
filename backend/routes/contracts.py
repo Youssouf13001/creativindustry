@@ -116,7 +116,7 @@ async def create_contract_template(template: ContractTemplate):
     }
     
     await db.contract_templates.insert_one(template_data)
-    del template_data['_id'] if '_id' in template_data else None
+    template_data.pop('_id', None)
     
     return {"success": True, "template": template_data}
 
