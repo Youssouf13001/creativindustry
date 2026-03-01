@@ -2222,6 +2222,11 @@ const ClientDashboard = () => {
           </div>
         )}
 
+        {/* Contracts Tab */}
+        {activeTab === "contracts" && (
+          <ClientContracts token={token} clientId={clientData?.id} />
+        )}
+
         {/* Devis Tab */}
         {activeTab === "devis" && (
           <div className="space-y-6">
