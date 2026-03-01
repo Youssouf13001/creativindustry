@@ -7182,6 +7182,11 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* Contracts Tab */}
+        {activeTab === "contracts" && (
+          <ContractsTab token={token} clients={clients} />
+        )}
+
         {/* Billing/Facturation Tab */}
         {activeTab === "billing" && (
           <div className="space-y-6">
