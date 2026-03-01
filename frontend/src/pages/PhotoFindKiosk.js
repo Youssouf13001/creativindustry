@@ -782,67 +782,106 @@ const PhotoFindKiosk = () => {
         
         {/* Step: Welcome */}
         {step === "welcome" && (
-          <div className="text-center max-w-4xl mx-auto relative">
-            {/* Decorative background elements */}
-            <div className="absolute inset-0 -z-10 overflow-hidden">
-              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-              <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}} />
+          <div 
+            className="fixed inset-0 flex flex-col items-center justify-center text-center"
+            style={{
+              backgroundImage: 'url(https://static.prod-images.emergentagent.com/jobs/aff0cb53-c576-4852-8f7c-1010b92e504a/images/ef14d17a4fe24ba3a2fc4d1b316f3c366b455f8db95f59398483e79736a4799e.png)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          >
+            {/* Event name */}
+            <div className="absolute top-6 left-8">
+              <h1 className="text-2xl font-light text-amber-200/80 tracking-wide">{eventDetails?.name || 'Événement'}</h1>
             </div>
             
+            {/* Fullscreen button */}
+            <button
+              onClick={toggleFullscreen}
+              className="absolute top-6 right-8 p-2 text-white/50 hover:text-white transition-colors"
+            >
+              <Maximize size={24} />
+            </button>
+            
             {/* Main content */}
-            <div className="mb-10">
-              <div className="relative inline-block mb-8">
-                <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full scale-150" />
-                <div className="relative bg-gradient-to-br from-primary to-amber-500 p-6 rounded-full">
-                  <Camera className="text-black" size={80} />
+            <div className="max-w-4xl mx-auto px-8">
+              {/* Camera icon with glow */}
+              <div className="relative mb-8">
+                <div className="absolute inset-0 blur-3xl bg-amber-500/30 rounded-full scale-150" />
+                <div className="relative">
+                  <div className="w-32 h-32 mx-auto border-4 border-amber-400 rounded-2xl flex items-center justify-center bg-black/30 backdrop-blur-sm shadow-[0_0_60px_rgba(251,191,36,0.4)]">
+                    <Camera className="text-amber-400" size={60} />
+                  </div>
                 </div>
               </div>
               
-              <h2 className="text-6xl font-bold mb-4 bg-gradient-to-r from-primary via-amber-400 to-primary bg-clip-text text-transparent">
+              {/* Title */}
+              <h2 className="text-6xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 drop-shadow-[0_0_30px_rgba(251,191,36,0.5)]">
                 Trouvez vos photos !
               </h2>
-              <p className="text-2xl text-white/70 max-w-xl mx-auto">
+              
+              {/* Subtitle */}
+              <p className="text-xl text-amber-100/70 mb-12 max-w-xl mx-auto">
                 Prenez un selfie et retrouvez instantanément toutes les photos où vous apparaissez.
               </p>
-            </div>
-            
-            <button
-              onClick={() => {
-                setStep("camera");
-                startCamera();
-              }}
-              className="group relative bg-gradient-to-r from-primary to-amber-500 text-black font-bold text-3xl px-16 py-8 rounded-2xl transition-all transform hover:scale-105 shadow-2xl shadow-primary/30 hover:shadow-primary/50"
-            >
-              <span className="relative z-10 flex items-center gap-3">
-                <Camera size={36} /> Commencer
-              </span>
-              <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
-            
-            <div className="mt-16 grid grid-cols-3 gap-8 text-center">
-              <div className="bg-gradient-to-b from-white/10 to-white/5 backdrop-blur-sm p-8 rounded-2xl border border-white/10 hover:border-primary/50 transition-all hover:scale-105">
-                <p className="text-4xl font-bold text-primary mb-2">{pricing.single}€</p>
-                <p className="text-white/60 text-lg">par photo</p>
-              </div>
-              <div className="bg-gradient-to-b from-primary/20 to-primary/5 backdrop-blur-sm p-8 rounded-2xl border-2 border-primary/50 hover:border-primary transition-all hover:scale-105 relative">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-black text-xs font-bold px-3 py-1 rounded-full">POPULAIRE</div>
-                <p className="text-4xl font-bold text-primary mb-2">{pricing.pack_5}€</p>
-                <p className="text-white/60 text-lg">pack 5 photos</p>
-              </div>
-              <div className="bg-gradient-to-b from-amber-500/20 to-amber-500/5 backdrop-blur-sm p-8 rounded-2xl border-2 border-amber-500/50 hover:border-amber-500 transition-all hover:scale-105">
-                <p className="text-4xl font-bold text-amber-400 mb-2">{pricing.all}€</p>
-                <p className="text-white/60 text-lg">toutes vos photos</p>
+              
+              {/* Start button */}
+              <button
+                onClick={() => {
+                  setStep("camera");
+                  startCamera();
+                }}
+                className="group relative mb-16"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-600 rounded-xl blur-md opacity-50 group-hover:opacity-80 transition-opacity" />
+                <div className="relative bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 text-black font-bold text-2xl px-16 py-5 rounded-xl flex items-center gap-3 shadow-[0_0_30px_rgba(251,191,36,0.5)] hover:shadow-[0_0_50px_rgba(251,191,36,0.7)] transition-all">
+                  <Camera size={28} /> Commencer
+                </div>
+              </button>
+              
+              {/* Pricing cards */}
+              <div className="grid grid-cols-3 gap-8 mb-12">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative bg-black/40 backdrop-blur-sm border-2 border-amber-500/50 rounded-xl p-8 hover:border-amber-400 transition-all">
+                    <p className="text-5xl font-bold text-amber-400 mb-2">{pricing.single}€</p>
+                    <p className="text-amber-100/60">par photo</p>
+                  </div>
+                  {/* Reflection */}
+                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-4 bg-gradient-to-b from-amber-500/20 to-transparent blur-sm rounded-full" />
+                </div>
+                
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-amber-500/30 blur-xl rounded-xl opacity-50 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative bg-black/40 backdrop-blur-sm border-2 border-amber-400 rounded-xl p-8 hover:border-amber-300 transition-all shadow-[0_0_30px_rgba(251,191,36,0.3)]">
+                    <p className="text-5xl font-bold text-amber-400 mb-2">{pricing.pack_5}€</p>
+                    <p className="text-amber-100/60">pack 5 photos</p>
+                  </div>
+                  {/* Reflection */}
+                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-4 bg-gradient-to-b from-amber-500/30 to-transparent blur-sm rounded-full" />
+                </div>
+                
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-amber-500/20 blur-xl rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="relative bg-black/40 backdrop-blur-sm border-2 border-amber-500/50 rounded-xl p-8 hover:border-amber-400 transition-all">
+                    <p className="text-5xl font-bold text-amber-400 mb-2">{pricing.all}€</p>
+                    <p className="text-amber-100/60">toutes vos photos</p>
+                  </div>
+                  {/* Reflection */}
+                  <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-4 bg-gradient-to-b from-amber-500/20 to-transparent blur-sm rounded-full" />
+                </div>
               </div>
             </div>
             
             {/* Footer branding */}
-            <div className="mt-16 pt-8 border-t border-white/10">
-              <p className="text-white/40 text-sm tracking-widest uppercase">
-                Une innovation
-              </p>
-              <p className="text-2xl font-bold bg-gradient-to-r from-primary to-amber-400 bg-clip-text text-transparent">
-                CREATIVINDUSTRY France
-              </p>
+            <div className="absolute bottom-8 left-8 flex items-center gap-3">
+              <div className="w-12 h-12 border-2 border-amber-500/50 rounded-full flex items-center justify-center">
+                <span className="text-amber-400 font-bold text-lg">C</span>
+              </div>
+              <div>
+                <p className="text-xl font-semibold text-amber-300">CreativIndustry</p>
+                <p className="text-xs text-amber-500/60 tracking-[0.3em] uppercase">France</p>
+              </div>
             </div>
           </div>
         )}
