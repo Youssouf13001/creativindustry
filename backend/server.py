@@ -41,6 +41,7 @@ from models.schemas import AdminCreate, AdminUpdate, AdminResponse
 
 # Import modular routes
 from routes.guestbook import router as guestbook_router
+from routes.contracts import router as contracts_router
 
 # Import SMS service
 from services.sms_service import (
