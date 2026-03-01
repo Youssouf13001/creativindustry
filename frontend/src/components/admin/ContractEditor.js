@@ -12,6 +12,7 @@ const ContractEditor = ({ token, onClose, existingTemplate = null, onSaved }) =>
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [addingField, setAddingField] = useState(null); // 'text', 'checkbox', 'date', 'signature'
+  const [draggingField, setDraggingField] = useState(null);
   const pdfContainerRef = useRef(null);
 
   const headers = { Authorization: `Bearer ${token}` };
