@@ -1179,6 +1179,7 @@ const ClientDashboard = () => {
                 { id: "galleries", label: "Galeries", icon: FolderOpen },
                 { id: "files", label: "Fichiers", icon: FileText },
                 { id: "transfers", label: "Transferts", icon: UploadCloud },
+                { id: "contracts", label: "Contrats", icon: FileText },
                 { id: "devis", label: "Devis", icon: Receipt },
                 { id: "invoices", label: "Factures", icon: File },
                 { id: "payments", label: "Paiements", icon: Euro },
