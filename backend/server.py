@@ -15,7 +15,7 @@ import base64
 import subprocess
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List, Optional
+from typing import List, Optional, Union
 import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
@@ -1046,11 +1046,11 @@ class Appointment(BaseModel):
     client_phone: str
     appointment_type: str  # contract_sign, contract_discuss, billing, project, other
     appointment_type_label: str = ""
-    duration: str  # 30, 60, 90 (minutes)
+    duration: Union[str, int] = "60"  # 30, 60, 90 (minutes)
     proposed_date: str
     proposed_time: str
     message: Optional[str] = None
-    status: str = "pending"  # pending, confirmed, refused, rescheduled_pending, rescheduled_confirmed
+    status: str = "pending"  # pending, confirmed, refused, rescheduled_pending, rescheduled_confirmed, cancelled
     admin_response: Optional[str] = None
     new_proposed_date: Optional[str] = None
     new_proposed_time: Optional[str] = None
@@ -5192,6 +5192,21 @@ async def update_appointment(appointment_id: str, data: AppointmentAdminUpdate, 
     if updated.get('updated_at') and isinstance(updated['updated_at'], str):
         updated['updated_at'] = datetime.fromisoformat(updated['updated_at'])
     return updated
+
+
+@api_router.delete("/appointments/{appointment_id}")
+async def delete_appointment(appointment_id: str, admin: dict = Depends(get_current_admin)):
+    """Delete an appointment (admin only)"""
+    appointment = await db.appointments.find_one({"id": appointment_id}, {"_id": 0})
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    result = await db.appointments.delete_one({"id": appointment_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=500, detail="Failed to delete appointment")
+    
+    return {"message": "Appointment deleted successfully", "id": appointment_id}
+
 
 @api_router.get("/appointments/confirm/{appointment_id}/{token}")
 async def confirm_rescheduled_appointment(appointment_id: str, token: str):

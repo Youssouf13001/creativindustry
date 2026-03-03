@@ -1840,10 +1840,37 @@ const AdminDashboard = () => {
     }
   };
 
+  // Cancel an appointment (change status to cancelled)
+  const cancelAppointment = async (appointmentId) => {
+    if (!window.confirm("Voulez-vous vraiment annuler ce rendez-vous ?")) return;
+    try {
+      await axios.put(`${API}/appointments/${appointmentId}`, { status: "cancelled", admin_response: "Rendez-vous annulé par l'administrateur" }, { headers });
+      toast.success("Rendez-vous annulé");
+      setSelectedAppointment(null);
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de l'annulation");
+    }
+  };
+
+  // Delete an appointment permanently
+  const deleteAppointment = async (appointmentId) => {
+    if (!window.confirm("Voulez-vous vraiment supprimer définitivement ce rendez-vous ? Cette action est irréversible.")) return;
+    try {
+      await axios.delete(`${API}/appointments/${appointmentId}`, { headers });
+      toast.success("Rendez-vous supprimé");
+      setSelectedAppointment(null);
+      fetchData();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
   const appointmentStatusColors = {
     pending: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30",
     confirmed: "bg-green-500/20 text-green-500 border-green-500/30",
     refused: "bg-red-500/20 text-red-500 border-red-500/30",
+    cancelled: "bg-gray-500/20 text-gray-500 border-gray-500/30",
     rescheduled_pending: "bg-orange-500/20 text-orange-500 border-orange-500/30"
   };
 
@@ -1851,6 +1878,7 @@ const AdminDashboard = () => {
     pending: "En attente",
     confirmed: "Confirmé",
     refused: "Refusé",
+    cancelled: "Annulé",
     rescheduled_pending: "Nouvelle date proposée"
   };
 
@@ -8048,10 +8076,85 @@ const AdminDashboard = () => {
                   )}
 
                   {selectedAppointment.status !== "pending" && (
-                    <div className={`p-4 text-center ${appointmentStatusColors[selectedAppointment.status]}`}>
-                      <p className="font-semibold">{appointmentStatusLabels[selectedAppointment.status]}</p>
-                      {selectedAppointment.status === "rescheduled_pending" && (
-                        <p className="text-sm mt-1">En attente de confirmation du client pour le {selectedAppointment.new_proposed_date} à {selectedAppointment.new_proposed_time}</p>
+                    <div className="space-y-4">
+                      <div className={`p-4 text-center ${appointmentStatusColors[selectedAppointment.status]}`}>
+                        <p className="font-semibold">{appointmentStatusLabels[selectedAppointment.status]}</p>
+                        {selectedAppointment.status === "rescheduled_pending" && (
+                          <p className="text-sm mt-1">En attente de confirmation du client pour le {selectedAppointment.new_proposed_date} à {selectedAppointment.new_proposed_time}</p>
+                        )}
+                      </div>
+                      
+                      {/* Actions for confirmed/rescheduled appointments */}
+                      {(selectedAppointment.status === "confirmed" || selectedAppointment.status === "rescheduled_pending") && (
+                        <div className="border-t border-white/10 pt-4 space-y-4">
+                          <h4 className="font-primary font-semibold text-sm">Actions disponibles</h4>
+                          
+                          {/* Propose new date */}
+                          <div className="bg-background p-4 rounded">
+                            <h5 className="text-sm font-semibold mb-3">Proposer une autre date :</h5>
+                            <div className="grid grid-cols-2 gap-2 mb-3">
+                              <input
+                                type="date"
+                                value={appointmentResponse.new_proposed_date}
+                                onChange={(e) => setAppointmentResponse({ ...appointmentResponse, new_proposed_date: e.target.value })}
+                                className="bg-card border border-white/20 px-3 py-2 text-sm"
+                              />
+                              <input
+                                type="time"
+                                value={appointmentResponse.new_proposed_time}
+                                onChange={(e) => setAppointmentResponse({ ...appointmentResponse, new_proposed_time: e.target.value })}
+                                className="bg-card border border-white/20 px-3 py-2 text-sm"
+                              />
+                            </div>
+                            <textarea
+                              placeholder="Message pour le client (optionnel)"
+                              value={appointmentResponse.admin_response}
+                              onChange={(e) => setAppointmentResponse({ ...appointmentResponse, admin_response: e.target.value })}
+                              className="w-full bg-card border border-white/20 px-3 py-2 text-sm mb-3"
+                              rows={2}
+                            />
+                            <button
+                              onClick={() => respondToAppointment(selectedAppointment.id, { 
+                                status: "rescheduled_pending", 
+                                admin_response: appointmentResponse.admin_response,
+                                new_proposed_date: appointmentResponse.new_proposed_date,
+                                new_proposed_time: appointmentResponse.new_proposed_time
+                              })}
+                              disabled={!appointmentResponse.new_proposed_date || !appointmentResponse.new_proposed_time}
+                              className="w-full bg-orange-600 hover:bg-orange-700 text-white py-2 text-sm font-semibold disabled:opacity-50"
+                            >
+                              📅 Proposer cette nouvelle date
+                            </button>
+                          </div>
+                          
+                          {/* Cancel / Delete buttons */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => cancelAppointment(selectedAppointment.id)}
+                              className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 text-sm font-semibold"
+                            >
+                              ✕ Annuler le RDV
+                            </button>
+                            <button
+                              onClick={() => deleteAppointment(selectedAppointment.id)}
+                              className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 text-sm font-semibold"
+                            >
+                              🗑 Supprimer
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* For cancelled/refused - only delete option */}
+                      {(selectedAppointment.status === "cancelled" || selectedAppointment.status === "refused") && (
+                        <div className="border-t border-white/10 pt-4">
+                          <button
+                            onClick={() => deleteAppointment(selectedAppointment.id)}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white py-2 text-sm font-semibold"
+                          >
+                            🗑 Supprimer définitivement
+                          </button>
+                        </div>
                       )}
                     </div>
                   )}

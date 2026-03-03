@@ -792,7 +792,7 @@ const PhotoFindKiosk = () => {
           >
             {/* Event name */}
             <div className="absolute top-6 left-8">
-              <h1 className="text-2xl font-light text-amber-200/80 tracking-wide">{eventDetails?.name || 'Événement'}</h1>
+              <h1 className="text-2xl font-light text-amber-200/80 tracking-wide">{event?.name || 'Événement'}</h1>
             </div>
             
             {/* Fullscreen button */}
