@@ -1,8 +1,14 @@
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables FIRST before any other imports
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
+
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, UploadFile, File, Form, Request, Header, BackgroundTasks, Body
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, Response, StreamingResponse
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -13,7 +19,6 @@ import io
 import secrets
 import base64
 import subprocess
-from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 from typing import List, Optional, Union
 import uuid
@@ -51,9 +56,6 @@ from services.sms_service import (
     send_new_file_sms,
     send_test_sms
 )
-
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
 
 # Create uploads directory
 UPLOADS_DIR = ROOT_DIR / "uploads"
