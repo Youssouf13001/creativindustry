@@ -163,3 +163,31 @@ def send_test_sms(phone_number: str) -> dict:
         "message": "SMS de test envoyé avec succès" if success else "Échec de l'envoi du SMS de test",
         "phone": phone_number
     }
+
+
+
+def send_appointment_reminder_sms(client_phone: str, client_name: str, appointment_date: str, appointment_time: str, appointment_type: str) -> bool:
+    """
+    Send SMS reminder 24h before appointment
+    
+    Args:
+        client_phone: Client's phone number
+        client_name: Client's name
+        appointment_date: Date of appointment (YYYY-MM-DD)
+        appointment_time: Time of appointment (HH:MM)
+        appointment_type: Type of appointment
+    
+    Returns:
+        bool: True if sent successfully
+    """
+    # Format date for display (DD/MM/YYYY)
+    try:
+        from datetime import datetime
+        date_obj = datetime.strptime(appointment_date, "%Y-%m-%d")
+        formatted_date = date_obj.strftime("%d/%m/%Y")
+    except:
+        formatted_date = appointment_date
+    
+    message = f"📅 Rappel RDV CREATIVINDUSTRY\n\nBonjour {client_name},\n\nVotre RDV ({appointment_type}) est prévu demain {formatted_date} à {appointment_time}.\n\nÀ bientôt !"
+    
+    return send_sms(client_phone, message)

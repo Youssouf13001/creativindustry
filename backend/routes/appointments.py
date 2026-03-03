@@ -6,7 +6,7 @@ Refactorisé depuis server.py - Mars 2026
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Union
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import uuid
 import logging
 import os
@@ -14,6 +14,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from motor.motor_asyncio import AsyncIOMotorClient
+
+# Import SMS service
+from services.sms_service import send_appointment_reminder_sms
 
 # Configuration
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
@@ -64,6 +67,8 @@ class Appointment(BaseModel):
     new_proposed_date: Optional[str] = None
     new_proposed_time: Optional[str] = None
     confirmation_token: str = Field(default_factory=lambda: str(uuid.uuid4())[:8].upper())
+    reminder_sent: bool = False  # SMS reminder 24h before
+    reminder_sent_at: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: Optional[datetime] = None
 
@@ -521,3 +526,131 @@ async def confirm_rescheduled_appointment(appointment_id: str, token: str):
         "date": appointment["new_proposed_date"], 
         "time": appointment["new_proposed_time"]
     }
+
+
+# ==================== SMS REMINDER ROUTES ====================
+
+@router.post("/appointments/send-reminders")
+async def send_appointment_reminders(admin: dict = Depends(lambda: _get_current_admin)):
+    """
+    Send SMS reminders for appointments happening in the next 24 hours.
+    This endpoint can be called by a cron job daily.
+    """
+    now = datetime.now(timezone.utc)
+    tomorrow = now + timedelta(hours=24)
+    
+    # Get today and tomorrow dates in YYYY-MM-DD format
+    today_str = now.strftime("%Y-%m-%d")
+    tomorrow_str = tomorrow.strftime("%Y-%m-%d")
+    
+    # Find confirmed appointments for tomorrow that haven't received a reminder
+    appointments = await db.appointments.find({
+        "status": "confirmed",
+        "proposed_date": tomorrow_str,
+        "reminder_sent": {"$ne": True}
+    }, {"_id": 0}).to_list(100)
+    
+    sent_count = 0
+    failed_count = 0
+    results = []
+    
+    for apt in appointments:
+        client_phone = apt.get("client_phone", "")
+        client_name = apt.get("client_name", "")
+        appointment_date = apt.get("proposed_date", "")
+        appointment_time = apt.get("proposed_time", "")
+        appointment_type = apt.get("appointment_type_label", apt.get("appointment_type", "RDV"))
+        
+        if not client_phone:
+            results.append({"id": apt["id"], "status": "skipped", "reason": "No phone number"})
+            continue
+        
+        # Send SMS reminder
+        success = send_appointment_reminder_sms(
+            client_phone=client_phone,
+            client_name=client_name,
+            appointment_date=appointment_date,
+            appointment_time=appointment_time,
+            appointment_type=appointment_type
+        )
+        
+        if success:
+            # Mark reminder as sent
+            await db.appointments.update_one(
+                {"id": apt["id"]},
+                {"$set": {
+                    "reminder_sent": True,
+                    "reminder_sent_at": datetime.now(timezone.utc).isoformat()
+                }}
+            )
+            sent_count += 1
+            results.append({"id": apt["id"], "client": client_name, "status": "sent"})
+        else:
+            failed_count += 1
+            results.append({"id": apt["id"], "client": client_name, "status": "failed"})
+    
+    return {
+        "message": f"Rappels envoyés: {sent_count}, Échecs: {failed_count}",
+        "total_found": len(appointments),
+        "sent": sent_count,
+        "failed": failed_count,
+        "date_checked": tomorrow_str,
+        "results": results
+    }
+
+@router.get("/appointments/pending-reminders")
+async def get_pending_reminders(admin: dict = Depends(lambda: _get_current_admin)):
+    """
+    Get list of appointments that will receive reminders tomorrow.
+    """
+    now = datetime.now(timezone.utc)
+    tomorrow = now + timedelta(hours=24)
+    tomorrow_str = tomorrow.strftime("%Y-%m-%d")
+    
+    appointments = await db.appointments.find({
+        "status": "confirmed",
+        "proposed_date": tomorrow_str,
+        "reminder_sent": {"$ne": True}
+    }, {"_id": 0, "id": 1, "client_name": 1, "client_phone": 1, "proposed_date": 1, "proposed_time": 1, "appointment_type_label": 1}).to_list(100)
+    
+    return {
+        "date": tomorrow_str,
+        "count": len(appointments),
+        "appointments": appointments
+    }
+
+@router.post("/appointments/{appointment_id}/send-reminder")
+async def send_single_reminder(appointment_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+    """
+    Manually send SMS reminder for a specific appointment.
+    """
+    appointment = await db.appointments.find_one({"id": appointment_id}, {"_id": 0})
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+    
+    if appointment.get("status") != "confirmed":
+        raise HTTPException(status_code=400, detail="Can only send reminders for confirmed appointments")
+    
+    client_phone = appointment.get("client_phone", "")
+    if not client_phone:
+        raise HTTPException(status_code=400, detail="No phone number for this appointment")
+    
+    success = send_appointment_reminder_sms(
+        client_phone=client_phone,
+        client_name=appointment.get("client_name", ""),
+        appointment_date=appointment.get("proposed_date", ""),
+        appointment_time=appointment.get("proposed_time", ""),
+        appointment_type=appointment.get("appointment_type_label", appointment.get("appointment_type", "RDV"))
+    )
+    
+    if success:
+        await db.appointments.update_one(
+            {"id": appointment_id},
+            {"$set": {
+                "reminder_sent": True,
+                "reminder_sent_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        return {"message": "Rappel SMS envoyé avec succès", "client": appointment.get("client_name")}
+    else:
+        raise HTTPException(status_code=500, detail="Échec de l'envoi du SMS")
