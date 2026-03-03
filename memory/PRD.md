@@ -130,21 +130,51 @@ French
 - BREVO_API_KEY
 
 ## Test Credentials
-- Admin: testadmin@test.com / testpassword
+- Admin: test@admin.com / admin123
 - Client: client@test.com / testpassword
 
+## Session du 3 Mars 2026 - Bug Fixes & Gestion RDV Admin
+
+### 1. Bug Kiosque PhotoFind Corrigé ✅
+- **Problème**: Écran noir causé par variable `eventDetails` non définie
+- **Correction**: Changé `eventDetails` en `event` ligne 795 de `PhotoFindKiosk.js`
+- **Résultat**: Kiosque affiche correctement l'événement
+
+### 2. Actions Admin sur RDV Confirmés ✅
+- **Backend** (`/backend/server.py`):
+  - Nouvel endpoint `DELETE /api/appointments/{id}` pour supprimer un RDV
+  - Modèle `Appointment` mis à jour avec `duration: Union[str, int]`
+  - Ajout du statut "cancelled" 
+
+- **Frontend** (`/pages/AdminDashboard.js`):
+  - Fonction `cancelAppointment()` - Annule un RDV (statut -> "cancelled")
+  - Fonction `deleteAppointment()` - Supprime définitivement un RDV
+  - Interface enrichie pour les RDV confirmés:
+    - Formulaire "Proposer une autre date" avec date/heure/message
+    - Bouton "Annuler le RDV" (gris)
+    - Bouton "Supprimer" (rouge)
+  - Statut "Annulé" ajouté aux labels et couleurs
+
+### Tests Validés ✅
+- Backend: 9/9 tests passés
+- Frontend: Tous les éléments UI vérifiés
+- Rapport: `/app/test_reports/iteration_14.json`
+
 ## Upcoming Tasks (P1)
+- Rappels SMS 24h avant les RDV (Brevo)
+- Prise de RDV depuis l'espace client
 - Intégration Terminal SumUp (paiement CB sur borne)
 - Impression directe DNP (éviter popup OS)
+- Refactoring des fichiers monolithiques
 
 ## Known Issues
 - **P2**: Erreur `[object Object]` sur les témoignages (production)
 - **P2**: Dashboard `devis` affiche des statistiques à zéro
 
 ## Technical Debt
-- `/backend/server.py` - >13,000 lignes (refactoring urgent)
-- `/frontend/src/pages/AdminDashboard.js` - Monolithe à décomposer
+- `/backend/server.py` - >14,500 lignes (refactoring urgent)
+- `/frontend/src/pages/AdminDashboard.js` - >9,200 lignes - Monolithe à décomposer
 - `/frontend/src/pages/ClientDashboard.js` - >2,500 lignes
 
 ## Last Update
-1er Mars 2026 - Système de Contrats Électroniques complet
+3 Mars 2026 - Bug PhotoFind corrigé + Actions RDV Admin ajoutées
