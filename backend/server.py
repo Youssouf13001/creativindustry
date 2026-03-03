@@ -59,6 +59,7 @@ from services.sms_service import (
     send_new_file_sms,
     send_test_sms
 )
+from services.scheduler_service import start_scheduler, stop_scheduler
 
 # Create uploads directory
 UPLOADS_DIR = ROOT_DIR / "uploads"
@@ -12213,4 +12214,9 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    stop_scheduler()
     client.close()
+
+@app.on_event("startup")
+async def startup_event():
+    start_scheduler()
