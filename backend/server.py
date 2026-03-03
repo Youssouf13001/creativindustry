@@ -6942,6 +6942,74 @@ async def admin_delete_client_transfer(file_id: str, admin: dict = Depends(get_c
     return {"success": True, "message": "Fichier supprimé"}
 
 
+# ==================== CLIENT APPOINTMENTS ENDPOINTS ====================
+
+@api_router.get("/client/appointments")
+async def get_client_appointments(client: dict = Depends(get_current_client)):
+    """Get all appointments for the current client"""
+    client_email = client.get("email", "").lower()
+    
+    appointments = await db.appointments.find(
+        {"client_email": {"$regex": f"^{client_email}$", "$options": "i"}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    # Convert datetime strings if needed
+    for apt in appointments:
+        if isinstance(apt.get('created_at'), str):
+            try:
+                apt['created_at'] = datetime.fromisoformat(apt['created_at'])
+            except:
+                pass
+        if apt.get('updated_at') and isinstance(apt['updated_at'], str):
+            try:
+                apt['updated_at'] = datetime.fromisoformat(apt['updated_at'])
+            except:
+                pass
+    
+    return appointments
+
+
+@api_router.put("/client/appointments/{appointment_id}/respond-reschedule")
+async def respond_to_reschedule(appointment_id: str, data: dict, client: dict = Depends(get_current_client)):
+    """Client responds to a rescheduled appointment proposal (accept or refuse)"""
+    client_email = client.get("email", "").lower()
+    
+    appointment = await db.appointments.find_one(
+        {"id": appointment_id, "client_email": {"$regex": f"^{client_email}$", "$options": "i"}},
+        {"_id": 0}
+    )
+    
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Rendez-vous non trouvé")
+    
+    if appointment.get("status") != "rescheduled_pending":
+        raise HTTPException(status_code=400, detail="Ce rendez-vous n'est pas en attente de confirmation")
+    
+    accept = data.get("accept", False)
+    
+    if accept:
+        # Accept the new proposed date
+        update_data = {
+            "status": "confirmed",
+            "proposed_date": appointment.get("new_proposed_date"),
+            "proposed_time": appointment.get("new_proposed_time"),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.appointments.update_one({"id": appointment_id}, {"$set": update_data})
+        
+        return {"success": True, "message": "Nouvelle date acceptée", "status": "confirmed"}
+    else:
+        # Refuse the new proposed date - back to pending or cancelled
+        update_data = {
+            "status": "cancelled",
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.appointments.update_one({"id": appointment_id}, {"$set": update_data})
+        
+        return {"success": True, "message": "Nouvelle date refusée", "status": "cancelled"}
+
+
 # ==================== CLIENT DEVIS/INVOICE/PAYMENT ENDPOINTS ====================
 
 @api_router.get("/client/my-devis")

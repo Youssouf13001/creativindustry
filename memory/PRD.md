@@ -11,16 +11,16 @@ Application complète pour photographe incluant :
 
 ## Test Credentials
 - **Admin**: test@admin.com / admin123
-- **Client**: client@test.com / testpassword
+- **Client test**: test-client@example.com / Test1234
 
 ## Architecture après Refactoring (Mars 2026)
 
 ### Backend Structure
 ```
 /backend/
-├── server.py              (12 216 lignes - réduit de 14 500)
+├── server.py              (12 300+ lignes)
 ├── routes/
-│   ├── appointments.py    (523 lignes) - RDV
+│   ├── appointments.py    (657 lignes) - RDV + Rappels SMS
 │   ├── photofind.py       (1 089 lignes) - Kiosque
 │   ├── galleries.py       (535 lignes) - Galeries
 │   ├── contracts.py       (380 lignes) - Contrats
@@ -30,6 +30,7 @@ Application complète pour photographe incluant :
 │   └── paypal.py          (467 lignes) - PayPal
 ├── services/
 │   ├── sms_service.py     - SMS Brevo
+│   ├── scheduler_service.py - Rappels automatiques
 │   └── email_service.py   - Emails SMTP
 └── models/
     └── schemas.py         - Modèles Pydantic
@@ -40,32 +41,65 @@ Application complète pour photographe incluant :
 /frontend/src/
 ├── pages/
 │   ├── AdminDashboard.js  (9 200 lignes) - À refactoriser
-│   ├── ClientDashboard.js (2 500+ lignes)
+│   ├── ClientDashboard.js (3 500+ lignes)
 │   └── PhotoFindKiosk.js  (1 875 lignes)
 └── components/
     ├── admin/
     └── client/
+        └── ClientAppointments.js - NOUVEAU
 ```
 
-## Session du 3 Mars 2026
+## Session du 3 Mars 2026 (matin)
 
-### Bugs Corrigés ✅
-1. **Écran noir Kiosque PhotoFind** - Variable `eventDetails` → `event`
-2. **SMS Brevo non envoyés** - `load_dotenv()` déplacé avant imports
+### ✅ RÉSOLU: Vue des RDV côté client
+- **Problème**: Les clients ne voyaient pas leurs RDV dans leur espace
+- **Solution**:
+  1. Créé endpoint `GET /api/client/appointments` dans `server.py`
+  2. Créé endpoint `PUT /api/client/appointments/{id}/respond-reschedule`
+  3. Intégré composant `ClientAppointments.js` dans `ClientDashboard.js`
+  4. Ajouté onglet "Rendez-vous" avec icône CalendarDays
+- **Testé**: ✅ Fonctionnel
 
-### Fonctionnalités Ajoutées ✅
-- Actions admin sur RDV confirmés (proposer nouvelle date, annuler, supprimer)
-- Endpoint `DELETE /api/appointments/{id}`
-- Statut "cancelled" pour les RDV
+### Sessions précédentes ✅
+- **Écran noir Kiosque PhotoFind** - Variable `eventDetails` → `event`
+- **SMS Brevo non envoyés** - `load_dotenv()` déplacé avant imports
+- **Actions admin sur RDV confirmés** (proposer nouvelle date, annuler, supprimer)
+- **Rappels SMS 100% automatiques** - APScheduler tous les jours à 10h
 
-### Refactoring Backend ✅
-- **server.py**: 14 500 → 12 216 lignes (-2 284)
-- 3 nouveaux modules: `appointments.py`, `photofind.py`, `galleries.py`
+## Instructions de déploiement IONOS
+
+Pour appliquer les changements sur votre serveur de production:
+
+```bash
+# Se connecter au serveur
+ssh user@votre-serveur-ionos
+
+# Aller dans le dossier du projet
+cd /var/www/creativindustry
+
+# Sauvegarder les modifications locales
+git stash
+
+# Récupérer les dernières modifications
+git pull origin main
+
+# Réappliquer les modifications locales
+git stash pop
+
+# IMPORTANT: Reconstruire le frontend
+cd frontend
+npm run build
+
+# Redémarrer le backend
+cd ..
+pkill -f uvicorn
+nohup python -m uvicorn backend.server:app --host 0.0.0.0 --port 8000 &
+```
 
 ## Prochaines Tâches
 
 ### P0 - Urgent
-- [ ] Rappels SMS 24h avant les RDV (Brevo)
+- [ ] Vérifier que l'onglet RDV fonctionne en production (après build)
 
 ### P1 - Important
 - [ ] Prise de RDV depuis l'espace client
@@ -85,6 +119,7 @@ Application complète pour photographe incluant :
 - PayPal (paiements)
 - FFmpeg (traitement vidéo)
 - react-pdf (affichage PDF)
+- APScheduler (tâches planifiées)
 
 ## Notes Techniques
 - MongoDB avec DB_NAME='test_database'
@@ -92,6 +127,7 @@ Application complète pour photographe incluant :
 - Déploiement manuel sur IONOS via SSH
 - Backend: FastAPI + uvicorn
 - Frontend: React + Tailwind
+- **IMPORTANT**: Tout changement frontend nécessite `npm run build` sur le serveur
 
 ## Dernière mise à jour
-3 Mars 2026
+3 Mars 2026 - 17:45 UTC

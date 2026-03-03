@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight, FileArchive, User, Settings, Lock, Upload, Loader, Bell, Music, File, CreditCard, Receipt, Euro, Trash2, UploadCloud, FileDown, Clock, AlertTriangle, CreditCard as CardIcon, Eye, ClipboardList, Play, Share2, QrCode, BookOpen, Mic, MessageCircle, Copy, Box, Sparkles, Shield, Plus } from "lucide-react";
+import { Video, Image, FileText, Download, LogOut, FolderOpen, Check, X, Camera, ZoomIn, ChevronLeft, ChevronRight, FileArchive, User, Settings, Lock, Upload, Loader, Bell, Music, File, CreditCard, Receipt, Euro, Trash2, UploadCloud, FileDown, Clock, AlertTriangle, CreditCard as CardIcon, Eye, ClipboardList, Play, Share2, QrCode, BookOpen, Mic, MessageCircle, Copy, Box, Sparkles, Shield, Plus, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 import ClientChat from "../components/ClientChat";
@@ -9,6 +9,7 @@ import { DevisPreview, InvoicePreview } from "../components/DocumentPreview";
 import { PaymentSummaryCard } from "../components/DevisInvoiceCards";
 import GallerySlideshowModal from "../components/GallerySlideshowModal";
 import ClientContracts from "../components/client/ClientContracts";
+import ClientAppointments from "../components/client/ClientAppointments";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -1177,6 +1178,7 @@ const ClientDashboard = () => {
             <div className="flex items-center gap-2 flex-wrap justify-center">
               {[
                 { id: "project", label: "Mon Projet", icon: ClipboardList },
+                { id: "appointments", label: "Rendez-vous", icon: CalendarDays },
                 { id: "galleries", label: "Galeries", icon: FolderOpen },
                 { id: "files", label: "Fichiers", icon: FileText },
                 { id: "transfers", label: "Transferts", icon: UploadCloud },
@@ -1467,6 +1469,11 @@ const ClientDashboard = () => {
               </p>
             </div>
           </div>
+        )}
+
+        {/* Appointments Tab */}
+        {activeTab === "appointments" && (
+          <ClientAppointments client={clientUser} token={token} />
         )}
 
         {/* Guestbooks Tab */}
