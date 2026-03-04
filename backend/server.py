@@ -2287,7 +2287,8 @@ async def login_client(data: ClientLogin):
             "name": client["name"], 
             "phone": client.get("phone"),
             "must_change_password": client.get("must_change_password", False),
-            "expires_at": client.get("expires_at")
+            "expires_at": client.get("expires_at"),
+            "last_login": client.get("last_login")
         }
     }
 

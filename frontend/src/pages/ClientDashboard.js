@@ -1171,6 +1171,13 @@ const ClientDashboard = () => {
               <div>
                 <h1 className="font-primary font-bold text-xl">{clientUser?.name || "Client"}</h1>
                 <p className="text-white/60 text-sm">{clientUser?.email}</p>
+                {clientUser?.last_login && (
+                  <p className="text-white/40 text-xs mt-1">
+                    Dernière connexion: {new Date(clientUser.last_login).toLocaleDateString('fr-FR', { 
+                      day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+                    })}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -1182,7 +1189,6 @@ const ClientDashboard = () => {
                 { id: "galleries", label: "Galeries", icon: FolderOpen },
                 { id: "files", label: "Fichiers", icon: FileText },
                 { id: "transfers", label: "Transferts", icon: UploadCloud },
-                { id: "contracts", label: "Contrats", icon: FileText },
                 { id: "devis", label: "Devis", icon: Receipt },
                 { id: "invoices", label: "Factures", icon: File },
                 { id: "payments", label: "Paiements", icon: Euro },
@@ -2227,11 +2233,6 @@ const ClientDashboard = () => {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Contracts Tab */}
-        {activeTab === "contracts" && (
-          <ClientContracts token={token} clientId={clientData?.id} />
         )}
 
         {/* Devis Tab */}
