@@ -632,12 +632,13 @@ const PhotoFindKiosk = () => {
       const res = await axios.post(`${API}/public/photofind/${eventId}/create-stripe-payment`, {
         photo_ids: selectedPhotos,
         amount: amount,
-        frame: selectedFilter,
+        format: "digital",
+        frame_id: selectedFilter || null,
         email: email
       });
       
       setStripeClientSecret(res.data.client_secret);
-      setStripeOrderId(res.data.order_id);
+      setStripeOrderId(res.data.payment_intent_id);
       setStep("payment-stripe");
     } catch (e) {
       toast.error("Erreur lors de la création du paiement");
@@ -652,11 +653,11 @@ const PhotoFindKiosk = () => {
     setProcessing(true);
     try {
       const res = await axios.post(`${API}/public/photofind/${eventId}/confirm-stripe-payment`, {
-        order_id: stripeOrderId,
         payment_intent_id: paymentIntentId
       });
       
-      if (res.data.success) {
+      // Check for success - the backend returns a purchase object with success: true
+      if (res.data && (res.data.success || res.data.id)) {
         toast.success("Paiement CB confirmé !");
         await autoPrintPhotos();
         setStep("print-success");
@@ -665,6 +666,7 @@ const PhotoFindKiosk = () => {
         setStep("payment-choice");
       }
     } catch (e) {
+      console.error("Stripe confirmation error:", e);
       toast.error("Erreur lors de la confirmation");
       setStep("payment-choice");
     } finally {

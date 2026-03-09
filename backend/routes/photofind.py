@@ -29,6 +29,7 @@ SITE_URL = os.environ.get('SITE_URL', 'https://creativindustry.com')
 PAYPAL_CLIENT_ID = os.environ.get('PAYPAL_CLIENT_ID', '')
 PAYPAL_CLIENT_SECRET = os.environ.get('PAYPAL_CLIENT_SECRET', '')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY', '')
 
 # Database connection
 client = AsyncIOMotorClient(MONGO_URL)
@@ -124,8 +125,20 @@ def set_admin_dependency(get_current_admin_func):
 def send_purchase_email(email: str, download_url: str, photo_count: int):
     """Send email with download link after purchase"""
     import smtplib
+    import re
     from email.mime.text import MIMEText
     from email.mime.multipart import MIMEMultipart
+    
+    # Validate email before attempting to send
+    if not email or not isinstance(email, str):
+        logging.warning(f"Invalid email (empty or not string): {email}")
+        return False
+    
+    email = email.strip()
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_regex, email):
+        logging.warning(f"Invalid email format: {email}")
+        return False
     
     SMTP_HOST = os.environ.get('SMTP_HOST', '')
     SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
@@ -570,6 +583,11 @@ async def get_kiosk_stats(event_id: str, admin: dict = Depends(lambda: _get_curr
     }
 
 # ==================== PUBLIC ROUTES ====================
+
+@router.get("/public/stripe-config")
+async def get_stripe_config():
+    """Get Stripe publishable key for frontend"""
+    return {"publishable_key": STRIPE_PUBLIC_KEY}
 
 @router.get("/public/photofind/{event_id}")
 async def get_public_event(event_id: str):
@@ -1075,13 +1093,18 @@ async def confirm_stripe_payment(event_id: str, data: dict = Body(...)):
         
         await db.photofind_kiosk_purchases.insert_one(purchase)
         
-        # Send email
+        # Send email (log detailed info for debugging)
+        logging.info(f"Stripe payment confirmed - attempting to send email to: '{email}' for {len(photo_ids)} photos")
         try:
-            send_purchase_email(email, download_url, len(photo_ids))
+            email_sent = send_purchase_email(email, download_url, len(photo_ids))
+            if not email_sent:
+                logging.warning(f"Email not sent (validation failed or SMTP issue) for email: '{email}'")
         except Exception as e:
             logging.error(f"Failed to send email: {e}")
         
         del purchase["_id"]
+        # Add success field for frontend compatibility
+        purchase["success"] = True
         return purchase
         
     except Exception as e:
