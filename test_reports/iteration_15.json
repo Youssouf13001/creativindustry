@@ -1,0 +1,85 @@
+{
+  "summary": "Backend testing for PhotoFind payment flows complete. All Stripe endpoints work correctly. PayPal skipped (live credentials). Email validation prevents SMTP 501 errors. Fixed error handling in confirm-stripe-payment to properly return 400 instead of 500 for unconfirmed payments.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/public/photofind/{event_id}/create-paypal-order",
+        "issue": "PayPal returns 500 'Erreur authentification PayPal' - using live credentials against sandbox API",
+        "priority": "LOW - environment config issue"
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "features_verified": {
+    "stripe_config_endpoint": {
+      "endpoint": "GET /api/public/stripe-config",
+      "status": "PASS",
+      "notes": "Returns Stripe publishable key (pk_test_...) correctly"
+    },
+    "stripe_payment_intent_creation": {
+      "endpoint": "POST /api/public/photofind/{event_id}/create-stripe-payment",
+      "status": "PASS",
+      "notes": "Creates payment intent with client_secret and payment_intent_id"
+    },
+    "stripe_payment_confirmation": {
+      "endpoint": "POST /api/public/photofind/{event_id}/confirm-stripe-payment",
+      "status": "PASS",
+      "notes": "Returns 400 for unconfirmed payments, includes success:true field in successful response"
+    },
+    "paypal_order_creation": {
+      "endpoint": "POST /api/public/photofind/{event_id}/create-paypal-order",
+      "status": "SKIPPED",
+      "notes": "PayPal credentials are live mode but API is sandbox - skipped in tests"
+    },
+    "paypal_capture": {
+      "endpoint": "POST /api/public/photofind/{event_id}/capture-paypal-order",
+      "status": "PASS",
+      "notes": "Validation works - returns 422 for missing order_id"
+    },
+    "email_validation": {
+      "function": "send_purchase_email",
+      "status": "PASS",
+      "notes": "Invalid emails are caught by regex validation before SMTP attempt - no 501 errors"
+    }
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_payment_flows.py",
+    "/app/backend/tests/test_photofind_kiosk.py",
+    "/app/test_reports/pytest/pytest_results_payment.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fixed: confirm-stripe-payment was catching HTTPException and wrapping it in 500 error - now re-raises HTTPException properly",
+    "Good: Email validation regex in send_purchase_email (lines 137-141) prevents invalid emails from reaching SMTP",
+    "Good: success:true field added to confirm-stripe-payment response (line 1107) for frontend compatibility"
+  ],
+  "updated_files": [
+    "/app/backend/routes/photofind.py",
+    "/app/backend/tests/test_payment_flows.py",
+    "/app/backend/tests/test_photofind_kiosk.py"
+  ],
+  "success_rate": {
+    "backend": "100% (18/18 passed, 1 skipped - PayPal)"
+  },
+  "test_credentials": {
+    "stripe_public_key": "pk_test_51T572ACuGUHlShsL...",
+    "photofind_event_id": "test-kiosk-demo"
+  },
+  "seed_data_creation": "Using existing test-kiosk-demo event",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Payment flow tests at /app/backend/tests/test_payment_flows.py. Stripe works fully in test mode. PayPal credentials are live but API calls to sandbox fail - if testing PayPal, need to use sandbox credentials or live API.",
+  "bug_fixes_applied": {
+    "confirm_stripe_payment_error_handling": {
+      "file": "/app/backend/routes/photofind.py",
+      "issue": "HTTPException was being caught by generic except and converted to 500",
+      "fix": "Added 'except HTTPException: raise' before generic exception handler",
+      "verification": "test_confirm_stripe_payment_invalid_payment_intent now returns 400 instead of 500"
+    }
+  }
+}

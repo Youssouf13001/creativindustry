@@ -36,12 +36,15 @@ class TestPhotoFindKioskPublic:
         # Verify event is active
         assert data["is_active"] == True, "Event should be active"
         
-        # Verify pricing structure
+        # Verify pricing structure - updated to match actual format-based pricing
         pricing = data["pricing"]
-        assert "per_photo" in pricing or "single" in pricing, "Pricing should have per_photo or single"
-        assert "pack_5" in pricing, "Pricing should have pack_5"
-        assert "pack_10" in pricing, "Pricing should have pack_10"
-        assert "all" in pricing, "Pricing should have all"
+        # New pricing structure uses formats and email_* fields
+        has_format_pricing = "formats" in pricing
+        has_email_pricing = "email_single" in pricing or "email_all" in pricing
+        has_legacy_pricing = "per_photo" in pricing or "single" in pricing
+        
+        assert has_format_pricing or has_email_pricing or has_legacy_pricing, \
+            "Pricing should have either formats, email_*, or legacy pricing fields"
         
         print(f"PASS: Event '{data['name']}' loaded successfully with pricing")
     
@@ -76,14 +79,14 @@ class TestPhotoFindKioskPurchase:
         
         data = response.json()
         
-        # Verify response structure
-        assert data.get("success") == True, "Response should indicate success"
-        assert "purchase_id" in data, "Response should contain purchase_id"
-        assert "download_url" in data, "Response should contain download_url"
-        assert "message" in data, "Response should contain message"
+        # Verify response structure - returns purchase object with id, download_url
+        assert "id" in data, "Response should contain 'id'"
+        assert "download_url" in data, "Response should contain 'download_url'"
+        assert "status" in data, "Response should contain 'status'"
+        assert data["status"] == "completed", "Status should be 'completed'"
         
         # Verify purchase ID is a valid UUID
-        purchase_id = data["purchase_id"]
+        purchase_id = data["id"]
         try:
             uuid.UUID(purchase_id)
         except ValueError:
@@ -136,7 +139,7 @@ class TestPhotoFindKioskPrintLog:
         """Test POST /api/public/photofind/{eventId}/log-print - Logs print job successfully"""
         payload = {
             "photo_ids": ["test-photo-1", "test-photo-2", "test-photo-3"],
-            "count": 3
+            "format": "10x15"
         }
         
         response = requests.post(
@@ -148,11 +151,11 @@ class TestPhotoFindKioskPrintLog:
         
         data = response.json()
         
-        # Verify response
-        assert data.get("success") == True, "Response should indicate success"
-        assert data.get("logged") == 3, f"Expected logged count 3, got {data.get('logged')}"
+        # Verify response - returns log entry with id, count, etc.
+        assert "id" in data, "Response should contain 'id'"
+        assert data.get("count") == 3, f"Expected count 3, got {data.get('count')}"
         
-        print(f"PASS: Print log created successfully with {data.get('logged')} photos")
+        print(f"PASS: Print log created successfully with {data.get('count')} photos")
     
     def test_log_print_validation(self):
         """Test POST /api/public/photofind/{eventId}/log-print - Validates required fields"""

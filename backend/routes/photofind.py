@@ -1107,6 +1107,13 @@ async def confirm_stripe_payment(event_id: str, data: dict = Body(...)):
         purchase["success"] = True
         return purchase
         
+    except HTTPException:
+        # Re-raise HTTPException as-is (don't wrap in 500)
+        raise
+    except stripe.error.InvalidRequestError as e:
+        # Invalid payment intent ID
+        logging.error(f"Stripe invalid request error: {e}")
+        raise HTTPException(status_code=400, detail="Payment intent invalide")
     except Exception as e:
         logging.error(f"Stripe confirmation error: {e}")
         raise HTTPException(status_code=500, detail="Erreur confirmation paiement")
