@@ -150,6 +150,11 @@ const PhotoFindKiosk = () => {
   
   // Track if cash payment was already confirmed (to skip payment on email screen)
   const [cashPaymentConfirmed, setCashPaymentConfirmed] = useState(false);
+  
+  // Cash code verification
+  const [cashCodeRequestId, setCashCodeRequestId] = useState(null);
+  const [cashCode, setCashCode] = useState("");
+  const [cashCodeError, setCashCodeError] = useState("");
 
   // Pricing - separate for print and email
   const [pricing, setPricing] = useState({
@@ -1641,24 +1646,22 @@ const PhotoFindKiosk = () => {
                     setProcessing(false);
                     setStep("email");
                   } else {
-                    // For print delivery, log purchase and print
+                    // For print delivery, request a verification code
                     try {
-                      await axios.post(`${API}/public/photofind/${eventId}/kiosk-purchase`, {
+                      const res = await axios.post(`${API}/public/photofind/${eventId}/request-cash-code`, {
                         photo_ids: selectedPhotos,
-                        email: email || "kiosk@local",
                         amount: calculatePrice(),
-                        payment_method: "cash",
-                        frame: selectedFilter,
-                        delivery_method: "print",
                         print_format: selectedPrintFormat
                       });
+                      setCashCodeRequestId(res.data.request_id);
+                      setCashCode("");
+                      setCashCodeError("");
+                      setStep("cash-code");
                     } catch (e) {
+                      toast.error("Erreur lors de la demande de code");
                       console.error(e);
                     }
-                    // Print
-                    await autoPrintPhotos();
                     setProcessing(false);
-                    setStep("print-success");
                   }
                 }}
                 disabled={processing}
@@ -1669,7 +1672,95 @@ const PhotoFindKiosk = () => {
                 ) : (
                   <>
                     <Check size={24} /> 
-                    {deliveryMethod === "email" ? "Paiement reçu - Continuer" : "Paiement reçu - Imprimer"}
+                    {deliveryMethod === "email" ? "Paiement reçu - Continuer" : "Paiement reçu - Demander le code"}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Cash Code Verification */}
+        {step === "cash-code" && (
+          <div className="w-full max-w-xl text-center">
+            <div className="text-6xl mb-6">🔐</div>
+            <h2 className="text-3xl font-bold mb-4">Code de confirmation</h2>
+            
+            <p className="text-white/70 mb-6">
+              Demandez le code à <strong className="text-yellow-400">4 chiffres</strong> au photographe
+            </p>
+            
+            <div className="mb-6">
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
+                placeholder="- - - -"
+                value={cashCode}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  setCashCode(val);
+                  setCashCodeError("");
+                }}
+                className="w-48 mx-auto bg-white/10 border-2 border-white/30 text-white text-4xl text-center tracking-[0.5em] px-6 py-4 rounded-xl focus:border-primary focus:outline-none"
+                autoFocus
+              />
+            </div>
+            
+            {cashCodeError && (
+              <div className="bg-red-500/20 text-red-400 p-3 rounded-lg mb-4">
+                {cashCodeError}
+              </div>
+            )}
+            
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => {
+                  setCashCode("");
+                  setCashCodeError("");
+                  setStep("payment-cash");
+                }}
+                className="bg-white/10 hover:bg-white/20 px-6 py-4 rounded-xl flex items-center gap-2"
+              >
+                <ArrowLeft size={20} /> Retour
+              </button>
+              
+              <button
+                onClick={async () => {
+                  if (cashCode.length !== 4) {
+                    setCashCodeError("Veuillez entrer un code à 4 chiffres");
+                    return;
+                  }
+                  
+                  setProcessing(true);
+                  try {
+                    const res = await axios.post(`${API}/public/photofind/${eventId}/validate-cash-code`, {
+                      code: cashCode,
+                      request_id: cashCodeRequestId
+                    });
+                    
+                    if (res.data.valid) {
+                      toast.success("Code validé !");
+                      await autoPrintPhotos();
+                      setStep("print-success");
+                    } else {
+                      setCashCodeError("Code incorrect - Réessayez");
+                    }
+                  } catch (e) {
+                    setCashCodeError(e.response?.data?.detail || "Erreur de validation");
+                  } finally {
+                    setProcessing(false);
+                  }
+                }}
+                disabled={processing || cashCode.length !== 4}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold text-xl px-8 py-4 rounded-xl disabled:opacity-50 flex items-center gap-3"
+              >
+                {processing ? (
+                  <Loader className="animate-spin" size={24} />
+                ) : (
+                  <>
+                    <Check size={24} /> Valider et Imprimer
                   </>
                 )}
               </button>

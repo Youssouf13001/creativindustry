@@ -153,6 +153,7 @@ const AdminDashboard = () => {
   const [kioskStats, setKioskStats] = useState({});
   const [loadingKioskStats, setLoadingKioskStats] = useState(false);
   const [newCustomFrame, setNewCustomFrame] = useState({});
+  const [pendingCashCodes, setPendingCashCodes] = useState({});
   // Chat state
   const [showChat, setShowChat] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -645,8 +646,34 @@ const AdminDashboard = () => {
     if (activeTab === "kiosk") {
       fetchPhotofindEvents(); // Reuse photofind events for kiosk
       fetchAllKioskStats();
+      fetchAllPendingCashCodes();
+      
+      // Set up interval to refresh pending cash codes every 3 seconds
+      const interval = setInterval(fetchAllPendingCashCodes, 3000);
+      return () => clearInterval(interval);
     }
   }, [activeTab]);
+
+  // Fetch pending cash codes for all events
+  const fetchAllPendingCashCodes = async () => {
+    try {
+      const eventsRes = await axios.get(`${API}/admin/photofind/events`, { headers });
+      const events = eventsRes.data || [];
+      
+      const codesPromises = events.map(event => 
+        axios.get(`${API}/admin/photofind/events/${event.id}/pending-cash-codes`, { headers })
+          .then(res => ({ eventId: event.id, codes: res.data.pending_codes || [] }))
+          .catch(() => ({ eventId: event.id, codes: [] }))
+      );
+      
+      const allCodes = await Promise.all(codesPromises);
+      const codesMap = {};
+      allCodes.forEach(c => { codesMap[c.eventId] = c.codes; });
+      setPendingCashCodes(codesMap);
+    } catch (e) {
+      console.error("Error fetching pending cash codes:", e);
+    }
+  };
 
   // Fetch all kiosk stats for all events
   const fetchAllKioskStats = async () => {
@@ -3968,6 +3995,49 @@ const AdminDashboard = () => {
                         {window.location.origin}/kiosk/{event.id}
                       </code>
                     </div>
+
+                    {/* Pending Cash Codes Section */}
+                    {pendingCashCodes[event.id] && pendingCashCodes[event.id].length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-white/10">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                          <h5 className="font-bold text-yellow-400">Codes paiement espèces en attente</h5>
+                        </div>
+                        <div className="grid gap-2">
+                          {pendingCashCodes[event.id].map(code => (
+                            <div key={code.id} className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="bg-yellow-500 text-black font-mono font-bold text-2xl px-4 py-2 rounded">
+                                  {code.code}
+                                </div>
+                                <div className="text-sm">
+                                  <p className="text-white">{code.photo_count} photo(s) - <strong>{code.amount}€</strong></p>
+                                  <p className="text-white/50">Format: {code.print_format || "10x15"}</p>
+                                  <p className="text-white/40 text-xs">
+                                    {new Date(code.created_at).toLocaleTimeString('fr-FR')}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await axios.delete(`${API}/admin/photofind/cash-codes/${code.id}`, { headers });
+                                    fetchAllPendingCashCodes();
+                                    toast.success("Code supprimé");
+                                  } catch (e) {
+                                    toast.error("Erreur");
+                                  }
+                                }}
+                                className="bg-red-500/20 text-red-400 px-3 py-1 rounded hover:bg-red-500/30"
+                                title="Supprimer ce code"
+                              >
+                                <X size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

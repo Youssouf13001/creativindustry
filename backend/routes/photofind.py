@@ -817,6 +817,109 @@ async def create_kiosk_purchase(event_id: str, data: KioskPurchaseData):
     del purchase["_id"]
     return purchase
 
+# ==================== CASH PAYMENT CODE VERIFICATION ====================
+
+import random
+
+@router.post("/public/photofind/{event_id}/request-cash-code")
+async def request_cash_payment_code(event_id: str, data: dict = Body(...)):
+    """Generate a verification code for cash payment - displayed to admin"""
+    event = await db.photofind_events.find_one({"id": event_id, "is_active": True})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    # Generate a 4-digit code
+    code = str(random.randint(1000, 9999))
+    request_id = str(uuid.uuid4())
+    
+    cash_request = {
+        "id": request_id,
+        "event_id": event_id,
+        "code": code,
+        "photo_ids": data.get("photo_ids", []),
+        "amount": data.get("amount", 0),
+        "photo_count": len(data.get("photo_ids", [])),
+        "print_format": data.get("print_format", "10x15"),
+        "status": "pending",  # pending, validated, expired
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.photofind_cash_codes.insert_one(cash_request)
+    
+    return {"request_id": request_id, "message": "Code généré - demandez le code au photographe"}
+
+@router.post("/public/photofind/{event_id}/validate-cash-code")
+async def validate_cash_payment_code(event_id: str, data: dict = Body(...)):
+    """Validate the cash payment code entered by client"""
+    code = data.get("code", "")
+    request_id = data.get("request_id", "")
+    
+    if not code or not request_id:
+        raise HTTPException(status_code=400, detail="Code et request_id requis")
+    
+    # Find the pending cash request
+    cash_request = await db.photofind_cash_codes.find_one({
+        "id": request_id,
+        "event_id": event_id,
+        "status": "pending"
+    })
+    
+    if not cash_request:
+        raise HTTPException(status_code=404, detail="Demande non trouvée ou expirée")
+    
+    if cash_request["code"] != code:
+        return {"valid": False, "message": "Code incorrect"}
+    
+    # Mark as validated
+    await db.photofind_cash_codes.update_one(
+        {"id": request_id},
+        {"$set": {"status": "validated", "validated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Create the actual purchase record
+    purchase_id = str(uuid.uuid4())
+    download_token = str(uuid.uuid4())
+    download_url = f"{SITE_URL}/photofind/download/{purchase_id}?token={download_token}"
+    
+    purchase = {
+        "id": purchase_id,
+        "event_id": event_id,
+        "photo_ids": cash_request["photo_ids"],
+        "email": "cash@kiosk.local",
+        "payment_method": "cash",
+        "amount": cash_request["amount"],
+        "format": "print",
+        "print_format": cash_request.get("print_format", "10x15"),
+        "download_token": download_token,
+        "download_url": download_url,
+        "status": "completed",
+        "cash_code": code,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.photofind_kiosk_purchases.insert_one(purchase)
+    
+    return {"valid": True, "message": "Code validé - impression autorisée", "purchase_id": purchase_id}
+
+@router.get("/admin/photofind/events/{event_id}/pending-cash-codes")
+async def get_pending_cash_codes(event_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+    """Get pending cash payment codes for admin to see"""
+    codes = await db.photofind_cash_codes.find(
+        {"event_id": event_id, "status": "pending"},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    return {"pending_codes": codes}
+
+@router.delete("/admin/photofind/cash-codes/{code_id}")
+async def delete_cash_code(code_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+    """Delete/expire a cash code"""
+    await db.photofind_cash_codes.update_one(
+        {"id": code_id},
+        {"$set": {"status": "expired"}}
+    )
+    return {"success": True}
+
 @router.post("/public/photofind/{event_id}/log-print")
 async def log_kiosk_print(event_id: str, data: KioskPrintLog):
     """Log a print from the kiosk"""
