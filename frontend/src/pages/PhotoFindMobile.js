@@ -386,15 +386,21 @@ export default function PhotoFindMobile() {
             
             {selfieMode ? (
               <div className="relative flex flex-col items-center">
-                <video 
-                  ref={videoRef} 
-                  autoPlay 
-                  playsInline 
-                  muted
-                  onLoadedMetadata={(e) => e.target.play()}
-                  style={{ width: '100%', maxWidth: '320px', minHeight: '240px', backgroundColor: '#000' }}
-                  className="rounded-xl border-2 border-primary"
-                />
+                <div className="relative bg-black rounded-xl overflow-hidden" style={{ maxWidth: '320px', width: '100%' }}>
+                  <video 
+                    ref={videoRef} 
+                    autoPlay 
+                    playsInline 
+                    muted
+                    onLoadedMetadata={(e) => e.target.play()}
+                    className="w-full transform scale-x-[-1]"
+                    style={{ minHeight: '240px' }}
+                  />
+                  {/* Face guide */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-32 h-40 border-2 border-dashed border-primary/50 rounded-full" />
+                  </div>
+                </div>
                 <canvas ref={canvasRef} className="hidden" />
                 <button
                   onClick={captureSelfie}
