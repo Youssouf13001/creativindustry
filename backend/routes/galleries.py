@@ -4,6 +4,7 @@ Refactorisé depuis server.py - Mars 2026
 """
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
@@ -19,6 +20,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
+security = HTTPBearer()
 
 # Configuration
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
@@ -87,6 +90,18 @@ def set_client_dependency(func):
     global _get_current_client
     _get_current_client = func
 
+async def get_client_auth(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Wrapper for client authentication"""
+    if _get_current_client is None:
+        raise HTTPException(status_code=500, detail="Client auth not configured")
+    return await _get_current_client(credentials)
+
+async def get_admin_auth(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Wrapper for admin authentication"""
+    if _get_current_admin is None:
+        raise HTTPException(status_code=500, detail="Admin auth not configured")
+    return await _get_current_admin(credentials)
+
 # ==================== EMAIL FUNCTIONS ====================
 
 def send_email(to_email: str, subject: str, html_content: str):
@@ -125,7 +140,7 @@ def send_selection_notification_email(admin_email: str, client_name: str, galler
 # ==================== ADMIN ROUTES ====================
 
 @router.get("/admin/galleries", response_model=List[dict])
-async def get_galleries(admin: dict = Depends(lambda: _get_current_admin)):
+async def get_galleries(admin: dict = Depends(get_admin_auth)):
     """Get all galleries with client info"""
     galleries = await db.galleries.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
     
@@ -142,7 +157,7 @@ async def get_galleries(admin: dict = Depends(lambda: _get_current_admin)):
     return galleries
 
 @router.post("/admin/galleries", response_model=dict)
-async def create_gallery(data: GalleryCreate, admin: dict = Depends(lambda: _get_current_admin)):
+async def create_gallery(data: GalleryCreate, admin: dict = Depends(get_admin_auth)):
     """Create a new gallery for a client"""
     client = await db.clients.find_one({"id": data.client_id})
     if not client:
@@ -156,7 +171,7 @@ async def create_gallery(data: GalleryCreate, admin: dict = Depends(lambda: _get
     return doc
 
 @router.post("/admin/galleries/{gallery_id}/photos", response_model=dict)
-async def upload_gallery_photos(gallery_id: str, files: List[UploadFile] = File(...), admin: dict = Depends(lambda: _get_current_admin)):
+async def upload_gallery_photos(gallery_id: str, files: List[UploadFile] = File(...), admin: dict = Depends(get_admin_auth)):
     """Upload photos to a gallery"""
     gallery = await db.galleries.find_one({"id": gallery_id})
     if not gallery:
@@ -188,7 +203,7 @@ async def upload_gallery_photos(gallery_id: str, files: List[UploadFile] = File(
     return {"uploaded": len(uploaded), "photos": uploaded}
 
 @router.delete("/admin/galleries/{gallery_id}/photos/{photo_id}", response_model=dict)
-async def delete_gallery_photo(gallery_id: str, photo_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def delete_gallery_photo(gallery_id: str, photo_id: str, admin: dict = Depends(get_admin_auth)):
     """Delete a photo from gallery"""
     gallery = await db.galleries.find_one({"id": gallery_id})
     if not gallery:
@@ -218,7 +233,7 @@ async def delete_gallery_photo(gallery_id: str, photo_id: str, admin: dict = Dep
     return {"message": "Photo supprimée"}
 
 @router.delete("/admin/galleries/{gallery_id}", response_model=dict)
-async def delete_gallery(gallery_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def delete_gallery(gallery_id: str, admin: dict = Depends(get_admin_auth)):
     """Delete a gallery and all its photos"""
     gallery = await db.galleries.find_one({"id": gallery_id})
     if not gallery:
@@ -239,7 +254,7 @@ async def delete_gallery(gallery_id: str, admin: dict = Depends(lambda: _get_cur
     return {"message": "Galerie supprimée"}
 
 @router.post("/admin/galleries/{gallery_id}/music", response_model=dict)
-async def upload_gallery_music(gallery_id: str, file: UploadFile = File(...), admin: dict = Depends(lambda: _get_current_admin)):
+async def upload_gallery_music(gallery_id: str, file: UploadFile = File(...), admin: dict = Depends(get_admin_auth)):
     """Upload background music for gallery slideshow"""
     gallery = await db.galleries.find_one({"id": gallery_id})
     if not gallery:
@@ -273,7 +288,7 @@ async def upload_gallery_music(gallery_id: str, file: UploadFile = File(...), ad
     return {"music_url": music_url}
 
 @router.delete("/admin/galleries/{gallery_id}/music", response_model=dict)
-async def delete_gallery_music(gallery_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def delete_gallery_music(gallery_id: str, admin: dict = Depends(get_admin_auth)):
     """Delete gallery background music"""
     gallery = await db.galleries.find_one({"id": gallery_id})
     if not gallery:
@@ -293,7 +308,7 @@ async def delete_gallery_music(gallery_id: str, admin: dict = Depends(lambda: _g
     return {"message": "Musique supprimée"}
 
 @router.get("/admin/galleries/{gallery_id}/selection", response_model=dict)
-async def get_gallery_selection(gallery_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def get_gallery_selection(gallery_id: str, admin: dict = Depends(get_admin_auth)):
     """Get client's photo selection for a gallery"""
     gallery = await db.galleries.find_one({"id": gallery_id}, {"_id": 0})
     if not gallery:
@@ -308,7 +323,7 @@ async def get_gallery_selection(gallery_id: str, admin: dict = Depends(lambda: _
     }
 
 @router.get("/admin/galleries/{gallery_id}/download-selection")
-async def download_selection_zip(gallery_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def download_selection_zip(gallery_id: str, admin: dict = Depends(get_admin_auth)):
     """Download selected photos as ZIP"""
     gallery = await db.galleries.find_one({"id": gallery_id})
     if not gallery:
@@ -344,7 +359,7 @@ async def download_selection_zip(gallery_id: str, admin: dict = Depends(lambda: 
     )
 
 @router.get("/admin/galleries/{gallery_id}/qrcode-3d")
-async def get_gallery_qrcode_3d(gallery_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def get_gallery_qrcode_3d(gallery_id: str, admin: dict = Depends(get_admin_auth)):
     """Generate QR code for 3D gallery view"""
     gallery = await db.galleries.find_one({"id": gallery_id})
     if not gallery:
@@ -365,7 +380,7 @@ async def get_gallery_qrcode_3d(gallery_id: str, admin: dict = Depends(lambda: _
     return StreamingResponse(img_buffer, media_type="image/png")
 
 @router.get("/admin/galleries/{gallery_id}/3d-info")
-async def get_gallery_3d_info(gallery_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def get_gallery_3d_info(gallery_id: str, admin: dict = Depends(get_admin_auth)):
     """Get info for 3D gallery display"""
     gallery = await db.galleries.find_one({"id": gallery_id}, {"_id": 0})
     if not gallery:
@@ -385,7 +400,7 @@ async def get_gallery_3d_info(gallery_id: str, admin: dict = Depends(lambda: _ge
 # ==================== CLIENT ROUTES ====================
 
 @router.get("/client/galleries", response_model=List[dict])
-async def get_client_galleries(client: dict = Depends(lambda: _get_current_client)):
+async def get_client_galleries(client: dict = Depends(get_client_auth)):
     """Get galleries for current client"""
     galleries = await db.galleries.find(
         {"client_id": client["id"], "is_active": True},
@@ -402,7 +417,7 @@ async def get_client_galleries(client: dict = Depends(lambda: _get_current_clien
     return galleries
 
 @router.get("/client/galleries/{gallery_id}", response_model=dict)
-async def get_client_gallery(gallery_id: str, client: dict = Depends(lambda: _get_current_client)):
+async def get_client_gallery(gallery_id: str, client: dict = Depends(get_client_auth)):
     """Get a specific gallery for client"""
     gallery = await db.galleries.find_one(
         {"id": gallery_id, "client_id": client["id"], "is_active": True},
@@ -420,7 +435,7 @@ async def get_client_gallery(gallery_id: str, client: dict = Depends(lambda: _ge
     return gallery
 
 @router.post("/client/galleries/{gallery_id}/selection", response_model=dict)
-async def update_photo_selection(gallery_id: str, photo_ids: List[str], client: dict = Depends(lambda: _get_current_client)):
+async def update_photo_selection(gallery_id: str, photo_ids: List[str], client: dict = Depends(get_client_auth)):
     """Update client's photo selection"""
     gallery = await db.galleries.find_one({"id": gallery_id, "client_id": client["id"]})
     if not gallery:
@@ -448,7 +463,7 @@ async def update_photo_selection(gallery_id: str, photo_ids: List[str], client: 
     return {"message": "Sélection mise à jour", "count": len(photo_ids)}
 
 @router.post("/client/galleries/{gallery_id}/validate", response_model=dict)
-async def validate_selection(gallery_id: str, client: dict = Depends(lambda: _get_current_client)):
+async def validate_selection(gallery_id: str, client: dict = Depends(get_client_auth)):
     """Validate and finalize photo selection"""
     gallery = await db.galleries.find_one({"id": gallery_id, "client_id": client["id"]})
     if not gallery:
