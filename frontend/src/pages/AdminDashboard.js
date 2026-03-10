@@ -6455,7 +6455,7 @@ const AdminDashboard = () => {
                           <>
                             <div className="flex justify-between items-start">
                               <h4 className="font-primary font-semibold">{option.name}</h4>
-                              <span className="font-primary font-bold text-primary">{option.price}€</span>
+                              {option.price > 0 && <span className="font-primary font-bold text-primary">{option.price}€</span>}
                             </div>
                             <p className="text-white/60 text-sm mt-1 mb-3">{option.description}</p>
                             <div className="flex gap-2">

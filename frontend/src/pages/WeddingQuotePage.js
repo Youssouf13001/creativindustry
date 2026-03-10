@@ -207,7 +207,9 @@ const WeddingQuotePage = () => {
                           </div>
                         </div>
                         <p className="text-white/60 text-sm mb-3">{option.description}</p>
-                        <p className="font-primary font-bold text-primary">{option.price}€</p>
+                        {option.price > 0 && (
+                          <p className="font-primary font-bold text-primary">{option.price}€</p>
+                        )}
                       </button>
                     );
                   })}
@@ -255,7 +257,7 @@ const WeddingQuotePage = () => {
                 {getSelectedOptionsData().map(opt => (
                   <div key={opt.id} className="flex justify-between text-sm">
                     <span className="text-white/70">{opt.name}</span>
-                    <span className="text-primary">{opt.price}€</span>
+                    {opt.price > 0 && <span className="text-primary">{opt.price}€</span>}
                   </div>
                 ))}
               </div>
