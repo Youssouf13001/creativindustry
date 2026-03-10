@@ -69,6 +69,20 @@ export default function PhotoFindMobile() {
     }
   };
 
+  // Load all photos (skip selfie)
+  const loadAllPhotos = async () => {
+    setSearchingFace(true);
+    try {
+      const res = await axios.get(`${API}/public/photofind/${eventId}/photos`);
+      setPhotos(res.data.photos || []);
+      setStep("photos");
+    } catch (e) {
+      toast.error("Erreur lors du chargement des photos");
+    } finally {
+      setSearchingFace(false);
+    }
+  };
+
   // Start camera for selfie
   const startCamera = async () => {
     try {
@@ -267,18 +281,27 @@ export default function PhotoFindMobile() {
             <div className="text-6xl mb-6">📸</div>
             <h2 className="text-2xl font-bold mb-4">Bienvenue !</h2>
             <p className="text-white/70 mb-8">
-              Prenez un selfie pour retrouver vos photos
+              Prenez un selfie pour retrouver vos photos ou parcourez toutes les photos
             </p>
-            <button
-              onClick={() => {
-                startCamera();
-                setStep("selfie");
-              }}
-              className="bg-primary text-black font-bold px-8 py-4 rounded-xl text-lg"
-            >
-              <Camera className="inline mr-2" size={24} />
-              Commencer
-            </button>
+            <div className="flex flex-col gap-4">
+              <button
+                onClick={() => {
+                  startCamera();
+                  setStep("selfie");
+                }}
+                className="bg-primary text-black font-bold px-8 py-4 rounded-xl text-lg"
+              >
+                <Camera className="inline mr-2" size={24} />
+                Prendre un selfie
+              </button>
+              <button
+                onClick={loadAllPhotos}
+                className="bg-white/10 text-white font-bold px-8 py-4 rounded-xl text-lg border border-white/20"
+              >
+                <Search className="inline mr-2" size={24} />
+                Voir toutes les photos
+              </button>
+            </div>
           </div>
         )}
 
@@ -310,13 +333,30 @@ export default function PhotoFindMobile() {
                 <p className="text-white/70">Recherche de vos photos...</p>
               </div>
             ) : (
-              <button
-                onClick={startCamera}
-                className="bg-white/10 px-8 py-4 rounded-xl"
-              >
-                Activer la caméra
-              </button>
+              <div className="space-y-4">
+                <button
+                  onClick={startCamera}
+                  className="bg-white/10 px-8 py-4 rounded-xl"
+                >
+                  Activer la caméra
+                </button>
+                <p className="text-white/50 text-sm">ou</p>
+                <button
+                  onClick={loadAllPhotos}
+                  className="text-primary underline"
+                >
+                  Voir toutes les photos
+                </button>
+              </div>
             )}
+            
+            <button
+              onClick={() => setStep("welcome")}
+              className="mt-6 text-white/50"
+            >
+              <ArrowLeft className="inline mr-2" size={16} />
+              Retour
+            </button>
           </div>
         )}
 
