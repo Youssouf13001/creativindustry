@@ -1640,29 +1640,23 @@ const PhotoFindKiosk = () => {
                 onClick={async () => {
                   setProcessing(true);
                   
-                  if (deliveryMethod === "email") {
-                    // For email delivery, mark cash payment as confirmed and ask for email address
-                    setCashPaymentConfirmed(true);
-                    setProcessing(false);
-                    setStep("email");
-                  } else {
-                    // For print delivery, request a verification code
-                    try {
-                      const res = await axios.post(`${API}/public/photofind/${eventId}/request-cash-code`, {
-                        photo_ids: selectedPhotos,
-                        amount: calculatePrice(),
-                        print_format: selectedPrintFormat
-                      });
-                      setCashCodeRequestId(res.data.request_id);
-                      setCashCode("");
-                      setCashCodeError("");
-                      setStep("cash-code");
-                    } catch (e) {
-                      toast.error("Erreur lors de la demande de code");
-                      console.error(e);
-                    }
-                    setProcessing(false);
+                  // Always request a verification code for cash payments (both email and print)
+                  try {
+                    const res = await axios.post(`${API}/public/photofind/${eventId}/request-cash-code`, {
+                      photo_ids: selectedPhotos,
+                      amount: calculatePrice(),
+                      print_format: selectedPrintFormat,
+                      delivery_method: deliveryMethod
+                    });
+                    setCashCodeRequestId(res.data.request_id);
+                    setCashCode("");
+                    setCashCodeError("");
+                    setStep("cash-code");
+                  } catch (e) {
+                    toast.error("Erreur lors de la demande de code");
+                    console.error(e);
                   }
+                  setProcessing(false);
                 }}
                 disabled={processing}
                 className="bg-green-600 hover:bg-green-700 text-white font-bold text-xl px-8 py-4 rounded-xl disabled:opacity-50 flex items-center gap-3"
@@ -1672,7 +1666,7 @@ const PhotoFindKiosk = () => {
                 ) : (
                   <>
                     <Check size={24} /> 
-                    {deliveryMethod === "email" ? "Paiement reçu - Continuer" : "Paiement reçu - Demander le code"}
+                    Paiement reçu - Demander le code
                   </>
                 )}
               </button>
@@ -1742,8 +1736,16 @@ const PhotoFindKiosk = () => {
                     
                     if (res.data.valid) {
                       toast.success("Code validé !");
-                      await autoPrintPhotos();
-                      setStep("print-success");
+                      
+                      if (deliveryMethod === "email") {
+                        // For email delivery, go to email input step
+                        setCashPaymentConfirmed(true);
+                        setStep("email");
+                      } else {
+                        // For print delivery, print and show success
+                        await autoPrintPhotos();
+                        setStep("print-success");
+                      }
                     } else {
                       setCashCodeError("Code incorrect - Réessayez");
                     }
@@ -1760,7 +1762,7 @@ const PhotoFindKiosk = () => {
                   <Loader className="animate-spin" size={24} />
                 ) : (
                   <>
-                    <Check size={24} /> Valider et Imprimer
+                    <Check size={24} /> {deliveryMethod === "email" ? "Valider et Continuer" : "Valider et Imprimer"}
                   </>
                 )}
               </button>

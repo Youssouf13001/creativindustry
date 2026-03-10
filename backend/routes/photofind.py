@@ -840,6 +840,7 @@ async def request_cash_payment_code(event_id: str, data: dict = Body(...)):
         "amount": data.get("amount", 0),
         "photo_count": len(data.get("photo_ids", [])),
         "print_format": data.get("print_format", "10x15"),
+        "delivery_method": data.get("delivery_method", "print"),
         "status": "pending",  # pending, validated, expired
         "created_at": datetime.now(timezone.utc).isoformat()
     }
