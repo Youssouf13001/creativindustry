@@ -902,6 +902,105 @@ async def validate_cash_payment_code(event_id: str, data: dict = Body(...)):
     
     return {"valid": True, "message": "Code validé - impression autorisée", "purchase_id": purchase_id}
 
+@router.post("/public/photofind/{event_id}/validate-cash-code-mobile")
+async def validate_cash_payment_code_mobile(event_id: str, data: dict = Body(...)):
+    """Validate cash code from mobile and create remote print order"""
+    code = data.get("code", "")
+    request_id = data.get("request_id", "")
+    delivery_info = data.get("delivery_info", {})
+    email = data.get("email")
+    
+    if not code or not request_id:
+        raise HTTPException(status_code=400, detail="Code et request_id requis")
+    
+    cash_request = await db.photofind_cash_codes.find_one({
+        "id": request_id,
+        "event_id": event_id,
+        "status": "pending"
+    })
+    
+    if not cash_request:
+        raise HTTPException(status_code=404, detail="Demande non trouvée")
+    
+    if cash_request["code"] != code:
+        return {"valid": False, "message": "Code incorrect"}
+    
+    # Mark as validated
+    await db.photofind_cash_codes.update_one(
+        {"id": request_id},
+        {"$set": {"status": "validated"}}
+    )
+    
+    # Create remote print order
+    order_id = str(uuid.uuid4())
+    order = {
+        "id": order_id,
+        "event_id": event_id,
+        "photo_ids": cash_request.get("photo_ids", []),
+        "amount": cash_request.get("amount", 0),
+        "payment_method": "cash",
+        "cash_code": code,
+        "delivery_method": cash_request.get("delivery_method", "print"),
+        "delivery_info": delivery_info,
+        "email": email,
+        "status": "pending_print",  # pending_print, printing, delivered
+        "source": "mobile",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.photofind_remote_orders.insert_one(order)
+    
+    return {"valid": True, "message": "Commande créée", "order_id": order_id}
+
+@router.post("/public/photofind/{event_id}/remote-print-order")
+async def create_remote_print_order(event_id: str, data: dict = Body(...)):
+    """Create a remote print order from mobile"""
+    event = await db.photofind_events.find_one({"id": event_id, "is_active": True})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    order_id = str(uuid.uuid4())
+    order = {
+        "id": order_id,
+        "event_id": event_id,
+        "photo_ids": data.get("photo_ids", []),
+        "amount": data.get("amount", 0),
+        "payment_method": data.get("payment_method", "unknown"),
+        "payment_id": data.get("payment_id"),
+        "delivery_method": data.get("delivery_method", "print"),
+        "delivery_info": data.get("delivery_info", {}),
+        "email": data.get("email"),
+        "status": "pending_print",
+        "source": "mobile",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.photofind_remote_orders.insert_one(order)
+    
+    return {"success": True, "order_id": order_id}
+
+@router.get("/admin/photofind/events/{event_id}/remote-orders")
+async def get_remote_orders(event_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+    """Get pending remote print orders for admin"""
+    orders = await db.photofind_remote_orders.find(
+        {"event_id": event_id, "status": {"$in": ["pending_print", "printing"]}},
+        {"_id": 0}
+    ).sort("created_at", -1).to_list(50)
+    
+    return {"orders": orders}
+
+@router.put("/admin/photofind/remote-orders/{order_id}/status")
+async def update_remote_order_status(order_id: str, data: dict = Body(...), admin: dict = Depends(lambda: _get_current_admin)):
+    """Update remote order status (printing, delivered)"""
+    new_status = data.get("status", "delivered")
+    
+    await db.photofind_remote_orders.update_one(
+        {"id": order_id},
+        {"$set": {"status": new_status, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return {"success": True}
+
 @router.get("/admin/photofind/events/{event_id}/pending-cash-codes")
 async def get_pending_cash_codes(event_id: str, admin: dict = Depends(lambda: _get_current_admin)):
     """Get pending cash payment codes for admin to see"""

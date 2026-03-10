@@ -154,6 +154,7 @@ const AdminDashboard = () => {
   const [loadingKioskStats, setLoadingKioskStats] = useState(false);
   const [newCustomFrame, setNewCustomFrame] = useState({});
   const [pendingCashCodes, setPendingCashCodes] = useState({});
+  const [remoteOrders, setRemoteOrders] = useState({});
   // Chat state
   const [showChat, setShowChat] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -670,6 +671,18 @@ const AdminDashboard = () => {
       const codesMap = {};
       allCodes.forEach(c => { codesMap[c.eventId] = c.codes; });
       setPendingCashCodes(codesMap);
+      
+      // Also fetch remote orders
+      const ordersPromises = events.map(event => 
+        axios.get(`${API}/admin/photofind/events/${event.id}/remote-orders`, { headers })
+          .then(res => ({ eventId: event.id, orders: res.data.orders || [] }))
+          .catch(() => ({ eventId: event.id, orders: [] }))
+      );
+      
+      const allOrders = await Promise.all(ordersPromises);
+      const ordersMap = {};
+      allOrders.forEach(o => { ordersMap[o.eventId] = o.orders; });
+      setRemoteOrders(ordersMap);
     } catch (e) {
       console.error("Error fetching pending cash codes:", e);
     }
@@ -4033,6 +4046,73 @@ const AdminDashboard = () => {
                               >
                                 <X size={16} />
                               </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Remote Orders Section */}
+                    {remoteOrders[event.id] && remoteOrders[event.id].length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-white/10">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
+                          <h5 className="font-bold text-blue-400">📱 Commandes Mobile à livrer</h5>
+                        </div>
+                        <div className="grid gap-2">
+                          {remoteOrders[event.id].map(order => (
+                            <div key={order.id} className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <p className="text-white font-bold">
+                                    {order.photo_ids?.length || 0} photo(s) - {order.amount}€
+                                  </p>
+                                  <div className="text-sm text-white/70 mt-1">
+                                    {order.delivery_info?.type === "table" && (
+                                      <span className="bg-green-500/20 text-green-400 px-2 py-1 rounded">
+                                        🪑 Table {order.delivery_info.table_number}
+                                      </span>
+                                    )}
+                                    {order.delivery_info?.type === "location" && (
+                                      <span className="bg-orange-500/20 text-orange-400 px-2 py-1 rounded">
+                                        📍 {order.delivery_info.description}
+                                      </span>
+                                    )}
+                                    {order.delivery_info?.type === "pickup" && (
+                                      <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded">
+                                        🚶 Récupération sur place
+                                      </span>
+                                    )}
+                                    {order.delivery_info?.type === "email" && (
+                                      <span className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded">
+                                        ✉️ {order.email}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-white/40 text-xs mt-1">
+                                    {new Date(order.created_at).toLocaleTimeString('fr-FR')}
+                                  </p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await axios.put(`${API}/admin/photofind/remote-orders/${order.id}/status`, 
+                                          { status: "delivered" }, 
+                                          { headers }
+                                        );
+                                        fetchAllPendingCashCodes();
+                                        toast.success("Commande marquée comme livrée");
+                                      } catch (e) {
+                                        toast.error("Erreur");
+                                      }
+                                    }}
+                                    className="bg-green-500/20 text-green-400 px-3 py-1 rounded hover:bg-green-500/30 text-sm"
+                                  >
+                                    ✓ Livré
+                                  </button>
+                                </div>
+                              </div>
                             </div>
                           ))}
                         </div>
