@@ -52,6 +52,16 @@ export default function PhotoFindMobile() {
   // Video ref for selfie
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   // Load event data
   useEffect(() => {
@@ -92,20 +102,19 @@ export default function PhotoFindMobile() {
         return;
       }
       
-      // Simple constraints that work better on mobile
+      // Get camera stream - same settings as PhotoFindKiosk
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "user" },
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: "user"
+        },
         audio: false
       });
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        // Wait for video to be ready
-        await new Promise((resolve) => {
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current.play().then(resolve).catch(resolve);
-          };
-        });
+        streamRef.current = stream;
       }
       setSelfieMode(true);
     } catch (e) {
@@ -120,25 +129,39 @@ export default function PhotoFindMobile() {
     }
   };
 
+  // Stop camera
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setSelfieMode(false);
+  };
+
   // Capture selfie
   const captureSelfie = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+    if (!videoRef.current || !canvasRef.current) {
+      toast.error("Caméra non prête");
+      return;
+    }
     
     const canvas = canvasRef.current;
     const video = videoRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d").drawImage(video, 0, 0);
     
+    // Set canvas size to video size
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    
+    // Draw video frame to canvas
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Get image data
     const imageData = canvas.toDataURL("image/jpeg", 0.8);
     setSelfieImage(imageData);
     
     // Stop camera
-    const stream = video.srcObject;
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    setSelfieMode(false);
+    stopCamera();
     
     // Search for matching photos
     searchByFace(imageData);
@@ -362,14 +385,15 @@ export default function PhotoFindMobile() {
             <h2 className="text-xl font-bold mb-4">Prenez un selfie</h2>
             
             {selfieMode ? (
-              <div className="relative">
+              <div className="relative flex flex-col items-center">
                 <video 
                   ref={videoRef} 
                   autoPlay 
                   playsInline 
                   muted
-                  style={{ width: '100%', maxWidth: '320px', height: 'auto', minHeight: '240px', backgroundColor: '#333' }}
-                  className="mx-auto rounded-xl border-2 border-primary"
+                  onLoadedMetadata={(e) => e.target.play()}
+                  style={{ width: '100%', maxWidth: '320px', minHeight: '240px', backgroundColor: '#000' }}
+                  className="rounded-xl border-2 border-primary"
                 />
                 <canvas ref={canvasRef} className="hidden" />
                 <button
@@ -377,6 +401,15 @@ export default function PhotoFindMobile() {
                   className="mt-4 bg-primary text-black font-bold px-8 py-4 rounded-full"
                 >
                   📷 Capturer
+                </button>
+                <button
+                  onClick={() => {
+                    stopCamera();
+                    setStep("welcome");
+                  }}
+                  className="mt-2 text-white/50 text-sm"
+                >
+                  Annuler
                 </button>
               </div>
             ) : searchingFace ? (
