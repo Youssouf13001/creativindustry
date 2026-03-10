@@ -5,6 +5,7 @@ Refactorisé depuis server.py - Mars 2026
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Body
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.security import HTTPBearer
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -120,6 +121,14 @@ def set_admin_dependency(get_current_admin_func):
     global _get_current_admin
     _get_current_admin = get_current_admin_func
 
+async def require_admin(credentials = Depends(HTTPBearer(auto_error=False))):
+    """Wrapper function for admin authentication"""
+    if _get_current_admin is None:
+        raise HTTPException(status_code=500, detail="Admin auth not configured")
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return await _get_current_admin(credentials)
+
 # ==================== EMAIL HELPER ====================
 
 def send_purchase_email(email: str, download_url: str, photo_count: int):
@@ -199,7 +208,7 @@ def send_purchase_email(email: str, download_url: str, photo_count: int):
 # ==================== ADMIN ROUTES ====================
 
 @router.post("/admin/photofind/events")
-async def create_photofind_event(data: PhotoFindEventCreate, admin: dict = Depends(lambda: _get_current_admin)):
+async def create_photofind_event(data: PhotoFindEventCreate, admin: dict = Depends(require_admin)):
     """Create a new PhotoFind event with its own face collection"""
     
     if not AWS_ACCESS_KEY or not AWS_SECRET_KEY:
@@ -270,13 +279,13 @@ async def create_photofind_event(data: PhotoFindEventCreate, admin: dict = Depen
     return event
 
 @router.get("/admin/photofind/events")
-async def get_photofind_events(admin: dict = Depends(lambda: _get_current_admin)):
+async def get_photofind_events(admin: dict = Depends(require_admin)):
     """Get all PhotoFind events"""
     events = await db.photofind_events.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return events
 
 @router.get("/admin/photofind/events/{event_id}")
-async def get_photofind_event(event_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def get_photofind_event(event_id: str, admin: dict = Depends(require_admin)):
     """Get a single PhotoFind event with its photos"""
     event = await db.photofind_events.find_one({"id": event_id}, {"_id": 0})
     if not event:
@@ -289,7 +298,7 @@ async def get_photofind_event(event_id: str, admin: dict = Depends(lambda: _get_
     return event
 
 @router.put("/admin/photofind/events/{event_id}")
-async def update_photofind_event(event_id: str, data: PhotoFindEventUpdate, admin: dict = Depends(lambda: _get_current_admin)):
+async def update_photofind_event(event_id: str, data: PhotoFindEventUpdate, admin: dict = Depends(require_admin)):
     """Update a PhotoFind event"""
     update_data = {k: v for k, v in data.model_dump().items() if v is not None}
     if not update_data:
@@ -300,7 +309,7 @@ async def update_photofind_event(event_id: str, data: PhotoFindEventUpdate, admi
     return event
 
 @router.delete("/admin/photofind/events/{event_id}")
-async def delete_photofind_event(event_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def delete_photofind_event(event_id: str, admin: dict = Depends(require_admin)):
     """Delete a PhotoFind event and its collection"""
     event = await db.photofind_events.find_one({"id": event_id})
     if not event:
@@ -325,7 +334,7 @@ async def delete_photofind_event(event_id: str, admin: dict = Depends(lambda: _g
 async def upload_photofind_photos(
     event_id: str,
     files: List[UploadFile] = File(...),
-    admin: dict = Depends(lambda: _get_current_admin)
+    admin: dict = Depends(require_admin)
 ):
     """Upload photos to a PhotoFind event and index faces"""
     event = await db.photofind_events.find_one({"id": event_id})
@@ -407,7 +416,7 @@ async def upload_photofind_photos(
     }
 
 @router.delete("/admin/photofind/photos/{photo_id}")
-async def delete_photofind_photo(photo_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def delete_photofind_photo(photo_id: str, admin: dict = Depends(require_admin)):
     """Delete a photo from PhotoFind"""
     photo = await db.photofind_photos.find_one({"id": photo_id})
     if not photo:
@@ -444,13 +453,13 @@ async def delete_photofind_photo(photo_id: str, admin: dict = Depends(lambda: _g
     return {"message": "Photo supprimée"}
 
 @router.get("/admin/photofind/purchases")
-async def get_photofind_purchases(admin: dict = Depends(lambda: _get_current_admin)):
+async def get_photofind_purchases(admin: dict = Depends(require_admin)):
     """Get all PhotoFind purchases"""
     purchases = await db.photofind_purchases.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
     return purchases
 
 @router.put("/admin/photofind/purchases/{purchase_id}/confirm")
-async def confirm_photofind_purchase(purchase_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def confirm_photofind_purchase(purchase_id: str, admin: dict = Depends(require_admin)):
     """Confirm a pending purchase and send download link"""
     purchase = await db.photofind_purchases.find_one({"id": purchase_id})
     if not purchase:
@@ -489,7 +498,7 @@ async def confirm_photofind_purchase(purchase_id: str, admin: dict = Depends(lam
     return {"message": "Achat confirmé", "download_url": download_url}
 
 @router.get("/admin/photofind/events/{event_id}/frames")
-async def get_event_frames(event_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def get_event_frames(event_id: str, admin: dict = Depends(require_admin)):
     """Get custom frames for an event"""
     event = await db.photofind_events.find_one({"id": event_id}, {"_id": 0})
     if not event:
@@ -501,7 +510,7 @@ async def add_event_frame(
     event_id: str,
     file: UploadFile = File(...),
     name: str = Form(...),
-    admin: dict = Depends(lambda: _get_current_admin)
+    admin: dict = Depends(require_admin)
 ):
     """Add a custom frame to an event"""
     event = await db.photofind_events.find_one({"id": event_id})
@@ -534,7 +543,7 @@ async def add_event_frame(
     return frame_doc
 
 @router.delete("/admin/photofind/events/{event_id}/frames/{frame_id}")
-async def delete_event_frame(event_id: str, frame_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def delete_event_frame(event_id: str, frame_id: str, admin: dict = Depends(require_admin)):
     """Delete a custom frame"""
     await db.photofind_events.update_one(
         {"id": event_id},
@@ -543,7 +552,7 @@ async def delete_event_frame(event_id: str, frame_id: str, admin: dict = Depends
     return {"success": True}
 
 @router.put("/admin/photofind/events/{event_id}/pricing")
-async def update_event_pricing(event_id: str, data: dict = Body(...), admin: dict = Depends(lambda: _get_current_admin)):
+async def update_event_pricing(event_id: str, data: dict = Body(...), admin: dict = Depends(require_admin)):
     """Update pricing for a PhotoFind event"""
     event = await db.photofind_events.find_one({"id": event_id})
     if not event:
@@ -559,7 +568,7 @@ async def update_event_pricing(event_id: str, data: dict = Body(...), admin: dic
     return {"success": True, "pricing": updated_event.get("pricing", {})}
 
 @router.get("/admin/photofind/events/{event_id}/kiosk-stats")
-async def get_kiosk_stats(event_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def get_kiosk_stats(event_id: str, admin: dict = Depends(require_admin)):
     """Get kiosk statistics for an event"""
     purchases = await db.photofind_kiosk_purchases.find(
         {"event_id": event_id}, {"_id": 0}
@@ -980,7 +989,7 @@ async def create_remote_print_order(event_id: str, data: dict = Body(...)):
     return {"success": True, "order_id": order_id}
 
 @router.get("/admin/photofind/events/{event_id}/remote-orders")
-async def get_remote_orders(event_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def get_remote_orders(event_id: str, admin: dict = Depends(require_admin)):
     """Get pending remote print orders for admin"""
     orders = await db.photofind_remote_orders.find(
         {"event_id": event_id, "status": {"$in": ["pending_print", "printing"]}},
@@ -990,7 +999,7 @@ async def get_remote_orders(event_id: str, admin: dict = Depends(lambda: _get_cu
     return {"orders": orders}
 
 @router.put("/admin/photofind/remote-orders/{order_id}/status")
-async def update_remote_order_status(order_id: str, data: dict = Body(...), admin: dict = Depends(lambda: _get_current_admin)):
+async def update_remote_order_status(order_id: str, data: dict = Body(...), admin: dict = Depends(require_admin)):
     """Update remote order status (printing, delivered)"""
     new_status = data.get("status", "delivered")
     
@@ -1002,7 +1011,7 @@ async def update_remote_order_status(order_id: str, data: dict = Body(...), admi
     return {"success": True}
 
 @router.get("/admin/photofind/events/{event_id}/pending-cash-codes")
-async def get_pending_cash_codes(event_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def get_pending_cash_codes(event_id: str, admin: dict = Depends(require_admin)):
     """Get pending cash payment codes for admin to see"""
     codes = await db.photofind_cash_codes.find(
         {"event_id": event_id, "status": "pending"},
@@ -1012,7 +1021,7 @@ async def get_pending_cash_codes(event_id: str, admin: dict = Depends(lambda: _g
     return {"pending_codes": codes}
 
 @router.delete("/admin/photofind/cash-codes/{code_id}")
-async def delete_cash_code(code_id: str, admin: dict = Depends(lambda: _get_current_admin)):
+async def delete_cash_code(code_id: str, admin: dict = Depends(require_admin)):
     """Delete/expire a cash code"""
     await db.photofind_cash_codes.update_one(
         {"id": code_id},
