@@ -86,15 +86,27 @@ export default function PhotoFindMobile() {
   // Start camera for selfie
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "user", width: 640, height: 480 } 
-      });
+      const constraints = { 
+        video: { 
+          facingMode: "user", 
+          width: { ideal: 640 }, 
+          height: { ideal: 480 } 
+        },
+        audio: false
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play();
+        };
       }
       setSelfieMode(true);
     } catch (e) {
-      toast.error("Impossible d'accéder à la caméra");
+      console.error("Camera error:", e);
+      toast.error("Impossible d'accéder à la caméra. Vérifiez les autorisations.");
     }
   };
 
@@ -126,13 +138,35 @@ export default function PhotoFindMobile() {
   const searchByFace = async (imageData) => {
     setSearchingFace(true);
     try {
-      const res = await axios.post(`${API}/public/photofind/${eventId}/search-by-face`, {
-        selfie: imageData
+      // Convert base64 to blob
+      const base64Data = imageData.split(',')[1];
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'image/jpeg' });
+      
+      // Create FormData and send as file
+      const formData = new FormData();
+      formData.append('file', blob, 'selfie.jpg');
+      
+      const res = await axios.post(`${API}/public/photofind/${eventId}/search`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
+      
       setPhotos(res.data.photos || []);
-      setStep("photos");
+      if (res.data.photos && res.data.photos.length > 0) {
+        setStep("photos");
+      } else {
+        toast.error("Aucune photo trouvée avec votre visage");
+        setStep("welcome");
+      }
     } catch (e) {
+      console.error("Search error:", e);
       toast.error("Erreur lors de la recherche");
+      setStep("welcome");
     } finally {
       setSearchingFace(false);
     }
