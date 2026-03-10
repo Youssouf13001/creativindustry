@@ -86,27 +86,37 @@ export default function PhotoFindMobile() {
   // Start camera for selfie
   const startCamera = async () => {
     try {
-      const constraints = { 
-        video: { 
-          facingMode: "user", 
-          width: { ideal: 640 }, 
-          height: { ideal: 480 } 
-        },
-        audio: false
-      };
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error("Votre navigateur ne supporte pas l'accès à la caméra");
+        return;
+      }
       
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Simple constraints that work better on mobile
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "user" },
+        audio: false
+      });
       
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play();
-        };
+        // Wait for video to be ready
+        await new Promise((resolve) => {
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current.play().then(resolve).catch(resolve);
+          };
+        });
       }
       setSelfieMode(true);
     } catch (e) {
       console.error("Camera error:", e);
-      toast.error("Impossible d'accéder à la caméra. Vérifiez les autorisations.");
+      if (e.name === 'NotAllowedError') {
+        toast.error("Accès à la caméra refusé. Autorisez l'accès dans les paramètres.");
+      } else if (e.name === 'NotFoundError') {
+        toast.error("Aucune caméra trouvée sur cet appareil");
+      } else {
+        toast.error("Impossible d'accéder à la caméra: " + e.message);
+      }
     }
   };
 
@@ -136,10 +146,20 @@ export default function PhotoFindMobile() {
 
   // Search photos by face
   const searchByFace = async (imageData) => {
+    if (!imageData) {
+      toast.error("Aucune image capturée");
+      setStep("welcome");
+      return;
+    }
+    
     setSearchingFace(true);
     try {
       // Convert base64 to blob
       const base64Data = imageData.split(',')[1];
+      if (!base64Data) {
+        throw new Error("Image invalide");
+      }
+      
       const byteCharacters = atob(base64Data);
       const byteNumbers = new Array(byteCharacters.length);
       for (let i = 0; i < byteCharacters.length; i++) {
@@ -153,19 +173,25 @@ export default function PhotoFindMobile() {
       formData.append('file', blob, 'selfie.jpg');
       
       const res = await axios.post(`${API}/public/photofind/${eventId}/search`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 30000
       });
       
       setPhotos(res.data.photos || []);
       if (res.data.photos && res.data.photos.length > 0) {
         setStep("photos");
+        toast.success(`${res.data.photos.length} photo(s) trouvée(s) !`);
       } else {
-        toast.error("Aucune photo trouvée avec votre visage");
+        toast.info("Aucune photo trouvée avec votre visage");
         setStep("welcome");
       }
     } catch (e) {
       console.error("Search error:", e);
-      toast.error("Erreur lors de la recherche");
+      if (e.response?.status === 500) {
+        toast.error("Service de reconnaissance faciale indisponible");
+      } else {
+        toast.error("Erreur lors de la recherche");
+      }
       setStep("welcome");
     } finally {
       setSearchingFace(false);
