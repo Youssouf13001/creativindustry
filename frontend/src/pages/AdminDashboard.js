@@ -7000,7 +7000,38 @@ const AdminDashboard = () => {
                 className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white mb-4 h-24 resize-none"
               />
               
-              <p className="text-white/60 text-sm mb-2">Sélectionner les clients :</p>
+              {/* Numéros supplémentaires */}
+              <div className="mb-4">
+                <p className="text-white/60 text-sm mb-2">Numéros supplémentaires (séparés par virgule) :</p>
+                <input 
+                  type="text" 
+                  id="sms-extra-phones"
+                  placeholder="Ex: 0612345678, 0698765432..."
+                  className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white"
+                />
+              </div>
+              
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-white/60 text-sm">Sélectionner les clients :</p>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      document.querySelectorAll(".sms-client-checkbox:not(:disabled)").forEach(cb => cb.checked = true);
+                    }}
+                    className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded hover:bg-green-500/30"
+                  >
+                    Tout sélectionner
+                  </button>
+                  <button 
+                    onClick={() => {
+                      document.querySelectorAll(".sms-client-checkbox").forEach(cb => cb.checked = false);
+                    }}
+                    className="text-xs px-2 py-1 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30"
+                  >
+                    Tout désélectionner
+                  </button>
+                </div>
+              </div>
               <div className="max-h-48 overflow-y-auto bg-white/5 rounded-lg p-2 mb-4 border border-white/10">
                 {clients && clients.length > 0 ? clients.map(c => (
                   <label key={c.id} className="flex items-center gap-2 p-2 hover:bg-white/10 rounded cursor-pointer">
@@ -7025,16 +7056,22 @@ const AdminDashboard = () => {
                     if (!msg) return alert("Entrez un message");
                     const checks = document.querySelectorAll(".sms-client-checkbox:checked");
                     const ids = [...checks].map(c => c.dataset.clientId);
-                    if (ids.length === 0) return alert("Sélectionnez au moins 1 client");
-                    if (!window.confirm(`Envoyer à ${ids.length} client(s) ?`)) return;
+                    const extraPhonesInput = document.getElementById("sms-extra-phones").value;
+                    const extraPhones = extraPhonesInput ? extraPhonesInput.split(",").map(p => p.trim()).filter(p => p) : [];
+                    if (ids.length === 0 && extraPhones.length === 0) return alert("Sélectionnez au moins 1 client ou ajoutez un numéro");
+                    if (!window.confirm(`Envoyer à ${ids.length} client(s) et ${extraPhones.length} numéro(s) supplémentaire(s) ?`)) return;
                     try {
                       const res = await fetch(`${API}/admin/sms/campaign`, {
                         method: "POST",
                         headers: {"Content-Type": "application/json", "Authorization": `Bearer ${token}`},
-                        body: JSON.stringify({message: msg, client_ids: ids})
+                        body: JSON.stringify({message: msg, client_ids: ids.length > 0 ? ids : null, extra_phones: extraPhones.length > 0 ? extraPhones : null})
                       });
                       const data = await res.json();
-                      alert(`SMS envoyés: ${data.sent} | Échecs: ${data.failed} | Sans tél: ${data.no_phone}`);
+                      if (data.sent !== undefined) {
+                        alert(`SMS envoyés: ${data.sent} | Échecs: ${data.failed} | Sans tél: ${data.no_phone}`);
+                      } else {
+                        alert("Erreur: " + (data.detail || "Réponse invalide"));
+                      }
                     } catch(e) { alert("Erreur: " + e.message); }
                   }}
                   className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
@@ -7045,15 +7082,21 @@ const AdminDashboard = () => {
                   onClick={async () => {
                     const msg = document.getElementById("sms-campaign-message").value;
                     if (!msg) return alert("Entrez un message");
+                    const extraPhonesInput = document.getElementById("sms-extra-phones").value;
+                    const extraPhones = extraPhonesInput ? extraPhonesInput.split(",").map(p => p.trim()).filter(p => p) : [];
                     if (!window.confirm("Envoyer à TOUS les clients avec numéro ?")) return;
                     try {
                       const res = await fetch(`${API}/admin/sms/campaign`, {
                         method: "POST",
                         headers: {"Content-Type": "application/json", "Authorization": `Bearer ${token}`},
-                        body: JSON.stringify({message: msg})
+                        body: JSON.stringify({message: msg, extra_phones: extraPhones.length > 0 ? extraPhones : null})
                       });
                       const data = await res.json();
-                      alert(`SMS envoyés: ${data.sent} | Échecs: ${data.failed} | Sans tél: ${data.no_phone}`);
+                      if (data.sent !== undefined) {
+                        alert(`SMS envoyés: ${data.sent} | Échecs: ${data.failed} | Sans tél: ${data.no_phone}`);
+                      } else {
+                        alert("Erreur: " + (data.detail || "Réponse invalide"));
+                      }
                     } catch(e) { alert("Erreur: " + e.message); }
                   }}
                   className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition"

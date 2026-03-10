@@ -12199,6 +12199,58 @@ class SMSManualRequest(BaseModel):
     phone_number: str
     message: str
 
+class SMSCampaignRequest(BaseModel):
+    message: str
+    client_ids: Optional[List[str]] = None
+    extra_phones: Optional[List[str]] = None  # Pour les numéros manuels
+
+@api_router.post("/admin/sms/campaign")
+async def send_sms_campaign(data: SMSCampaignRequest, admin: dict = Depends(get_current_admin)):
+    """Send SMS campaign to multiple clients"""
+    from services.sms_service import send_sms
+    
+    sent = 0
+    failed = 0
+    no_phone = 0
+    
+    # Si client_ids fournis, envoyer à ces clients spécifiques
+    if data.client_ids:
+        clients = await db.clients.find({"id": {"$in": data.client_ids}}, {"_id": 0}).to_list(500)
+    else:
+        # Sinon, envoyer à tous les clients avec un numéro
+        clients = await db.clients.find({"phone": {"$exists": True, "$ne": ""}}, {"_id": 0}).to_list(500)
+    
+    for client in clients:
+        phone = client.get("phone")
+        if not phone:
+            no_phone += 1
+            continue
+        try:
+            success = send_sms(phone, data.message)
+            if success:
+                sent += 1
+            else:
+                failed += 1
+        except Exception as e:
+            logging.error(f"SMS error for {phone}: {e}")
+            failed += 1
+    
+    # Envoyer aux numéros manuels additionnels
+    if data.extra_phones:
+        for phone in data.extra_phones:
+            if phone and phone.strip():
+                try:
+                    success = send_sms(phone.strip(), data.message)
+                    if success:
+                        sent += 1
+                    else:
+                        failed += 1
+                except Exception as e:
+                    logging.error(f"SMS error for extra phone {phone}: {e}")
+                    failed += 1
+    
+    return {"sent": sent, "failed": failed, "no_phone": no_phone}
+
 @api_router.post("/admin/sms/test")
 async def test_sms_endpoint(data: SMSTestRequest, admin: dict = Depends(get_current_admin)):
     """Send a test SMS to verify Brevo configuration"""
