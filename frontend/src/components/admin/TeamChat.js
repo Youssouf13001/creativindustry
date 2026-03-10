@@ -214,11 +214,20 @@ const TeamChat = ({ token, currentAdmin }) => {
               className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-2 text-white text-sm [&>option]:bg-[#1a1a1a]"
             >
               <option value="">📢 Tout le monde</option>
-              {teamMembers.map(member => (
-                <option key={member.id} value={member.id}>
-                  💬 {member.name} ({member.role === "complet" ? "Admin" : "Collab."})
-                </option>
-              ))}
+              <optgroup label="👥 Équipe">
+                {teamMembers.filter(m => m.type === "admin" || !m.type).map(member => (
+                  <option key={member.id} value={member.id}>
+                    👤 {member.name} ({member.role === "complet" ? "Admin" : "Collab."})
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="🧑‍💼 Clients">
+                {teamMembers.filter(m => m.type === "client").map(client => (
+                  <option key={client.id} value={client.id}>
+                    🧑‍💼 {client.name || client.email}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
 

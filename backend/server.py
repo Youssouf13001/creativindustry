@@ -9646,13 +9646,28 @@ async def mark_messages_read(admin: dict = Depends(get_current_admin)):
 
 @api_router.get("/team-chat/online-users")
 async def get_online_users(admin: dict = Depends(get_current_admin)):
-    """Get list of all admins for chat"""
+    """Get list of all admins and clients for chat"""
     admins = await db.admins.find(
         {},
         {"_id": 0, "id": 1, "name": 1, "email": 1, "role": 1}
     ).to_list(100)
     
-    return admins
+    # Add type to admins
+    for a in admins:
+        a["type"] = "admin"
+    
+    # Get clients too
+    clients = await db.clients.find(
+        {"phone": {"$exists": True, "$ne": ""}},
+        {"_id": 0, "id": 1, "name": 1, "email": 1, "phone": 1}
+    ).to_list(100)
+    
+    # Add type to clients
+    for c in clients:
+        c["type"] = "client"
+        c["role"] = "client"
+    
+    return admins + clients
 
 
 # Task reminder check endpoint (to be called by cron)
