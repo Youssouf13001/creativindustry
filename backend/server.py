@@ -7949,6 +7949,21 @@ async def websocket_client_endpoint(websocket: WebSocket, client_id: str, token:
             }
             await db.chat_messages.insert_one(message_record)
             
+            # Also store in team_chat so admins can see it in TeamChat
+            team_message = {
+                "id": str(uuid.uuid4()),
+                "sender_id": client_id,
+                "sender_name": client.get("name", "Client") if client else "Client",
+                "sender_role": "client",
+                "recipient_id": None,  # Broadcast to all admins
+                "recipient_type": "admin",
+                "content": data.get("content", ""),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "read_by": [],
+                "from_client_chat": True
+            }
+            await db.team_chat.insert_one(team_message)
+            
             # Send to all admins
             await manager.broadcast_to_admins({
                 "type": "new_message",
@@ -9622,16 +9637,33 @@ async def get_team_messages(admin: dict = Depends(get_current_admin), limit: int
     admin_id = admin.get("id")
     
     if recipient_id:
-        # Get messages between admin and specific recipient
-        messages = await db.team_chat.find(
-            {
-                "$or": [
-                    {"sender_id": admin_id, "recipient_id": recipient_id},
-                    {"sender_id": recipient_id, "recipient_id": admin_id}
-                ]
-            },
-            {"_id": 0}
-        ).sort("created_at", -1).limit(limit).to_list(limit)
+        # Check if recipient is a client
+        client = await db.clients.find_one({"id": recipient_id}, {"_id": 0})
+        is_client = client is not None
+        
+        if is_client:
+            # Get messages between admin and this client
+            # Include: admin->client messages AND client broadcast messages (from client chat)
+            messages = await db.team_chat.find(
+                {
+                    "$or": [
+                        {"sender_id": admin_id, "recipient_id": recipient_id},
+                        {"sender_id": recipient_id}  # Client messages (they broadcast to admins)
+                    ]
+                },
+                {"_id": 0}
+            ).sort("created_at", -1).limit(limit).to_list(limit)
+        else:
+            # Get messages between admin and specific admin recipient
+            messages = await db.team_chat.find(
+                {
+                    "$or": [
+                        {"sender_id": admin_id, "recipient_id": recipient_id},
+                        {"sender_id": recipient_id, "recipient_id": admin_id}
+                    ]
+                },
+                {"_id": 0}
+            ).sort("created_at", -1).limit(limit).to_list(limit)
     else:
         # Get messages that are broadcast OR where admin is sender/recipient
         messages = await db.team_chat.find(
