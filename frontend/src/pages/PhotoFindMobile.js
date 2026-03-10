@@ -342,7 +342,8 @@ export default function PhotoFindMobile() {
                   autoPlay 
                   playsInline 
                   muted
-                  className="w-full max-w-sm mx-auto rounded-xl"
+                  style={{ width: '100%', maxWidth: '320px', height: 'auto', minHeight: '240px', backgroundColor: '#333' }}
+                  className="mx-auto rounded-xl border-2 border-primary"
                 />
                 <canvas ref={canvasRef} className="hidden" />
                 <button
