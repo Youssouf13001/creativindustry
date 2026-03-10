@@ -34,7 +34,10 @@ const TeamChat = ({ token, currentAdmin }) => {
   // Load messages
   const loadMessages = async () => {
     try {
-      const res = await axios.get(`${API}/team-chat/messages`, { headers });
+      const url = selectedRecipient 
+        ? `${API}/team-chat/messages?recipient_id=${selectedRecipient}`
+        : `${API}/team-chat/messages`;
+      const res = await axios.get(url, { headers });
       const newMessages = res.data;
       
       // Check for new messages
@@ -118,7 +121,7 @@ const TeamChat = ({ token, currentAdmin }) => {
     }, 3000); // Poll every 3 seconds
     
     return () => clearInterval(interval);
-  }, [token]);
+  }, [token, selectedRecipient]);
 
   // Scroll when messages change
   useEffect(() => {

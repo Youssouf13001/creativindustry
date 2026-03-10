@@ -9549,30 +9549,57 @@ async def send_team_chat_email(recipient: dict, sender_name: str, message_conten
 @api_router.post("/team-chat/send")
 async def send_team_message(data: dict, admin: dict = Depends(get_current_admin)):
     """Send a message in team chat"""
+    recipient_id = data.get("recipient_id")
+    content = data.get("content")
+    
+    # Check if recipient is a client
+    is_client_recipient = False
+    if recipient_id:
+        client = await db.clients.find_one({"id": recipient_id}, {"_id": 0})
+        if client:
+            is_client_recipient = True
+    
     message = {
         "id": str(uuid.uuid4()),
         "sender_id": admin.get("id"),
         "sender_name": admin.get("name"),
         "sender_role": admin.get("role", "complet"),
-        "recipient_id": data.get("recipient_id"),  # None = broadcast to all
-        "content": data.get("content"),
+        "recipient_id": recipient_id,
+        "recipient_type": "client" if is_client_recipient else "admin",
+        "content": content,
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "read_by": [admin.get("id")]  # Sender has read it
+        "read_by": [admin.get("id")]
     }
     
     await db.team_chat.insert_one(message)
     
+    # If recipient is a client, also send to client chat so they can see it
+    if is_client_recipient:
+        client_message = {
+            "id": str(uuid.uuid4()),
+            "conversation_id": f"client_{recipient_id}",
+            "sender_type": "admin",
+            "sender_id": admin.get("id"),
+            "sender_name": admin.get("name"),
+            "content": content,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "read": False
+        }
+        await db.chat_messages.insert_one(client_message)
+    
     # Send email notifications
     sender_name = admin.get("name")
-    recipient_id = data.get("recipient_id")
-    content = data.get("content")
     
     try:
         if recipient_id:
-            # Private message - send to specific recipient
-            recipient = await db.admins.find_one({"id": recipient_id}, {"_id": 0})
-            if recipient:
-                await send_team_chat_email(recipient, sender_name, content, is_broadcast=False)
+            if is_client_recipient:
+                # Could add client email notification here
+                pass
+            else:
+                # Private message to admin
+                recipient = await db.admins.find_one({"id": recipient_id}, {"_id": 0})
+                if recipient:
+                    await send_team_chat_email(recipient, sender_name, content, is_broadcast=False)
         else:
             # Broadcast - send to all other admins
             all_admins = await db.admins.find(
@@ -9590,21 +9617,33 @@ async def send_team_message(data: dict, admin: dict = Depends(get_current_admin)
 
 
 @api_router.get("/team-chat/messages")
-async def get_team_messages(admin: dict = Depends(get_current_admin), limit: int = 50):
-    """Get recent team chat messages"""
+async def get_team_messages(admin: dict = Depends(get_current_admin), limit: int = 50, recipient_id: str = None):
+    """Get recent team chat messages, optionally filtered by recipient"""
     admin_id = admin.get("id")
     
-    # Get messages that are broadcast OR where admin is sender/recipient
-    messages = await db.team_chat.find(
-        {
-            "$or": [
-                {"recipient_id": None},  # Broadcast messages
-                {"sender_id": admin_id},  # Sent by this admin
-                {"recipient_id": admin_id}  # Sent to this admin
-            ]
-        },
-        {"_id": 0}
-    ).sort("created_at", -1).limit(limit).to_list(limit)
+    if recipient_id:
+        # Get messages between admin and specific recipient
+        messages = await db.team_chat.find(
+            {
+                "$or": [
+                    {"sender_id": admin_id, "recipient_id": recipient_id},
+                    {"sender_id": recipient_id, "recipient_id": admin_id}
+                ]
+            },
+            {"_id": 0}
+        ).sort("created_at", -1).limit(limit).to_list(limit)
+    else:
+        # Get messages that are broadcast OR where admin is sender/recipient
+        messages = await db.team_chat.find(
+            {
+                "$or": [
+                    {"recipient_id": None},  # Broadcast messages
+                    {"sender_id": admin_id},  # Sent by this admin
+                    {"recipient_id": admin_id}  # Sent to this admin
+                ]
+            },
+            {"_id": 0}
+        ).sort("created_at", -1).limit(limit).to_list(limit)
     
     return list(reversed(messages))
 
