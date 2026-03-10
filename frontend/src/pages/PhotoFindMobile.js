@@ -281,27 +281,18 @@ export default function PhotoFindMobile() {
             <div className="text-6xl mb-6">📸</div>
             <h2 className="text-2xl font-bold mb-4">Bienvenue !</h2>
             <p className="text-white/70 mb-8">
-              Prenez un selfie pour retrouver vos photos ou parcourez toutes les photos
+              Prenez un selfie pour retrouver vos photos
             </p>
-            <div className="flex flex-col gap-4">
-              <button
-                onClick={() => {
-                  startCamera();
-                  setStep("selfie");
-                }}
-                className="bg-primary text-black font-bold px-8 py-4 rounded-xl text-lg"
-              >
-                <Camera className="inline mr-2" size={24} />
-                Prendre un selfie
-              </button>
-              <button
-                onClick={loadAllPhotos}
-                className="bg-white/10 text-white font-bold px-8 py-4 rounded-xl text-lg border border-white/20"
-              >
-                <Search className="inline mr-2" size={24} />
-                Voir toutes les photos
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                startCamera();
+                setStep("selfie");
+              }}
+              className="bg-primary text-black font-bold px-8 py-4 rounded-xl text-lg"
+            >
+              <Camera className="inline mr-2" size={24} />
+              Prendre un selfie
+            </button>
           </div>
         )}
 
@@ -334,18 +325,13 @@ export default function PhotoFindMobile() {
               </div>
             ) : (
               <div className="space-y-4">
+                <p className="text-white/60 mb-4">Autorisez l'accès à la caméra pour prendre un selfie</p>
                 <button
                   onClick={startCamera}
-                  className="bg-white/10 px-8 py-4 rounded-xl"
+                  className="bg-primary text-black font-bold px-8 py-4 rounded-xl"
                 >
+                  <Camera className="inline mr-2" size={20} />
                   Activer la caméra
-                </button>
-                <p className="text-white/50 text-sm">ou</p>
-                <button
-                  onClick={loadAllPhotos}
-                  className="text-primary underline"
-                >
-                  Voir toutes les photos
                 </button>
               </div>
             )}
