@@ -4,19 +4,101 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast, Toaster } from "sonner";
 import { 
   Camera, Check, ArrowLeft, Loader, CreditCard, 
-  MapPin, User, MessageSquare, Printer, Mail,
-  ChevronRight, X, Search
+  MapPin, User, Printer, Mail,
+  ChevronRight, X, Smartphone
 } from "lucide-react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 const API = process.env.REACT_APP_BACKEND_URL + "/api";
 
+// Initialize Stripe
+let stripePromise = null;
+const getStripe = () => {
+  const key = process.env.REACT_APP_STRIPE_PUBLIC_KEY;
+  if (key && !stripePromise) {
+    stripePromise = loadStripe(key);
+  }
+  return stripePromise;
+};
+
+// Stripe Checkout Form Component
+const StripeCheckoutForm = ({ onSuccess, onCancel, amount }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setProcessing(true);
+    setError(null);
+
+    const { error: submitError, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: window.location.href,
+      },
+      redirect: "if_required"
+    });
+
+    if (submitError) {
+      setError(submitError.message);
+      setProcessing(false);
+    } else if (paymentIntent && paymentIntent.status === "succeeded") {
+      onSuccess(paymentIntent.id);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="w-full">
+      <div className="bg-white rounded-xl p-4 mb-4">
+        <PaymentElement />
+      </div>
+      
+      {error && (
+        <div className="bg-red-500/20 text-red-400 p-3 rounded-lg mb-4 text-sm">
+          {error}
+        </div>
+      )}
+      
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 bg-white/10 hover:bg-white/20 px-4 py-3 rounded-xl"
+          disabled={processing}
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          disabled={!stripe || processing}
+          className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-3 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {processing ? (
+            <Loader className="animate-spin" size={20} />
+          ) : (
+            <>
+              <CreditCard size={20} /> Payer {amount}€
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+};
+
 export default function PhotoFindMobile() {
   const { eventId } = useParams();
+  const [searchParams] = useSearchParams();
   
   // Event data
   const [event, setEvent] = useState(null);
@@ -30,7 +112,7 @@ export default function PhotoFindMobile() {
   const [selfieImage, setSelfieImage] = useState(null);
   const [searchingFace, setSearchingFace] = useState(false);
   
-  // Steps: welcome, selfie, photos, delivery, payment, confirm, success
+  // Steps: welcome, selfie, photos, delivery, payment, payment-stripe, payment-paypal, success
   const [step, setStep] = useState("welcome");
   
   // Delivery options
@@ -41,27 +123,43 @@ export default function PhotoFindMobile() {
   const [email, setEmail] = useState("");
   
   // Payment
-  const [paymentMethod, setPaymentMethod] = useState(null);
   const [processing, setProcessing] = useState(false);
   
-  // Cash code
-  const [cashCodeRequestId, setCashCodeRequestId] = useState(null);
-  const [cashCode, setCashCode] = useState("");
-  const [cashCodeError, setCashCodeError] = useState("");
+  // Stripe payment
+  const [stripeClientSecret, setStripeClientSecret] = useState(null);
+  const [stripeOrderId, setStripeOrderId] = useState(null);
+  
+  // PayPal payment
+  const [paypalOrderId, setPaypalOrderId] = useState(null);
+  const [paypalQrCode, setPaypalQrCode] = useState(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const paymentCheckInterval = useRef(null);
   
   // Video ref for selfie
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
 
-  // Cleanup camera on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
+      if (paymentCheckInterval.current) {
+        clearInterval(paymentCheckInterval.current);
+      }
     };
   }, []);
+  
+  // Check for PayPal return
+  useEffect(() => {
+    const paypalSuccess = searchParams.get("paypal_success");
+    const orderId = searchParams.get("order_id");
+    if (paypalSuccess === "true" && orderId) {
+      handlePayPalSuccess(orderId);
+    }
+  }, [searchParams]);
 
   // Load event data
   useEffect(() => {
@@ -313,51 +411,117 @@ export default function PhotoFindMobile() {
     return res.data;
   };
 
-  // Handle cash payment
-  const handleCashPayment = async () => {
+  // Create Stripe payment intent
+  const createStripePayment = async () => {
     setProcessing(true);
     try {
-      const res = await axios.post(`${API}/public/photofind/${eventId}/request-cash-code`, {
+      const amount = calculatePrice();
+      const res = await axios.post(`${API}/public/photofind/${eventId}/create-stripe-payment`, {
         photo_ids: selectedPhotos,
-        amount: calculatePrice(),
-        delivery_method: deliveryMethod,
-        delivery_info: getDeliveryInfo()
+        amount: amount,
+        format: "digital",
+        email: email || null
       });
-      setCashCodeRequestId(res.data.request_id);
-      setCashCode("");
-      setCashCodeError("");
-      setStep("cash-code");
+      
+      setStripeClientSecret(res.data.client_secret);
+      setStripeOrderId(res.data.payment_intent_id);
+      setStep("payment-stripe");
     } catch (e) {
-      toast.error("Erreur lors de la demande de code");
+      toast.error("Erreur lors de la création du paiement");
+      console.error(e);
     } finally {
       setProcessing(false);
     }
   };
 
-  // Validate cash code
-  const validateCashCode = async () => {
-    if (cashCode.length !== 4) {
-      setCashCodeError("Veuillez entrer un code à 4 chiffres");
-      return;
-    }
-    
+  // Handle successful Stripe payment
+  const handleStripeSuccess = async (paymentIntentId) => {
     setProcessing(true);
     try {
-      const res = await axios.post(`${API}/public/photofind/${eventId}/validate-cash-code-mobile`, {
-        code: cashCode,
-        request_id: cashCodeRequestId,
-        delivery_info: getDeliveryInfo(),
+      // Create the remote order with Stripe payment info
+      await createRemotePrintOrder({
+        method: "stripe",
+        payment_id: paymentIntentId
+      });
+      
+      toast.success("Paiement confirmé !");
+      setStep("success");
+    } catch (e) {
+      toast.error("Erreur lors de la confirmation");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Create PayPal order and get QR code
+  const createPayPalOrder = async () => {
+    setProcessing(true);
+    try {
+      const amount = calculatePrice();
+      const res = await axios.post(`${API}/public/photofind/${eventId}/create-paypal-order`, {
+        photo_ids: selectedPhotos,
+        amount: amount,
+        return_url: `${window.location.origin}/kiosk-mobile/${eventId}?paypal_success=true`
+      });
+      
+      setPaypalOrderId(res.data.order_id);
+      setPaypalQrCode(res.data.qr_code_url || res.data.approval_url);
+      setStep("payment-paypal");
+      
+      // Start checking for payment confirmation
+      startPaymentCheck(res.data.order_id);
+    } catch (e) {
+      toast.error("Erreur lors de la création du paiement PayPal");
+      console.error(e);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Start polling for PayPal payment confirmation
+  const startPaymentCheck = (orderId) => {
+    setCheckingPayment(true);
+    paymentCheckInterval.current = setInterval(async () => {
+      try {
+        const res = await axios.get(`${API}/public/photofind/${eventId}/check-payment/${orderId}`);
+        if (res.data.status === "COMPLETED" || res.data.status === "APPROVED") {
+          clearInterval(paymentCheckInterval.current);
+          setCheckingPayment(false);
+          handlePayPalSuccess(orderId);
+        }
+      } catch (e) {
+        // Continue checking
+      }
+    }, 3000);
+  };
+
+  // Handle successful PayPal payment
+  const handlePayPalSuccess = async (orderId) => {
+    setProcessing(true);
+    try {
+      // Capture the payment
+      const captureRes = await axios.post(`${API}/public/photofind/${eventId}/capture-paypal-order`, {
+        order_id: orderId,
+        photo_ids: selectedPhotos,
         email: email || null
       });
       
-      if (res.data.valid) {
-        toast.success("Commande envoyée !");
+      if (captureRes.data.success) {
+        // Create the remote order
+        await createRemotePrintOrder({
+          method: "paypal",
+          payment_id: orderId
+        });
+        
+        toast.success("Paiement PayPal confirmé !");
         setStep("success");
       } else {
-        setCashCodeError("Code incorrect");
+        toast.error("Erreur de paiement PayPal");
+        setStep("payment");
       }
     } catch (e) {
-      setCashCodeError(e.response?.data?.detail || "Erreur");
+      toast.error("Erreur lors de la confirmation PayPal");
+      setStep("payment");
     } finally {
       setProcessing(false);
     }
@@ -697,62 +861,111 @@ export default function PhotoFindMobile() {
             </div>
             
             <div className="space-y-3">
+              {/* Stripe - Carte bancaire */}
               <button
-                onClick={handleCashPayment}
+                onClick={createStripePayment}
                 disabled={processing}
-                className="w-full p-4 bg-green-600 hover:bg-green-700 rounded-xl font-bold flex items-center justify-center gap-3"
+                className="w-full p-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold flex items-center justify-center gap-3"
               >
-                {processing ? <Loader className="animate-spin" size={20} /> : "💶"}
-                Payer en espèces / CB au photographe
+                {processing ? <Loader className="animate-spin" size={20} /> : <CreditCard size={24} />}
+                Payer par Carte Bancaire
               </button>
               
-              {/* TODO: Add Stripe and PayPal buttons */}
+              {/* PayPal */}
+              <button
+                onClick={createPayPalOrder}
+                disabled={processing}
+                className="w-full p-4 bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl font-bold flex items-center justify-center gap-3"
+              >
+                {processing ? <Loader className="animate-spin" size={20} /> : (
+                  <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.59 3.025-2.566 6.082-8.558 6.082h-2.19c-1.717 0-3.146 1.27-3.403 2.958l-1.12 7.106H2.47c-.99 0-1.776.871-1.633 1.862l.326 2.26c.143.991 1.01 1.732 2.003 1.732h4.606c1.717 0 3.146-1.27 3.403-2.958l.812-5.148h2.398c5.553 0 9.55-2.857 10.635-8.437.386-1.985.066-3.594-.798-4.67z"/>
+                  </svg>
+                )}
+                Payer avec PayPal
+              </button>
             </div>
           </div>
         )}
 
-        {/* Step: Cash Code */}
-        {step === "cash-code" && (
-          <div className="text-center py-8">
-            <div className="text-6xl mb-6">🔐</div>
-            <h2 className="text-2xl font-bold mb-4">Code de confirmation</h2>
-            <p className="text-white/70 mb-6">
-              Demandez le code au photographe après avoir payé
-            </p>
+        {/* Step: Stripe Payment */}
+        {step === "payment-stripe" && stripeClientSecret && (
+          <div>
+            <button onClick={() => {
+              setStripeClientSecret(null);
+              setStep("payment");
+            }} className="text-white/60 mb-4 flex items-center">
+              <ArrowLeft size={20} className="mr-2" /> Retour
+            </button>
             
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={4}
-              placeholder="- - - -"
-              value={cashCode}
-              onChange={(e) => {
-                setCashCode(e.target.value.replace(/\D/g, '').slice(0, 4));
-                setCashCodeError("");
-              }}
-              className="w-32 mx-auto bg-white/10 border-2 border-white/30 text-white text-3xl text-center tracking-[0.5em] px-4 py-3 rounded-xl"
-            />
+            <h2 className="text-xl font-bold mb-4">Paiement par carte</h2>
             
-            {cashCodeError && (
-              <p className="text-red-400 mt-4">{cashCodeError}</p>
-            )}
+            <Elements stripe={getStripe()} options={{ clientSecret: stripeClientSecret }}>
+              <StripeCheckoutForm 
+                amount={calculatePrice()}
+                onSuccess={handleStripeSuccess}
+                onCancel={() => {
+                  setStripeClientSecret(null);
+                  setStep("payment");
+                }}
+              />
+            </Elements>
+          </div>
+        )}
+
+        {/* Step: PayPal Payment */}
+        {step === "payment-paypal" && (
+          <div className="text-center">
+            <button onClick={() => {
+              if (paymentCheckInterval.current) {
+                clearInterval(paymentCheckInterval.current);
+              }
+              setCheckingPayment(false);
+              setStep("payment");
+            }} className="text-white/60 mb-4 flex items-center">
+              <ArrowLeft size={20} className="mr-2" /> Retour
+            </button>
             
-            <div className="flex gap-4 justify-center mt-8">
-              <button
-                onClick={() => setStep("payment")}
-                className="px-6 py-3 bg-white/10 rounded-xl"
-              >
-                Retour
-              </button>
-              <button
-                onClick={validateCashCode}
-                disabled={processing || cashCode.length !== 4}
-                className="px-6 py-3 bg-green-600 rounded-xl font-bold disabled:opacity-50"
-              >
-                {processing ? <Loader className="animate-spin" size={20} /> : "Valider"}
-              </button>
+            <h2 className="text-xl font-bold mb-4">Paiement PayPal</h2>
+            
+            <div className="bg-white/10 rounded-xl p-6 mb-6">
+              <p className="text-white/70 mb-4">
+                Scannez le QR code ou cliquez sur le lien pour payer
+              </p>
+              
+              {paypalQrCode && (
+                <>
+                  <div className="bg-white p-4 rounded-xl inline-block mb-4">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(paypalQrCode)}`}
+                      alt="QR Code PayPal"
+                      className="w-48 h-48"
+                    />
+                  </div>
+                  <div>
+                    <a 
+                      href={paypalQrCode}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-yellow-400 underline text-sm"
+                    >
+                      Ouvrir PayPal
+                    </a>
+                  </div>
+                </>
+              )}
+              
+              {checkingPayment && (
+                <div className="mt-6 flex items-center justify-center gap-2 text-white/60">
+                  <Loader className="animate-spin" size={20} />
+                  <span>En attente du paiement...</span>
+                </div>
+              )}
             </div>
+            
+            <p className="text-white/50 text-sm">
+              Montant: {calculatePrice()}€
+            </p>
           </div>
         )}
 
