@@ -112,7 +112,7 @@ export default function PhotoFindMobile() {
   const [selfieImage, setSelfieImage] = useState(null);
   const [searchingFace, setSearchingFace] = useState(false);
   
-  // Steps: welcome, selfie, photos, delivery, payment, payment-stripe, payment-paypal, success
+  // Steps: welcome, selfie, photos, delivery, payment, payment-stripe, processing, success
   const [step, setStep] = useState("welcome");
   
   // Delivery options
@@ -131,9 +131,6 @@ export default function PhotoFindMobile() {
   
   // PayPal payment
   const [paypalOrderId, setPaypalOrderId] = useState(null);
-  const [paypalQrCode, setPaypalQrCode] = useState(null);
-  const [checkingPayment, setCheckingPayment] = useState(false);
-  const paymentCheckInterval = useRef(null);
   
   // Video ref for selfie
   const videoRef = useRef(null);
@@ -146,18 +143,42 @@ export default function PhotoFindMobile() {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
-      if (paymentCheckInterval.current) {
-        clearInterval(paymentCheckInterval.current);
-      }
     };
   }, []);
   
   // Check for PayPal return
   useEffect(() => {
     const paypalSuccess = searchParams.get("paypal_success");
-    const orderId = searchParams.get("order_id");
-    if (paypalSuccess === "true" && orderId) {
-      handlePayPalSuccess(orderId);
+    
+    if (paypalSuccess === "true") {
+      // Get stored data from localStorage
+      const orderId = localStorage.getItem('pending_paypal_order');
+      const storedPhotos = localStorage.getItem('pending_paypal_photos');
+      const storedDelivery = localStorage.getItem('pending_paypal_delivery');
+      
+      if (orderId) {
+        // Restore state
+        if (storedPhotos) {
+          try {
+            setSelectedPhotos(JSON.parse(storedPhotos));
+          } catch (e) {}
+        }
+        if (storedDelivery) {
+          try {
+            const delivery = JSON.parse(storedDelivery);
+            setDeliveryMethod(delivery.method);
+            setEmail(delivery.email || "");
+          } catch (e) {}
+        }
+        
+        // Process the payment
+        handlePayPalSuccess(orderId);
+        
+        // Clean up localStorage
+        localStorage.removeItem('pending_paypal_order');
+        localStorage.removeItem('pending_paypal_photos');
+        localStorage.removeItem('pending_paypal_delivery');
+      }
     }
   }, [searchParams]);
 
@@ -453,7 +474,7 @@ export default function PhotoFindMobile() {
     }
   };
 
-  // Create PayPal order and get QR code
+  // Create PayPal order and redirect directly
   const createPayPalOrder = async () => {
     setProcessing(true);
     try {
@@ -463,43 +484,41 @@ export default function PhotoFindMobile() {
         amount: amount,
         email: email || "",
         format: "digital",
-        return_url: `${window.location.origin}/kiosk-mobile/${eventId}?paypal_success=true`
+        return_url: `${window.location.origin}/kiosk-mobile/${eventId}?paypal_success=true&order_id=`
       });
       
-      setPaypalOrderId(res.data.order_id);
-      setPaypalQrCode(res.data.approval_url);
-      setStep("payment-paypal");
+      const orderId = res.data.order_id;
+      const approvalUrl = res.data.approval_url;
       
-      // Start checking for payment confirmation
-      startPaymentCheck(res.data.order_id);
+      setPaypalOrderId(orderId);
+      
+      if (approvalUrl) {
+        // Store order ID in localStorage for when user returns
+        localStorage.setItem('pending_paypal_order', orderId);
+        localStorage.setItem('pending_paypal_photos', JSON.stringify(selectedPhotos));
+        localStorage.setItem('pending_paypal_delivery', JSON.stringify({
+          method: deliveryMethod,
+          info: getDeliveryInfo(),
+          email: email
+        }));
+        
+        // Redirect directly to PayPal
+        window.location.href = approvalUrl;
+      } else {
+        toast.error("Impossible d'ouvrir PayPal");
+        setProcessing(false);
+      }
     } catch (e) {
       toast.error("Erreur lors de la création du paiement PayPal");
       console.error(e);
-    } finally {
       setProcessing(false);
     }
-  };
-
-  // Start polling for PayPal payment confirmation
-  const startPaymentCheck = (orderId) => {
-    setCheckingPayment(true);
-    paymentCheckInterval.current = setInterval(async () => {
-      try {
-        const res = await axios.get(`${API}/public/photofind/${eventId}/check-payment/${orderId}`);
-        if (res.data.status === "COMPLETED" || res.data.status === "APPROVED") {
-          clearInterval(paymentCheckInterval.current);
-          setCheckingPayment(false);
-          handlePayPalSuccess(orderId);
-        }
-      } catch (e) {
-        // Continue checking
-      }
-    }, 3000);
   };
 
   // Handle successful PayPal payment
   const handlePayPalSuccess = async (orderId) => {
     setProcessing(true);
+    setStep("processing"); // Show processing state
     try {
       // Capture the payment
       const captureRes = await axios.post(`${API}/public/photofind/${eventId}/capture-paypal-order`, {
@@ -521,11 +540,12 @@ export default function PhotoFindMobile() {
         setStep("success");
       } else {
         toast.error("Erreur de paiement PayPal");
-        setStep("payment");
+        setStep("welcome");
       }
     } catch (e) {
+      console.error("PayPal capture error:", e);
       toast.error("Erreur lors de la confirmation PayPal");
-      setStep("payment");
+      setStep("welcome");
     } finally {
       setProcessing(false);
     }
@@ -917,49 +937,12 @@ export default function PhotoFindMobile() {
           </div>
         )}
 
-        {/* Step: PayPal Payment */}
-        {step === "payment-paypal" && (
-          <div className="text-center">
-            <button onClick={() => {
-              if (paymentCheckInterval.current) {
-                clearInterval(paymentCheckInterval.current);
-              }
-              setCheckingPayment(false);
-              setStep("payment");
-            }} className="text-white/60 mb-4 flex items-center">
-              <ArrowLeft size={20} className="mr-2" /> Retour
-            </button>
-            
-            <h2 className="text-xl font-bold mb-4">Paiement PayPal</h2>
-            
-            <div className="bg-white/10 rounded-xl p-6 mb-6">
-              <div className="text-5xl mb-4">💳</div>
-              <p className="text-white/70 mb-6">
-                Cliquez sur le bouton pour finaliser votre paiement
-              </p>
-              
-              {paypalQrCode && (
-                <a 
-                  href={paypalQrCode}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 px-6 rounded-xl"
-                >
-                  Ouvrir PayPal - {calculatePrice()}€
-                </a>
-              )}
-              
-              {checkingPayment && (
-                <div className="mt-6 flex items-center justify-center gap-2 text-white/60">
-                  <Loader className="animate-spin" size={20} />
-                  <span>En attente de confirmation...</span>
-                </div>
-              )}
-            </div>
-            
-            <p className="text-white/50 text-sm">
-              Revenez sur cette page après le paiement
-            </p>
+        {/* Step: Processing Payment (shown when returning from PayPal) */}
+        {step === "processing" && (
+          <div className="text-center py-12">
+            <Loader className="animate-spin mx-auto mb-6 text-primary" size={64} />
+            <h2 className="text-xl font-bold mb-4">Traitement du paiement...</h2>
+            <p className="text-white/60">Veuillez patienter</p>
           </div>
         )}
 
