@@ -484,11 +484,17 @@ export default function PhotoFindMobile() {
         amount: amount,
         email: email || "",
         format: "digital",
-        return_url: `${window.location.origin}/kiosk-mobile/${eventId}?paypal_success=true&order_id=`
+        return_url: `${window.location.origin}/kiosk-mobile/${eventId}?paypal_success=true`
       });
       
       const orderId = res.data.order_id;
-      const approvalUrl = res.data.approval_url;
+      // Try to get approval_url from response, or construct it from order_id
+      let approvalUrl = res.data.approval_url;
+      
+      // Fallback: construct PayPal URL if not provided by backend
+      if (!approvalUrl && orderId) {
+        approvalUrl = `https://www.paypal.com/checkoutnow?token=${orderId}`;
+      }
       
       setPaypalOrderId(orderId);
       
@@ -505,7 +511,7 @@ export default function PhotoFindMobile() {
         // Redirect directly to PayPal
         window.location.href = approvalUrl;
       } else {
-        toast.error("Impossible d'ouvrir PayPal");
+        toast.error("Impossible d'ouvrir PayPal - ID manquant");
         setProcessing(false);
       }
     } catch (e) {
