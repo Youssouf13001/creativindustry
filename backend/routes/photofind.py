@@ -92,22 +92,23 @@ class KioskPrintLog(BaseModel):
 
 class KioskPayPalOrderRequest(BaseModel):
     photo_ids: List[str]
-    email: str
+    email: Optional[str] = None
     amount: float
     format: Optional[str] = "digital"
     frame_id: Optional[str] = None
+    return_url: Optional[str] = None
 
 class KioskCapturePayPalRequest(BaseModel):
     order_id: str
     photo_ids: List[str]
-    email: str
+    email: Optional[str] = None
     amount: float
     format: Optional[str] = "digital"
     frame_id: Optional[str] = None
 
 class KioskStripePaymentIntent(BaseModel):
     photo_ids: List[str]
-    email: str
+    email: Optional[str] = None
     amount: float
     format: Optional[str] = "digital"
     frame_id: Optional[str] = None
@@ -1081,29 +1082,48 @@ async def create_paypal_order(event_id: str, data: KioskPayPalOrderRequest):
     
     access_token = auth_response.json()["access_token"]
     
-    # Create order
+    # Create order with application context for redirect
+    order_payload = {
+        "intent": "CAPTURE",
+        "purchase_units": [{
+            "amount": {
+                "currency_code": "EUR",
+                "value": str(data.amount)
+            },
+            "description": f"PhotoFind - {len(data.photo_ids)} photo(s)"
+        }]
+    }
+    
+    # Add application context for mobile redirect
+    if data.return_url:
+        order_payload["application_context"] = {
+            "return_url": data.return_url,
+            "cancel_url": data.return_url,
+            "landing_page": "NO_PREFERENCE",
+            "user_action": "PAY_NOW"
+        }
+    
     order_response = requests.post(
         "https://api-m.paypal.com/v2/checkout/orders",
         headers={
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json"
         },
-        json={
-            "intent": "CAPTURE",
-            "purchase_units": [{
-                "amount": {
-                    "currency_code": "EUR",
-                    "value": str(data.amount)
-                },
-                "description": f"PhotoFind - {len(data.photo_ids)} photo(s)"
-            }]
-        }
+        json=order_payload
     )
     
     if order_response.status_code != 201:
+        logging.error(f"PayPal order creation error: {order_response.text}")
         raise HTTPException(status_code=500, detail="Erreur création commande PayPal")
     
     order_data = order_response.json()
+    
+    # Get approval URL
+    approval_url = None
+    for link in order_data.get("links", []):
+        if link.get("rel") == "approve":
+            approval_url = link.get("href")
+            break
     
     # Store pending order
     pending_order = {
@@ -1121,7 +1141,10 @@ async def create_paypal_order(event_id: str, data: KioskPayPalOrderRequest):
     
     await db.photofind_pending_orders.insert_one(pending_order)
     
-    return {"order_id": order_data["id"]}
+    return {
+        "order_id": order_data["id"],
+        "approval_url": approval_url
+    }
 
 @router.get("/public/photofind/{event_id}/check-payment/{order_id}")
 async def check_paypal_payment(event_id: str, order_id: str):

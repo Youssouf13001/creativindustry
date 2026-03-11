@@ -420,7 +420,7 @@ export default function PhotoFindMobile() {
         photo_ids: selectedPhotos,
         amount: amount,
         format: "digital",
-        email: email || null
+        email: email || ""
       });
       
       setStripeClientSecret(res.data.client_secret);
@@ -461,11 +461,13 @@ export default function PhotoFindMobile() {
       const res = await axios.post(`${API}/public/photofind/${eventId}/create-paypal-order`, {
         photo_ids: selectedPhotos,
         amount: amount,
+        email: email || "",
+        format: "digital",
         return_url: `${window.location.origin}/kiosk-mobile/${eventId}?paypal_success=true`
       });
       
       setPaypalOrderId(res.data.order_id);
-      setPaypalQrCode(res.data.qr_code_url || res.data.approval_url);
+      setPaypalQrCode(res.data.approval_url);
       setStep("payment-paypal");
       
       // Start checking for payment confirmation
@@ -503,7 +505,9 @@ export default function PhotoFindMobile() {
       const captureRes = await axios.post(`${API}/public/photofind/${eventId}/capture-paypal-order`, {
         order_id: orderId,
         photo_ids: selectedPhotos,
-        email: email || null
+        email: email || "",
+        amount: calculatePrice(),
+        format: "digital"
       });
       
       if (captureRes.data.success) {
