@@ -929,42 +929,32 @@ export default function PhotoFindMobile() {
             <h2 className="text-xl font-bold mb-4">Paiement PayPal</h2>
             
             <div className="bg-white/10 rounded-xl p-6 mb-6">
-              <p className="text-white/70 mb-4">
-                Scannez le QR code ou cliquez sur le lien pour payer
+              <div className="text-5xl mb-4">💳</div>
+              <p className="text-white/70 mb-6">
+                Cliquez sur le bouton pour finaliser votre paiement
               </p>
               
               {paypalQrCode && (
-                <>
-                  <div className="bg-white p-4 rounded-xl inline-block mb-4">
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(paypalQrCode)}`}
-                      alt="QR Code PayPal"
-                      className="w-48 h-48"
-                    />
-                  </div>
-                  <div>
-                    <a 
-                      href={paypalQrCode}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-yellow-400 underline text-sm"
-                    >
-                      Ouvrir PayPal
-                    </a>
-                  </div>
-                </>
+                <a 
+                  href={paypalQrCode}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 px-6 rounded-xl"
+                >
+                  Ouvrir PayPal - {calculatePrice()}€
+                </a>
               )}
               
               {checkingPayment && (
                 <div className="mt-6 flex items-center justify-center gap-2 text-white/60">
                   <Loader className="animate-spin" size={20} />
-                  <span>En attente du paiement...</span>
+                  <span>En attente de confirmation...</span>
                 </div>
               )}
             </div>
             
             <p className="text-white/50 text-sm">
-              Montant: {calculatePrice()}€
+              Revenez sur cette page après le paiement
             </p>
           </div>
         )}
