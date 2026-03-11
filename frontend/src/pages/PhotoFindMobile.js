@@ -122,7 +122,9 @@ export default function PhotoFindMobile() {
   const [locationDescription, setLocationDescription] = useState("");
   const [email, setEmail] = useState("");
   
-  // Payment
+  // Payment - separate loading states for each method
+  const [processingStripe, setProcessingStripe] = useState(false);
+  const [processingPaypal, setProcessingPaypal] = useState(false);
   const [processing, setProcessing] = useState(false);
   
   // Stripe payment
@@ -157,30 +159,79 @@ export default function PhotoFindMobile() {
       const storedDelivery = localStorage.getItem('pending_paypal_delivery');
       
       if (orderId) {
-        // Restore state
+        // Parse stored data
+        let photos = [];
+        let deliveryData = {};
+        
         if (storedPhotos) {
           try {
-            setSelectedPhotos(JSON.parse(storedPhotos));
+            photos = JSON.parse(storedPhotos);
           } catch (e) {}
         }
         if (storedDelivery) {
           try {
-            const delivery = JSON.parse(storedDelivery);
-            setDeliveryMethod(delivery.method);
-            setEmail(delivery.email || "");
+            deliveryData = JSON.parse(storedDelivery);
           } catch (e) {}
         }
         
-        // Process the payment
-        handlePayPalSuccess(orderId);
-        
-        // Clean up localStorage
+        // Clean up localStorage first
         localStorage.removeItem('pending_paypal_order');
         localStorage.removeItem('pending_paypal_photos');
         localStorage.removeItem('pending_paypal_delivery');
+        
+        // Process PayPal payment with stored data
+        processPayPalReturn(orderId, photos, deliveryData);
       }
     }
   }, [searchParams]);
+  
+  // Process PayPal return with stored data
+  const processPayPalReturn = async (orderId, photos, deliveryData) => {
+    setProcessing(true);
+    setStep("processing");
+    
+    try {
+      // Calculate amount based on stored photos
+      const amount = photos.length * (event?.price_per_photo || 3);
+      
+      // Capture the payment
+      const captureRes = await axios.post(`${API}/public/photofind/${eventId}/capture-paypal-order`, {
+        order_id: orderId,
+        photo_ids: photos,
+        email: deliveryData.email || "",
+        amount: amount,
+        format: "digital"
+      });
+      
+      if (captureRes.data.success) {
+        // Create the remote order
+        const orderData = {
+          photo_ids: photos,
+          amount: amount,
+          delivery_method: deliveryData.method || "print",
+          delivery_info: deliveryData.info || { type: "pickup" },
+          payment_method: "paypal",
+          payment_id: orderId,
+          email: deliveryData.email || null
+        };
+        
+        await axios.post(`${API}/public/photofind/${eventId}/remote-print-order`, orderData);
+        
+        toast.success("Paiement PayPal confirmé !");
+        setStep("success");
+        setDeliveryMethod(deliveryData.method || "print");
+      } else {
+        toast.error("Erreur de paiement PayPal");
+        setStep("welcome");
+      }
+    } catch (e) {
+      console.error("PayPal capture error:", e);
+      toast.error("Erreur lors de la confirmation PayPal");
+      setStep("welcome");
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   // Load event data
   useEffect(() => {
@@ -434,7 +485,7 @@ export default function PhotoFindMobile() {
 
   // Create Stripe payment intent
   const createStripePayment = async () => {
-    setProcessing(true);
+    setProcessingStripe(true);
     try {
       const amount = calculatePrice();
       const res = await axios.post(`${API}/public/photofind/${eventId}/create-stripe-payment`, {
@@ -451,7 +502,7 @@ export default function PhotoFindMobile() {
       toast.error("Erreur lors de la création du paiement");
       console.error(e);
     } finally {
-      setProcessing(false);
+      setProcessingStripe(false);
     }
   };
 
@@ -476,7 +527,7 @@ export default function PhotoFindMobile() {
 
   // Create PayPal order and redirect directly
   const createPayPalOrder = async () => {
-    setProcessing(true);
+    setProcessingPaypal(true);
     try {
       const amount = calculatePrice();
       const res = await axios.post(`${API}/public/photofind/${eventId}/create-paypal-order`, {
@@ -512,12 +563,12 @@ export default function PhotoFindMobile() {
         window.location.href = approvalUrl;
       } else {
         toast.error("Impossible d'ouvrir PayPal - ID manquant");
-        setProcessing(false);
+        setProcessingPaypal(false);
       }
     } catch (e) {
       toast.error("Erreur lors de la création du paiement PayPal");
       console.error(e);
-      setProcessing(false);
+      setProcessingPaypal(false);
     }
   };
 
@@ -894,20 +945,20 @@ export default function PhotoFindMobile() {
               {/* Stripe - Carte bancaire */}
               <button
                 onClick={createStripePayment}
-                disabled={processing}
-                className="w-full p-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold flex items-center justify-center gap-3"
+                disabled={processingStripe || processingPaypal}
+                className="w-full p-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold flex items-center justify-center gap-3 disabled:opacity-50"
               >
-                {processing ? <Loader className="animate-spin" size={20} /> : <CreditCard size={24} />}
+                {processingStripe ? <Loader className="animate-spin" size={20} /> : <CreditCard size={24} />}
                 Payer par Carte Bancaire
               </button>
               
               {/* PayPal */}
               <button
                 onClick={createPayPalOrder}
-                disabled={processing}
-                className="w-full p-4 bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl font-bold flex items-center justify-center gap-3"
+                disabled={processingStripe || processingPaypal}
+                className="w-full p-4 bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl font-bold flex items-center justify-center gap-3 disabled:opacity-50"
               >
-                {processing ? <Loader className="animate-spin" size={20} /> : (
+                {processingPaypal ? <Loader className="animate-spin" size={20} /> : (
                   <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.59 3.025-2.566 6.082-8.558 6.082h-2.19c-1.717 0-3.146 1.27-3.403 2.958l-1.12 7.106H2.47c-.99 0-1.776.871-1.633 1.862l.326 2.26c.143.991 1.01 1.732 2.003 1.732h4.606c1.717 0 3.146-1.27 3.403-2.958l.812-5.148h2.398c5.553 0 9.55-2.857 10.635-8.437.386-1.985.066-3.594-.798-4.67z"/>
                   </svg>
