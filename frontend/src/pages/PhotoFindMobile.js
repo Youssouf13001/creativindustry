@@ -93,7 +93,7 @@ export default function PhotoFindMobile() {
     }
   };
 
-  // Start camera for selfie
+  // Start camera for selfie - iOS Safari compatible
   const startCamera = async () => {
     try {
       // Check if getUserMedia is supported
@@ -102,35 +102,62 @@ export default function PhotoFindMobile() {
         return;
       }
       
-      // Simplified constraints for maximum iOS/Safari compatibility
+      // First, set selfieMode to true so the video element is rendered
+      setSelfieMode(true);
+      
+      // Wait a tick for React to render the video element
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Minimal constraints for maximum iOS compatibility
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: {
-          facingMode: "user"
-        },
+        video: true,
         audio: false
       });
       
       streamRef.current = stream;
       
-      if (videoRef.current) {
-        // Critical for iOS: set attributes before srcObject
-        videoRef.current.setAttribute('autoplay', '');
-        videoRef.current.setAttribute('playsinline', '');
-        videoRef.current.setAttribute('muted', '');
+      // Get the video element after React has rendered it
+      const video = videoRef.current;
+      if (video) {
+        // iOS Safari requires these to be set as properties
+        video.muted = true;
+        video.playsInline = true;
+        video.autoplay = true;
         
-        videoRef.current.srcObject = stream;
+        // Also set as attributes for older iOS versions
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute('muted', 'true');
+        video.setAttribute('autoplay', 'true');
         
-        // Wait for metadata then play
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current.play().catch(err => {
-            console.error("Video play error:", err);
-          });
+        // Attach the stream
+        video.srcObject = stream;
+        
+        // Force play with multiple attempts for iOS
+        const tryPlay = async () => {
+          try {
+            await video.play();
+            console.log("Video playing successfully");
+          } catch (err) {
+            console.error("Play attempt failed:", err);
+          }
         };
+        
+        // Try to play immediately
+        tryPlay();
+        
+        // Also try when metadata is loaded
+        video.onloadedmetadata = () => {
+          tryPlay();
+        };
+        
+        // And try again after a short delay (iOS sometimes needs this)
+        setTimeout(tryPlay, 300);
+        setTimeout(tryPlay, 1000);
       }
-      
-      setSelfieMode(true);
     } catch (e) {
       console.error("Camera error:", e);
+      setSelfieMode(false);
       if (e.name === 'NotAllowedError') {
         toast.error("Accès à la caméra refusé. Autorisez l'accès dans les paramètres.");
       } else if (e.name === 'NotFoundError') {
@@ -380,8 +407,8 @@ export default function PhotoFindMobile() {
             </p>
             <button
               onClick={() => {
-                startCamera();
                 setStep("selfie");
+                startCamera();
               }}
               className="bg-primary text-black font-bold px-8 py-4 rounded-xl text-lg"
             >
@@ -398,18 +425,21 @@ export default function PhotoFindMobile() {
             
             {selfieMode ? (
               <div className="relative flex flex-col items-center">
-                <div className="relative bg-black rounded-xl overflow-hidden" style={{ width: '300px', height: '400px' }}>
+                <div className="relative bg-gray-900 rounded-xl overflow-hidden" style={{ width: '300px', height: '400px' }}>
                   <video 
                     ref={videoRef} 
                     autoPlay
                     playsInline
                     muted
+                    webkit-playsinline="true"
+                    x-webkit-airplay="allow"
                     style={{ 
                       width: '100%', 
                       height: '100%', 
                       objectFit: 'cover',
                       transform: 'scaleX(-1)',
-                      background: '#000'
+                      background: '#1a1a1a',
+                      display: 'block'
                     }}
                   />
                   {/* Face guide */}
