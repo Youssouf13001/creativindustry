@@ -9,7 +9,7 @@ import requests
 import os
 import uuid
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://photofind-kiosk.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://photo-table-order.preview.emergentagent.com').rstrip('/')
 
 @pytest.fixture(scope="module")
 def admin_token():

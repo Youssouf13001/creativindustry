@@ -102,20 +102,32 @@ export default function PhotoFindMobile() {
         return;
       }
       
-      // Get camera stream - same settings as PhotoFindKiosk
+      // Simplified constraints for maximum iOS/Safari compatibility
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
           facingMode: "user"
         },
         audio: false
       });
       
+      streamRef.current = stream;
+      
       if (videoRef.current) {
+        // Critical for iOS: set attributes before srcObject
+        videoRef.current.setAttribute('autoplay', '');
+        videoRef.current.setAttribute('playsinline', '');
+        videoRef.current.setAttribute('muted', '');
+        
         videoRef.current.srcObject = stream;
-        streamRef.current = stream;
+        
+        // Wait for metadata then play
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current.play().catch(err => {
+            console.error("Video play error:", err);
+          });
+        };
       }
+      
       setSelfieMode(true);
     } catch (e) {
       console.error("Camera error:", e);
@@ -386,15 +398,19 @@ export default function PhotoFindMobile() {
             
             {selfieMode ? (
               <div className="relative flex flex-col items-center">
-                <div className="relative bg-black rounded-xl overflow-hidden" style={{ maxWidth: '320px', width: '100%' }}>
+                <div className="relative bg-black rounded-xl overflow-hidden" style={{ width: '300px', height: '400px' }}>
                   <video 
                     ref={videoRef} 
-                    autoPlay 
-                    playsInline 
+                    autoPlay
+                    playsInline
                     muted
-                    onLoadedMetadata={(e) => e.target.play()}
-                    className="w-full transform scale-x-[-1]"
-                    style={{ minHeight: '240px' }}
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'cover',
+                      transform: 'scaleX(-1)',
+                      background: '#000'
+                    }}
                   />
                   {/* Face guide */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
