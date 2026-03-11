@@ -125,6 +125,13 @@ const PhotoFindKiosk = () => {
   const [processing, setProcessing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   
+  // DNP Direct Print Service
+  const [directPrintAvailable, setDirectPrintAvailable] = useState(false);
+  const [directPrintPrinter, setDirectPrintPrinter] = useState(null);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const [printProgress, setPrintProgress] = useState({ current: 0, total: 0 });
+  const PRINT_SERVICE_URL = "http://localhost:5555";
+  
   // Frame selection
   const [selectedFilter, setSelectedFilter] = useState("none");
   const [customFrames, setCustomFrames] = useState([]);
@@ -226,6 +233,22 @@ const PhotoFindKiosk = () => {
       }
     };
     fetchEvent();
+    
+    // Check if DNP Direct Print Service is available
+    const checkPrintService = async () => {
+      try {
+        const res = await axios.get(`${PRINT_SERVICE_URL}/health`, { timeout: 2000 });
+        if (res.data.status === "ok") {
+          setDirectPrintAvailable(true);
+          setDirectPrintPrinter(res.data.printer);
+          console.log("DNP Print Service disponible:", res.data.printer);
+        }
+      } catch (e) {
+        setDirectPrintAvailable(false);
+        console.log("DNP Print Service non disponible, utilisation de l'impression navigateur");
+      }
+    };
+    checkPrintService();
     
     // Fetch custom frames for this event
     const fetchFrames = async () => {
@@ -522,6 +545,65 @@ const PhotoFindKiosk = () => {
 
   // Auto print after PayPal payment
   const autoPrintPhotos = async () => {
+    // Si le service d'impression directe est disponible, l'utiliser
+    if (directPrintAvailable) {
+      return await directPrintPhotos();
+    }
+    
+    // Sinon, utiliser l'impression navigateur classique
+    return await browserPrintPhotos();
+  };
+  
+  // Impression directe via DNP Print Service (silencieuse, sans dialogue)
+  const directPrintPhotos = async () => {
+    try {
+      setIsPrinting(true);
+      setPrintProgress({ current: 0, total: selectedPhotos.length });
+      
+      const images = selectedPhotos.map(photoId => {
+        const photo = matchedPhotos.find(p => p.id === photoId);
+        if (!photo) return null;
+        const photoUrl = photo.url ? `${BACKEND_URL}${photo.url}` : `${BACKEND_URL}/uploads/photofind/${eventId}/${photo.filename}`;
+        return { url: photoUrl, copies: 1 };
+      }).filter(Boolean);
+      
+      if (images.length === 0) {
+        toast.error("Aucune photo à imprimer");
+        return;
+      }
+      
+      // Envoyer au service d'impression en batch
+      const res = await axios.post(`${PRINT_SERVICE_URL}/print-batch`, {
+        images: images,
+        printer: directPrintPrinter
+      }, { timeout: 120000 }); // 2 minutes timeout pour les gros lots
+      
+      if (res.data.success) {
+        toast.success(`${res.data.printed} photo(s) envoyée(s) à l'imprimante`);
+        
+        // Log print job
+        await axios.post(`${API}/public/photofind/${eventId}/log-print`, {
+          photo_ids: selectedPhotos,
+          count: selectedPhotos.length,
+          method: "direct_dnp"
+        }).catch(() => {});
+      } else {
+        toast.error("Erreur lors de l'impression");
+      }
+      
+    } catch (e) {
+      console.error("Direct print error:", e);
+      toast.error("Erreur d'impression directe, tentative via navigateur...");
+      // Fallback vers l'impression navigateur
+      await browserPrintPhotos();
+    } finally {
+      setIsPrinting(false);
+      setPrintProgress({ current: 0, total: 0 });
+    }
+  };
+  
+  // Impression via navigateur (avec dialogue système)
+  const browserPrintPhotos = async () => {
     try {
       const printWindow = window.open("", "_blank");
       const frame = PHOTO_FILTERS.find(f => f.id === selectedFilter) || PHOTO_FILTERS[0];
@@ -616,7 +698,8 @@ const PhotoFindKiosk = () => {
       // Log print job
       await axios.post(`${API}/public/photofind/${eventId}/log-print`, {
         photo_ids: selectedPhotos,
-        count: selectedPhotos.length
+        count: selectedPhotos.length,
+        method: "browser"
       }).catch(() => {});
       
     } catch (e) {
