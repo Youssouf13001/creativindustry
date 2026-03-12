@@ -113,6 +113,16 @@ class KioskStripePaymentIntent(BaseModel):
     format: Optional[str] = "digital"
     frame_id: Optional[str] = None
 
+# ==================== UPLOAD PRINT SESSION MODELS ====================
+
+class UploadPrintSession(BaseModel):
+    session_id: str
+    event_id: str
+    status: str  # waiting, uploaded, printing, completed
+    photo_url: Optional[str] = None
+    created_at: str
+    expires_at: str
+
 # ==================== AUTH DEPENDENCY ====================
 
 _get_current_admin = None
@@ -1352,3 +1362,164 @@ async def confirm_stripe_payment(event_id: str, data: dict = Body(...)):
     except Exception as e:
         logging.error(f"Stripe confirmation error: {e}")
         raise HTTPException(status_code=500, detail="Erreur confirmation paiement")
+
+
+# ==================== UPLOAD & PRINT FROM PHONE ====================
+
+@router.post("/public/photofind/{event_id}/create-upload-session")
+async def create_upload_session(event_id: str):
+    """
+    Crée une session d'upload pour permettre à un client d'envoyer une photo depuis son téléphone.
+    La borne affiche un QR code avec cette session.
+    """
+    event = await db.photofind_events.find_one({"id": event_id, "is_active": True})
+    if not event:
+        raise HTTPException(status_code=404, detail="Événement non trouvé")
+    
+    session_id = str(uuid.uuid4())[:8].upper()  # Code court facile à lire
+    now = datetime.now(timezone.utc)
+    expires = datetime(now.year, now.month, now.day, now.hour, now.minute + 30, tzinfo=timezone.utc)  # 30 min
+    
+    session = {
+        "session_id": session_id,
+        "event_id": event_id,
+        "status": "waiting",  # waiting, uploaded, printing, completed
+        "photo_url": None,
+        "photo_filename": None,
+        "created_at": now.isoformat(),
+        "expires_at": expires.isoformat()
+    }
+    
+    await db.photofind_upload_sessions.insert_one(session)
+    
+    # Générer l'URL pour le mobile
+    upload_url = f"{SITE_URL}/upload-print/{event_id}/{session_id}"
+    
+    return {
+        "session_id": session_id,
+        "upload_url": upload_url,
+        "expires_in_minutes": 30
+    }
+
+@router.get("/public/photofind/{event_id}/upload-session/{session_id}")
+async def get_upload_session(event_id: str, session_id: str):
+    """
+    Vérifie le statut d'une session d'upload (polling depuis la borne)
+    """
+    session = await db.photofind_upload_sessions.find_one({
+        "session_id": session_id,
+        "event_id": event_id
+    })
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Session non trouvée")
+    
+    # Vérifier expiration
+    expires_at = datetime.fromisoformat(session["expires_at"].replace('Z', '+00:00'))
+    if datetime.now(timezone.utc) > expires_at:
+        return {"status": "expired", "session_id": session_id}
+    
+    return {
+        "session_id": session["session_id"],
+        "status": session["status"],
+        "photo_url": session.get("photo_url"),
+        "created_at": session["created_at"]
+    }
+
+@router.post("/public/photofind/{event_id}/upload-session/{session_id}/upload")
+async def upload_photo_to_session(
+    event_id: str, 
+    session_id: str,
+    file: UploadFile = File(...)
+):
+    """
+    Upload une photo depuis le téléphone vers une session
+    """
+    session = await db.photofind_upload_sessions.find_one({
+        "session_id": session_id,
+        "event_id": event_id
+    })
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Session non trouvée")
+    
+    # Vérifier expiration
+    expires_at = datetime.fromisoformat(session["expires_at"].replace('Z', '+00:00'))
+    if datetime.now(timezone.utc) > expires_at:
+        raise HTTPException(status_code=400, detail="Session expirée")
+    
+    if session["status"] != "waiting":
+        raise HTTPException(status_code=400, detail="Une photo a déjà été uploadée")
+    
+    # Vérifier le type de fichier
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="Fichier image requis")
+    
+    # Sauvegarder le fichier
+    upload_dir = PHOTOFIND_DIR / event_id / "uploads"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    file_ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+    filename = f"upload_{session_id}_{uuid.uuid4().hex[:8]}.{file_ext}"
+    file_path = upload_dir / filename
+    
+    content = await file.read()
+    with open(file_path, 'wb') as f:
+        f.write(content)
+    
+    # URL de la photo
+    photo_url = f"/api/uploads/photofind/{event_id}/uploads/{filename}"
+    
+    # Mettre à jour la session
+    await db.photofind_upload_sessions.update_one(
+        {"session_id": session_id},
+        {"$set": {
+            "status": "uploaded",
+            "photo_url": photo_url,
+            "photo_filename": filename,
+            "uploaded_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {
+        "success": True,
+        "message": "Photo uploadée avec succès",
+        "photo_url": photo_url
+    }
+
+@router.post("/public/photofind/{event_id}/upload-session/{session_id}/complete")
+async def complete_upload_session(event_id: str, session_id: str, data: dict = Body(...)):
+    """
+    Marque une session comme terminée (après impression)
+    """
+    session = await db.photofind_upload_sessions.find_one({
+        "session_id": session_id,
+        "event_id": event_id
+    })
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Session non trouvée")
+    
+    status = data.get("status", "completed")
+    
+    await db.photofind_upload_sessions.update_one(
+        {"session_id": session_id},
+        {"$set": {
+            "status": status,
+            "completed_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    return {"success": True, "status": status}
+
+@router.delete("/public/photofind/{event_id}/upload-session/{session_id}")
+async def cancel_upload_session(event_id: str, session_id: str):
+    """
+    Annule une session d'upload
+    """
+    result = await db.photofind_upload_sessions.delete_one({
+        "session_id": session_id,
+        "event_id": event_id
+    })
+    
+    return {"success": result.deleted_count > 0}

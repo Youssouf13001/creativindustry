@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { Camera, Loader, Download, Printer, Mail, RefreshCw, X, Check, CreditCard, ArrowLeft, Maximize, Smartphone, QrCode, Image, Sparkles } from "lucide-react";
+import { Camera, Loader, Download, Printer, Mail, RefreshCw, X, Check, CreditCard, ArrowLeft, Maximize, Smartphone, QrCode, Image, Sparkles, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { API, BACKEND_URL } from "../config/api";
 import { loadStripe } from "@stripe/stripe-js";
@@ -131,6 +131,12 @@ const PhotoFindKiosk = () => {
   const [isPrinting, setIsPrinting] = useState(false);
   const [printProgress, setPrintProgress] = useState({ current: 0, total: 0 });
   const PRINT_SERVICE_URL = "http://localhost:5555";
+  
+  // Upload from phone feature
+  const [uploadSession, setUploadSession] = useState(null);
+  const [uploadedPhoto, setUploadedPhoto] = useState(null);
+  const [checkingUpload, setCheckingUpload] = useState(false);
+  const uploadCheckInterval = useRef(null);
   
   // Frame selection
   const [selectedFilter, setSelectedFilter] = useState("none");
@@ -819,7 +825,123 @@ const PhotoFindKiosk = () => {
     setDeliveryMethod(null);
     setSelectedFilter("none");
     setWithPhysicalFrame(false);
+    // Clear upload session
+    if (uploadCheckInterval.current) {
+      clearInterval(uploadCheckInterval.current);
+    }
+    setUploadSession(null);
+    setUploadedPhoto(null);
     stopCamera();
+  };
+
+  // ==================== UPLOAD FROM PHONE FUNCTIONS ====================
+  
+  // Create upload session and show QR code
+  const startUploadSession = async () => {
+    try {
+      const res = await axios.post(`${API}/public/photofind/${eventId}/create-upload-session`);
+      setUploadSession(res.data);
+      setStep("upload-qr");
+      
+      // Start polling for uploaded photo
+      startUploadCheck(res.data.session_id);
+    } catch (e) {
+      toast.error("Erreur lors de la création de la session");
+      console.error(e);
+    }
+  };
+  
+  // Poll for uploaded photo
+  const startUploadCheck = (sessionId) => {
+    setCheckingUpload(true);
+    uploadCheckInterval.current = setInterval(async () => {
+      try {
+        const res = await axios.get(`${API}/public/photofind/${eventId}/upload-session/${sessionId}`);
+        
+        if (res.data.status === "uploaded") {
+          clearInterval(uploadCheckInterval.current);
+          setCheckingUpload(false);
+          setUploadedPhoto(res.data.photo_url);
+          setStep("upload-preview");
+          toast.success("Photo reçue !");
+        } else if (res.data.status === "expired") {
+          clearInterval(uploadCheckInterval.current);
+          setCheckingUpload(false);
+          toast.error("Session expirée");
+          setStep("welcome");
+        }
+      } catch (e) {
+        // Continue checking
+      }
+    }, 2000);
+  };
+  
+  // Cancel upload session
+  const cancelUploadSession = async () => {
+    if (uploadCheckInterval.current) {
+      clearInterval(uploadCheckInterval.current);
+    }
+    if (uploadSession) {
+      await axios.delete(`${API}/public/photofind/${eventId}/upload-session/${uploadSession.session_id}`).catch(() => {});
+    }
+    setUploadSession(null);
+    setUploadedPhoto(null);
+    setCheckingUpload(false);
+    setStep("welcome");
+  };
+  
+  // Print uploaded photo
+  const printUploadedPhoto = async () => {
+    if (!uploadedPhoto) return;
+    
+    setIsPrinting(true);
+    try {
+      const photoUrl = `${BACKEND_URL}${uploadedPhoto}`;
+      
+      if (directPrintAvailable) {
+        // Direct print to DNP
+        await axios.post(`${PRINT_SERVICE_URL}/print`, {
+          image_url: photoUrl,
+          copies: 1,
+          printer: directPrintPrinter
+        }, { timeout: 60000 });
+        toast.success("Photo envoyée à l'imprimante !");
+      } else {
+        // Browser print
+        const printWindow = window.open("", "_blank");
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Impression Photo</title>
+            <style>
+              @page { margin: 5mm; }
+              body { margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
+              img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+            </style>
+          </head>
+          <body>
+            <img src="${photoUrl}" onload="setTimeout(() => window.print(), 500)" />
+          </body>
+          </html>
+        `);
+        printWindow.document.close();
+      }
+      
+      // Mark session as completed
+      if (uploadSession) {
+        await axios.post(`${API}/public/photofind/${eventId}/upload-session/${uploadSession.session_id}/complete`, {
+          status: "completed"
+        }).catch(() => {});
+      }
+      
+      setStep("upload-success");
+    } catch (e) {
+      console.error("Print error:", e);
+      toast.error("Erreur d'impression");
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   if (loading) {
@@ -921,11 +1043,22 @@ const PhotoFindKiosk = () => {
                   setStep("camera");
                   startCamera();
                 }}
-                className="group relative mb-16"
+                className="group relative mb-6"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-600 rounded-xl blur-md opacity-50 group-hover:opacity-80 transition-opacity" />
                 <div className="relative bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 text-black font-bold text-2xl px-16 py-5 rounded-xl flex items-center gap-3 shadow-[0_0_30px_rgba(251,191,36,0.5)] hover:shadow-[0_0_50px_rgba(251,191,36,0.7)] transition-all">
                   <Camera size={28} /> Commencer
+                </div>
+              </button>
+              
+              {/* Upload from phone button */}
+              <button
+                onClick={startUploadSession}
+                className="group relative mb-16"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur-md opacity-30 group-hover:opacity-60 transition-opacity" />
+                <div className="relative bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white font-semibold text-lg px-10 py-3 rounded-xl flex items-center gap-3 transition-all">
+                  <Upload size={22} /> Imprimer ma photo
                 </div>
               </button>
               
@@ -973,6 +1106,123 @@ const PhotoFindKiosk = () => {
                 <p className="text-xs text-amber-500/60 tracking-[0.3em] uppercase">France</p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Step: Upload QR Code */}
+        {step === "upload-qr" && uploadSession && (
+          <div className="text-center max-w-2xl mx-auto">
+            <div className="mb-8">
+              <Upload className="mx-auto mb-4 text-primary" size={64} />
+              <h2 className="text-4xl font-bold mb-4">Imprimer votre photo</h2>
+              <p className="text-xl text-white/70">
+                Scannez ce QR code avec votre téléphone pour envoyer votre photo
+              </p>
+            </div>
+            
+            {/* QR Code */}
+            <div className="bg-white p-8 rounded-2xl inline-block mb-8 shadow-[0_0_60px_rgba(255,255,255,0.2)]">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(uploadSession.upload_url)}`}
+                alt="QR Code"
+                className="w-64 h-64"
+              />
+            </div>
+            
+            {/* Session code */}
+            <div className="mb-8">
+              <p className="text-white/50 mb-2">Code de session</p>
+              <p className="text-4xl font-mono font-bold tracking-[0.3em] text-primary">
+                {uploadSession.session_id}
+              </p>
+            </div>
+            
+            {/* Waiting indicator */}
+            {checkingUpload && (
+              <div className="flex items-center justify-center gap-3 text-white/60 mb-8">
+                <Loader className="animate-spin" size={24} />
+                <span>En attente de votre photo...</span>
+              </div>
+            )}
+            
+            {/* Cancel button */}
+            <button
+              onClick={cancelUploadSession}
+              className="bg-white/10 hover:bg-white/20 px-8 py-3 rounded-xl"
+            >
+              Annuler
+            </button>
+          </div>
+        )}
+
+        {/* Step: Upload Preview */}
+        {step === "upload-preview" && uploadedPhoto && (
+          <div className="text-center max-w-4xl mx-auto">
+            <div className="mb-6">
+              <Check className="mx-auto mb-4 text-green-500" size={64} />
+              <h2 className="text-4xl font-bold mb-2">Photo reçue !</h2>
+              <p className="text-xl text-white/70">
+                Votre photo est prête à être imprimée
+              </p>
+            </div>
+            
+            {/* Photo preview */}
+            <div className="bg-white/5 rounded-2xl p-4 mb-8 inline-block">
+              <img 
+                src={`${BACKEND_URL}${uploadedPhoto}`}
+                alt="Votre photo"
+                className="max-h-[50vh] rounded-xl"
+              />
+            </div>
+            
+            {/* Action buttons */}
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={cancelUploadSession}
+                className="bg-white/10 hover:bg-white/20 px-8 py-4 rounded-xl text-lg"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={printUploadedPhoto}
+                disabled={isPrinting}
+                className="bg-gradient-to-r from-amber-400 to-amber-600 text-black font-bold px-12 py-4 rounded-xl text-xl flex items-center gap-3 disabled:opacity-50"
+              >
+                {isPrinting ? (
+                  <>
+                    <Loader className="animate-spin" size={24} />
+                    Impression...
+                  </>
+                ) : (
+                  <>
+                    <Printer size={24} />
+                    Imprimer
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Upload Success */}
+        {step === "upload-success" && (
+          <div className="text-center max-w-2xl mx-auto">
+            <div className="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-8">
+              <Check size={64} className="text-white" />
+            </div>
+            
+            <h2 className="text-5xl font-bold mb-4 text-green-400">Impression lancée !</h2>
+            <p className="text-xl text-white/70 mb-12">
+              Votre photo est en cours d'impression.<br />
+              Récupérez-la auprès du photographe.
+            </p>
+            
+            <button
+              onClick={reset}
+              className="bg-white/10 hover:bg-white/20 px-12 py-4 rounded-xl text-xl"
+            >
+              Retour à l'accueil
+            </button>
           </div>
         )}
 

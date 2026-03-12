@@ -33,6 +33,7 @@ import PhotoFindPage from "./pages/PhotoFindPage";
 import PhotoFindDownloadPage from "./pages/PhotoFindDownloadPage";
 import PhotoFindKiosk from "./pages/PhotoFindKiosk";
 import PhotoFindMobile from "./pages/PhotoFindMobile";
+import UploadPrint from "./pages/UploadPrint";
 import Gallery3DPage from "./pages/Gallery3DPage";
 
 // Layout wrapper that conditionally shows header/footer
@@ -40,7 +41,7 @@ function AppLayout({ children }) {
   const location = useLocation();
   
   // Pages that should be displayed without header/footer (fullscreen mode)
-  const fullscreenPaths = ['/kiosk/', '/galerie3d/', '/kiosk-mobile/'];
+  const fullscreenPaths = ['/kiosk/', '/galerie3d/', '/kiosk-mobile/', '/upload-print/'];
   const isFullscreen = fullscreenPaths.some(path => location.pathname.startsWith(path));
   
   if (isFullscreen) {
@@ -105,6 +106,8 @@ function App() {
           <Route path="/kiosk/:eventId" element={<PhotoFindKiosk />} />
           {/* PhotoFind Mobile - Order from phone */}
           <Route path="/kiosk-mobile/:eventId" element={<PhotoFindMobile />} />
+          {/* Upload Print - Upload photo from phone to kiosk */}
+          <Route path="/upload-print/:eventId/:sessionId" element={<UploadPrint />} />
           {/* Aliases for different URLs */}
           <Route path="/mariages" element={<ServicePage category="wedding" />} />
           <Route path="/podcast" element={<ServicePage category="podcast" />} />
