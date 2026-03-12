@@ -708,16 +708,14 @@ async def download_purchased_photos(purchase_id: str, token: str):
     # Check in photofind_purchases first
     purchase = await db.photofind_purchases.find_one({
         "id": purchase_id,
-        "download_token": token,
-        "status": "completed"
+        "download_token": token
     })
     
     # Also check kiosk_purchases if not found
     if not purchase:
         purchase = await db.photofind_kiosk_purchases.find_one({
             "id": purchase_id,
-            "download_token": token,
-            "status": "completed"
+            "download_token": token
         })
     
     if not purchase:
@@ -751,6 +749,21 @@ async def download_purchased_photos(purchase_id: str, token: str):
                     "url": photo.get("url") or f"/uploads/photofind/{purchase['event_id']}/{photo['filename']}"
                 })
     
+    # Determine actual payment status
+    # If payment_method is "kiosk", "pay_later", "email", or "pending" and no paid_at, it's not paid
+    payment_method = purchase.get("payment_method", "")
+    paid_at = purchase.get("paid_at")
+    
+    # Consider as paid only if:
+    # 1. Has paid_at timestamp OR
+    # 2. payment_method is one of the actual payment methods (stripe, paypal, cash with confirmation)
+    actual_paid_methods = ["stripe", "paypal", "cash_confirmed", "card"]
+    
+    if paid_at or payment_method in actual_paid_methods:
+        effective_status = "completed"
+    else:
+        effective_status = "pending"
+    
     return {
         "purchase_id": purchase_id,
         "event_name": event_name,
@@ -758,7 +771,8 @@ async def download_purchased_photos(purchase_id: str, token: str):
         "photos": photo_list,
         "amount": purchase.get("amount", 0),
         "created_at": purchase.get("created_at"),
-        "status": purchase.get("status")
+        "status": effective_status,
+        "payment_method": payment_method
     }
 
 @router.get("/public/photofind/download/{purchase_id}/zip")
@@ -779,8 +793,12 @@ async def download_photos_as_zip(purchase_id: str, token: str):
     if not purchase:
         raise HTTPException(status_code=404, detail="Achat non trouvé ou lien invalide")
     
-    # Check if payment is completed
-    if purchase.get("status") not in ["completed", "paid"]:
+    # Check if payment is actually completed
+    payment_method = purchase.get("payment_method", "")
+    paid_at = purchase.get("paid_at")
+    actual_paid_methods = ["stripe", "paypal", "cash_confirmed", "card"]
+    
+    if not paid_at and payment_method not in actual_paid_methods:
         raise HTTPException(status_code=402, detail="Paiement requis avant téléchargement")
     
     zip_buffer = io.BytesIO()

@@ -778,18 +778,20 @@ const PhotoFindKiosk = () => {
     setProcessing(true);
     
     try {
-      // Create purchase record
+      // Create purchase record with "pay_later" so they pay on the download page
       const res = await axios.post(`${API}/public/photofind/${eventId}/kiosk-purchase`, {
         photo_ids: selectedPhotos,
         email: email,
         amount: calculatePrice(),
-        payment_method: "kiosk"
+        payment_method: "pay_later",
+        format: deliveryMethod || "email",
+        frame_id: selectedFilter
       });
       
-      toast.success("Paiement enregistré !");
+      toast.success("Un email avec le lien de téléchargement vous a été envoyé !");
       setStep("success");
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Erreur lors du paiement");
+      toast.error(e.response?.data?.detail || "Erreur lors de l'envoi");
     } finally {
       setProcessing(false);
     }
