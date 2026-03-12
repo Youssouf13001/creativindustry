@@ -1469,8 +1469,8 @@ async def upload_photo_to_session(
     with open(file_path, 'wb') as f:
         f.write(content)
     
-    # URL de la photo
-    photo_url = f"/api/uploads/photofind/{event_id}/uploads/{filename}"
+    # URL de la photo (sans /api car les fichiers statiques sont montés sur /uploads)
+    photo_url = f"/uploads/photofind/{event_id}/uploads/{filename}"
     
     # Mettre à jour la session
     await db.photofind_upload_sessions.update_one(
