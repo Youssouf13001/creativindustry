@@ -16,6 +16,7 @@ import os
 import io
 import zipfile
 import qrcode
+import requests
 import boto3
 from botocore.exceptions import ClientError
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -765,8 +766,7 @@ async def download_photos_as_zip(purchase_id: str, token: str):
     """Download all purchased photos as a zip file"""
     purchase = await db.photofind_purchases.find_one({
         "id": purchase_id,
-        "download_token": token,
-        "status": "completed"
+        "download_token": token
     })
     
     if not purchase:
@@ -778,6 +778,10 @@ async def download_photos_as_zip(purchase_id: str, token: str):
     
     if not purchase:
         raise HTTPException(status_code=404, detail="Achat non trouvé ou lien invalide")
+    
+    # Check if payment is completed
+    if purchase.get("status") not in ["completed", "paid"]:
+        raise HTTPException(status_code=402, detail="Paiement requis avant téléchargement")
     
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -806,6 +810,207 @@ async def download_photos_as_zip(purchase_id: str, token: str):
         headers={"Content-Disposition": f"attachment; filename=photofind_{purchase_id[:8]}.zip"}
     )
 
+
+# ==================== DOWNLOAD PAGE PAYMENT ENDPOINTS ====================
+
+@router.post("/public/photofind/download/{purchase_id}/create-payment")
+async def create_download_payment(purchase_id: str, data: dict = Body(...)):
+    """Create a payment for a pending purchase from the download page"""
+    token = data.get("token")
+    payment_method = data.get("payment_method")
+    return_url = data.get("return_url")
+    
+    # Find the purchase
+    purchase = await db.photofind_purchases.find_one({
+        "id": purchase_id,
+        "download_token": token
+    })
+    
+    if not purchase:
+        purchase = await db.photofind_kiosk_purchases.find_one({
+            "id": purchase_id,
+            "download_token": token
+        })
+    
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Achat non trouvé")
+    
+    # Check if already paid
+    if purchase.get("status") == "completed" or purchase.get("status") == "paid":
+        raise HTTPException(status_code=400, detail="Cet achat a déjà été payé")
+    
+    amount = purchase.get("amount", 0)
+    
+    if payment_method == "stripe":
+        # Create Stripe payment intent
+        import stripe
+        stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+        
+        if not stripe.api_key:
+            raise HTTPException(status_code=500, detail="Configuration Stripe manquante")
+        
+        intent = stripe.PaymentIntent.create(
+            amount=int(amount * 100),  # Stripe uses cents
+            currency="eur",
+            metadata={
+                "purchase_id": purchase_id,
+                "type": "photofind_download"
+            }
+        )
+        
+        return {
+            "client_secret": intent.client_secret,
+            "payment_intent_id": intent.id
+        }
+        
+    elif payment_method == "paypal":
+        # Create PayPal order
+        paypal_client_id = os.environ.get("PAYPAL_CLIENT_ID")
+        paypal_secret = os.environ.get("PAYPAL_SECRET")
+        
+        if not paypal_client_id or not paypal_secret:
+            raise HTTPException(status_code=500, detail="Configuration PayPal manquante")
+        
+        # Get access token
+        auth_response = requests.post(
+            "https://api-m.paypal.com/v1/oauth2/token",
+            auth=(paypal_client_id, paypal_secret),
+            data={"grant_type": "client_credentials"}
+        )
+        
+        if auth_response.status_code != 200:
+            raise HTTPException(status_code=500, detail="Erreur authentification PayPal")
+        
+        access_token = auth_response.json()["access_token"]
+        
+        # Create order
+        order_response = requests.post(
+            "https://api-m.paypal.com/v2/checkout/orders",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "intent": "CAPTURE",
+                "purchase_units": [{
+                    "amount": {
+                        "currency_code": "EUR",
+                        "value": str(amount)
+                    },
+                    "description": "PhotoFind - Téléchargement photos"
+                }],
+                "application_context": {
+                    "return_url": f"{return_url}&paypal_order_id={{order_id}}".replace("{order_id}", ""),
+                    "cancel_url": return_url
+                }
+            }
+        )
+        
+        if order_response.status_code != 201:
+            raise HTTPException(status_code=500, detail="Erreur création commande PayPal")
+        
+        order_data = order_response.json()
+        
+        # Get approval URL
+        approval_url = None
+        for link in order_data.get("links", []):
+            if link.get("rel") == "approve":
+                approval_url = link.get("href")
+                break
+        
+        # Add order_id to return URL
+        if approval_url:
+            # Store PayPal order ID in purchase
+            collection = db.photofind_purchases if await db.photofind_purchases.find_one({"id": purchase_id}) else db.photofind_kiosk_purchases
+            await collection.update_one(
+                {"id": purchase_id},
+                {"$set": {"paypal_order_id": order_data["id"]}}
+            )
+        
+        return {
+            "order_id": order_data["id"],
+            "approval_url": approval_url
+        }
+    
+    raise HTTPException(status_code=400, detail="Méthode de paiement non supportée")
+
+@router.post("/public/photofind/download/{purchase_id}/confirm-payment")
+async def confirm_download_payment(purchase_id: str, data: dict = Body(...)):
+    """Confirm payment for a purchase from the download page"""
+    token = data.get("token")
+    payment_id = data.get("payment_id")
+    payment_method = data.get("payment_method")
+    
+    # Find the purchase
+    purchase = await db.photofind_purchases.find_one({
+        "id": purchase_id,
+        "download_token": token
+    })
+    collection = db.photofind_purchases
+    
+    if not purchase:
+        purchase = await db.photofind_kiosk_purchases.find_one({
+            "id": purchase_id,
+            "download_token": token
+        })
+        collection = db.photofind_kiosk_purchases
+    
+    if not purchase:
+        raise HTTPException(status_code=404, detail="Achat non trouvé")
+    
+    if payment_method == "paypal":
+        # Capture PayPal payment
+        paypal_client_id = os.environ.get("PAYPAL_CLIENT_ID")
+        paypal_secret = os.environ.get("PAYPAL_SECRET")
+        
+        # Get access token
+        auth_response = requests.post(
+            "https://api-m.paypal.com/v1/oauth2/token",
+            auth=(paypal_client_id, paypal_secret),
+            data={"grant_type": "client_credentials"}
+        )
+        
+        if auth_response.status_code == 200:
+            access_token = auth_response.json()["access_token"]
+            
+            # Capture order
+            capture_response = requests.post(
+                f"https://api-m.paypal.com/v2/checkout/orders/{payment_id}/capture",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                }
+            )
+            
+            if capture_response.status_code not in [200, 201]:
+                logging.error(f"PayPal capture error: {capture_response.text}")
+                raise HTTPException(status_code=500, detail="Erreur capture PayPal")
+    
+    # Update purchase status to completed
+    await collection.update_one(
+        {"id": purchase_id},
+        {"$set": {
+            "status": "completed",
+            "paid_at": datetime.now(timezone.utc).isoformat(),
+            "payment_id": payment_id,
+            "payment_method": payment_method
+        }}
+    )
+    
+    # Send email with download link if email exists
+    if purchase.get("email") and purchase.get("download_url"):
+        try:
+            send_purchase_email(
+                email=purchase["email"],
+                download_url=purchase["download_url"],
+                photo_count=len(purchase.get("photo_ids", []))
+            )
+        except Exception as e:
+            logging.error(f"Failed to send confirmation email: {e}")
+    
+    return {"success": True, "message": "Paiement confirmé"}
+
+
 @router.get("/public/photofind/{event_id}/photo/{photo_id}")
 async def get_photo(event_id: str, photo_id: str):
     """Get a single photo for preview"""
@@ -830,6 +1035,12 @@ async def create_kiosk_purchase(event_id: str, data: KioskPurchaseData):
     download_token = str(uuid.uuid4())
     download_url = f"{SITE_URL}/photofind/download/{purchase_id}?token={download_token}"
     
+    # Status depends on payment method
+    # "pay_later" or "email" = pending (needs to pay on download page)
+    # "cash", "stripe", "paypal" = completed (already paid)
+    is_pay_later = data.payment_method in ["pay_later", "email", "pending"]
+    status = "pending" if is_pay_later else "completed"
+    
     purchase = {
         "id": purchase_id,
         "event_id": event_id,
@@ -841,13 +1052,13 @@ async def create_kiosk_purchase(event_id: str, data: KioskPurchaseData):
         "frame_id": data.frame_id,
         "download_token": download_token,
         "download_url": download_url,
-        "status": "completed",
+        "status": status,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     await db.photofind_kiosk_purchases.insert_one(purchase)
     
-    # Send email with download link
+    # Send email with download link (for pay later, they will pay on the download page)
     try:
         send_purchase_email(
             email=data.email,
