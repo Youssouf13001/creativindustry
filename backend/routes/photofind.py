@@ -703,47 +703,62 @@ async def create_photofind_purchase(event_id: str, data: dict = Body(...)):
 
 @router.get("/public/photofind/download/{purchase_id}")
 async def download_purchased_photos(purchase_id: str, token: str):
-    """Download purchased photos"""
+    """Download purchased photos - returns info for the download page"""
+    # Check in photofind_purchases first
     purchase = await db.photofind_purchases.find_one({
         "id": purchase_id,
         "download_token": token,
         "status": "completed"
     })
     
+    # Also check kiosk_purchases if not found
+    if not purchase:
+        purchase = await db.photofind_kiosk_purchases.find_one({
+            "id": purchase_id,
+            "download_token": token,
+            "status": "completed"
+        })
+    
     if not purchase:
         raise HTTPException(status_code=404, detail="Achat non trouvé ou lien invalide")
     
-    # Get photos
-    photos = await db.photofind_photos.find(
-        {"id": {"$in": purchase["photo_ids"]}},
-        {"_id": 0}
-    ).to_list(100)
+    # Get event info
+    event = await db.photofind_events.find_one({"id": purchase["event_id"]})
+    event_name = event.get("name", "PhotoFind") if event else "PhotoFind"
     
-    if len(photos) == 1:
-        # Single photo - return directly
-        photo = photos[0]
-        filepath = PHOTOFIND_DIR / purchase["event_id"] / photo["filename"]
-        if filepath.exists():
-            return FileResponse(
-                filepath,
-                media_type="image/jpeg",
-                filename=photo["filename"]
-            )
+    # Build photo list with URLs
+    photo_list = []
+    for photo_id in purchase.get("photo_ids", []):
+        # Check if it's an uploaded photo
+        if photo_id.startswith("upload_"):
+            # Uploaded photo - get from session or directly use the stored URL
+            session_id = photo_id.replace("upload_", "")
+            session = await db.photofind_upload_sessions.find_one({"session_id": session_id})
+            if session and session.get("photo_url"):
+                photo_list.append({
+                    "id": photo_id,
+                    "filename": session.get("photo_filename", f"photo_{session_id}.jpg"),
+                    "url": session["photo_url"]
+                })
+        else:
+            # Regular photo from event
+            photo = await db.photofind_photos.find_one({"id": photo_id})
+            if photo:
+                photo_list.append({
+                    "id": photo["id"],
+                    "filename": photo["filename"],
+                    "url": photo.get("url") or f"/uploads/photofind/{purchase['event_id']}/{photo['filename']}"
+                })
     
-    # Multiple photos - create zip
-    zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for photo in photos:
-            filepath = PHOTOFIND_DIR / purchase["event_id"] / photo["filename"]
-            if filepath.exists():
-                zf.write(filepath, photo["filename"])
-    
-    zip_buffer.seek(0)
-    return StreamingResponse(
-        zip_buffer,
-        media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename=photofind_{purchase_id[:8]}.zip"}
-    )
+    return {
+        "purchase_id": purchase_id,
+        "event_name": event_name,
+        "photo_count": len(photo_list),
+        "photos": photo_list,
+        "amount": purchase.get("amount", 0),
+        "created_at": purchase.get("created_at"),
+        "status": purchase.get("status")
+    }
 
 @router.get("/public/photofind/download/{purchase_id}/zip")
 async def download_photos_as_zip(purchase_id: str, token: str):
@@ -764,17 +779,25 @@ async def download_photos_as_zip(purchase_id: str, token: str):
     if not purchase:
         raise HTTPException(status_code=404, detail="Achat non trouvé ou lien invalide")
     
-    photos = await db.photofind_photos.find(
-        {"id": {"$in": purchase["photo_ids"]}},
-        {"_id": 0}
-    ).to_list(100)
-    
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for photo in photos:
-            filepath = PHOTOFIND_DIR / purchase["event_id"] / photo["filename"]
-            if filepath.exists():
-                zf.write(filepath, photo["filename"])
+        for photo_id in purchase.get("photo_ids", []):
+            # Check if it's an uploaded photo
+            if photo_id.startswith("upload_"):
+                session_id = photo_id.replace("upload_", "")
+                session = await db.photofind_upload_sessions.find_one({"session_id": session_id})
+                if session and session.get("photo_filename"):
+                    # Uploaded photos are in the uploads subfolder
+                    filepath = PHOTOFIND_DIR / purchase["event_id"] / "uploads" / session["photo_filename"]
+                    if filepath.exists():
+                        zf.write(filepath, session["photo_filename"])
+            else:
+                # Regular photo
+                photo = await db.photofind_photos.find_one({"id": photo_id})
+                if photo:
+                    filepath = PHOTOFIND_DIR / purchase["event_id"] / photo["filename"]
+                    if filepath.exists():
+                        zf.write(filepath, photo["filename"])
     
     zip_buffer.seek(0)
     return StreamingResponse(
