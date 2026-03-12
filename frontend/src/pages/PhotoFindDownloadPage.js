@@ -96,11 +96,12 @@ const PhotoFindDownloadPage = () => {
   const [downloadInfo, setDownloadInfo] = useState(null);
   const [downloading, setDownloading] = useState(false);
   
-  // Payment states
+  // Payment states - separate loading for each method
   const [showPayment, setShowPayment] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [stripeClientSecret, setStripeClientSecret] = useState(null);
-  const [processingPayment, setProcessingPayment] = useState(false);
+  const [processingStripe, setProcessingStripe] = useState(false);
+  const [processingPaypal, setProcessingPaypal] = useState(false);
 
   useEffect(() => {
     fetchDownloadInfo();
@@ -129,7 +130,7 @@ const PhotoFindDownloadPage = () => {
 
   // Create Stripe payment intent
   const createStripePayment = async () => {
-    setProcessingPayment(true);
+    setProcessingStripe(true);
     try {
       const res = await axios.post(`${API}/public/photofind/download/${purchaseId}/create-payment`, {
         token: token,
@@ -143,13 +144,13 @@ const PhotoFindDownloadPage = () => {
       toast.error("Erreur lors de la création du paiement");
       console.error(e);
     } finally {
-      setProcessingPayment(false);
+      setProcessingStripe(false);
     }
   };
 
   // Handle successful Stripe payment
   const handleStripeSuccess = async (paymentIntentId) => {
-    setProcessingPayment(true);
+    setProcessingStripe(true);
     try {
       const res = await axios.post(`${API}/public/photofind/download/${purchaseId}/confirm-payment`, {
         token: token,
@@ -167,13 +168,13 @@ const PhotoFindDownloadPage = () => {
     } catch (e) {
       toast.error("Erreur lors de la confirmation du paiement");
     } finally {
-      setProcessingPayment(false);
+      setProcessingStripe(false);
     }
   };
 
   // Create PayPal payment
   const createPayPalPayment = async () => {
-    setProcessingPayment(true);
+    setProcessingPaypal(true);
     try {
       const res = await axios.post(`${API}/public/photofind/download/${purchaseId}/create-payment`, {
         token: token,
@@ -188,11 +189,14 @@ const PhotoFindDownloadPage = () => {
       // Redirect to PayPal
       if (res.data.approval_url) {
         window.location.href = res.data.approval_url;
+      } else {
+        toast.error("URL PayPal non disponible");
+        setProcessingPaypal(false);
       }
     } catch (e) {
       toast.error("Erreur lors de la création du paiement PayPal");
       console.error(e);
-      setProcessingPayment(false);
+      setProcessingPaypal(false);
     }
   };
 
@@ -213,7 +217,7 @@ const PhotoFindDownloadPage = () => {
   }, [searchParams]);
 
   const confirmPayPalPayment = async (paypalOrderId) => {
-    setProcessingPayment(true);
+    setProcessingPaypal(true);
     try {
       const res = await axios.post(`${API}/public/photofind/download/${purchaseId}/confirm-payment`, {
         token: token,
@@ -228,7 +232,7 @@ const PhotoFindDownloadPage = () => {
     } catch (e) {
       toast.error("Erreur lors de la confirmation PayPal");
     } finally {
-      setProcessingPayment(false);
+      setProcessingPaypal(false);
     }
   };
 
@@ -367,20 +371,20 @@ const PhotoFindDownloadPage = () => {
                 {/* Stripe - Carte bancaire */}
                 <button
                   onClick={createStripePayment}
-                  disabled={processingPayment}
+                  disabled={processingStripe || processingPaypal}
                   className="w-full p-4 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold flex items-center justify-center gap-3 disabled:opacity-50"
                 >
-                  {processingPayment ? <Loader className="animate-spin" size={20} /> : <CreditCard size={24} />}
+                  {processingStripe ? <Loader className="animate-spin" size={20} /> : <CreditCard size={24} />}
                   Payer par Carte Bancaire
                 </button>
                 
                 {/* PayPal */}
                 <button
                   onClick={createPayPalPayment}
-                  disabled={processingPayment}
+                  disabled={processingStripe || processingPaypal}
                   className="w-full p-4 bg-yellow-500 hover:bg-yellow-600 text-black rounded-xl font-bold flex items-center justify-center gap-3 disabled:opacity-50"
                 >
-                  {processingPayment ? <Loader className="animate-spin" size={20} /> : (
+                  {processingPaypal ? <Loader className="animate-spin" size={20} /> : (
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.59 3.025-2.566 6.082-8.558 6.082h-2.19c-1.717 0-3.146 1.27-3.403 2.958l-1.12 7.106H2.47c-.99 0-1.776.871-1.633 1.862l.326 2.26c.143.991 1.01 1.732 2.003 1.732h4.606c1.717 0 3.146-1.27 3.403-2.958l.812-5.148h2.398c5.553 0 9.55-2.857 10.635-8.437.386-1.985.066-3.594-.798-4.67z"/>
                     </svg>
