@@ -1037,30 +1037,33 @@ const PhotoFindKiosk = () => {
                 Prenez un selfie et retrouvez instantanément toutes les photos où vous apparaissez.
               </p>
               
-              {/* Start button */}
-              <button
-                onClick={() => {
-                  setStep("camera");
-                  startCamera();
-                }}
-                className="group relative mb-6"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-600 rounded-xl blur-md opacity-50 group-hover:opacity-80 transition-opacity" />
-                <div className="relative bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 text-black font-bold text-2xl px-16 py-5 rounded-xl flex items-center gap-3 shadow-[0_0_30px_rgba(251,191,36,0.5)] hover:shadow-[0_0_50px_rgba(251,191,36,0.7)] transition-all">
-                  <Camera size={28} /> Commencer
-                </div>
-              </button>
-              
-              {/* Upload from phone button */}
-              <button
-                onClick={startUploadSession}
-                className="group relative mb-16"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur-md opacity-30 group-hover:opacity-60 transition-opacity" />
-                <div className="relative bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white font-semibold text-lg px-10 py-3 rounded-xl flex items-center gap-3 transition-all">
-                  <Upload size={22} /> Imprimer ma photo
-                </div>
-              </button>
+              {/* Buttons row */}
+              <div className="flex gap-6 justify-center mb-16">
+                {/* Start button */}
+                <button
+                  onClick={() => {
+                    setStep("camera");
+                    startCamera();
+                  }}
+                  className="group relative"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-600 rounded-xl blur-md opacity-50 group-hover:opacity-80 transition-opacity" />
+                  <div className="relative bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 text-black font-bold text-2xl px-12 py-5 rounded-xl flex items-center gap-3 shadow-[0_0_30px_rgba(251,191,36,0.5)] hover:shadow-[0_0_50px_rgba(251,191,36,0.7)] transition-all">
+                    <Camera size={28} /> Commencer
+                  </div>
+                </button>
+                
+                {/* Upload from phone button - same style */}
+                <button
+                  onClick={startUploadSession}
+                  className="group relative"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-600 rounded-xl blur-md opacity-50 group-hover:opacity-80 transition-opacity" />
+                  <div className="relative bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 text-black font-bold text-2xl px-12 py-5 rounded-xl flex items-center gap-3 shadow-[0_0_30px_rgba(251,191,36,0.5)] hover:shadow-[0_0_50px_rgba(251,191,36,0.7)] transition-all">
+                    <Upload size={28} /> Imprimer ma photo
+                  </div>
+                </button>
+              </div>
               
               {/* Pricing cards */}
               <div className="grid grid-cols-3 gap-8 mb-12">
