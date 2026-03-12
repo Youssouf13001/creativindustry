@@ -861,8 +861,22 @@ const PhotoFindKiosk = () => {
         if (res.data.status === "uploaded") {
           clearInterval(uploadCheckInterval.current);
           setCheckingUpload(false);
+          
+          // Create a photo object like the ones from face search
+          const uploadedPhotoObj = {
+            id: `upload_${sessionId}`,
+            filename: res.data.photo_url.split('/').pop(),
+            url: res.data.photo_url,
+            isUploaded: true
+          };
+          
+          // Set this as the only photo and select it
+          setMatchedPhotos([uploadedPhotoObj]);
+          setSelectedPhotos([uploadedPhotoObj.id]);
           setUploadedPhoto(res.data.photo_url);
-          setStep("upload-preview");
+          
+          // Go to frames selection step (same flow as normal)
+          setStep("frames");
           toast.success("Photo reçue !");
         } else if (res.data.status === "expired") {
           clearInterval(uploadCheckInterval.current);
@@ -888,60 +902,6 @@ const PhotoFindKiosk = () => {
     setUploadedPhoto(null);
     setCheckingUpload(false);
     setStep("welcome");
-  };
-  
-  // Print uploaded photo
-  const printUploadedPhoto = async () => {
-    if (!uploadedPhoto) return;
-    
-    setIsPrinting(true);
-    try {
-      const photoUrl = `${BACKEND_URL}${uploadedPhoto}`;
-      
-      if (directPrintAvailable) {
-        // Direct print to DNP
-        await axios.post(`${PRINT_SERVICE_URL}/print`, {
-          image_url: photoUrl,
-          copies: 1,
-          printer: directPrintPrinter
-        }, { timeout: 60000 });
-        toast.success("Photo envoyée à l'imprimante !");
-      } else {
-        // Browser print
-        const printWindow = window.open("", "_blank");
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>Impression Photo</title>
-            <style>
-              @page { margin: 5mm; }
-              body { margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; }
-              img { max-width: 100%; max-height: 100vh; object-fit: contain; }
-            </style>
-          </head>
-          <body>
-            <img src="${photoUrl}" onload="setTimeout(() => window.print(), 500)" />
-          </body>
-          </html>
-        `);
-        printWindow.document.close();
-      }
-      
-      // Mark session as completed
-      if (uploadSession) {
-        await axios.post(`${API}/public/photofind/${eventId}/upload-session/${uploadSession.session_id}/complete`, {
-          status: "completed"
-        }).catch(() => {});
-      }
-      
-      setStep("upload-success");
-    } catch (e) {
-      console.error("Print error:", e);
-      toast.error("Erreur d'impression");
-    } finally {
-      setIsPrinting(false);
-    }
   };
 
   if (loading) {
@@ -1154,77 +1114,6 @@ const PhotoFindKiosk = () => {
               className="bg-white/10 hover:bg-white/20 px-8 py-3 rounded-xl"
             >
               Annuler
-            </button>
-          </div>
-        )}
-
-        {/* Step: Upload Preview */}
-        {step === "upload-preview" && uploadedPhoto && (
-          <div className="text-center max-w-4xl mx-auto">
-            <div className="mb-6">
-              <Check className="mx-auto mb-4 text-green-500" size={64} />
-              <h2 className="text-4xl font-bold mb-2">Photo reçue !</h2>
-              <p className="text-xl text-white/70">
-                Votre photo est prête à être imprimée
-              </p>
-            </div>
-            
-            {/* Photo preview */}
-            <div className="bg-white/5 rounded-2xl p-4 mb-8 inline-block">
-              <img 
-                src={`${BACKEND_URL}${uploadedPhoto}`}
-                alt="Votre photo"
-                className="max-h-[50vh] rounded-xl"
-              />
-            </div>
-            
-            {/* Action buttons */}
-            <div className="flex gap-4 justify-center">
-              <button
-                onClick={cancelUploadSession}
-                className="bg-white/10 hover:bg-white/20 px-8 py-4 rounded-xl text-lg"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={printUploadedPhoto}
-                disabled={isPrinting}
-                className="bg-gradient-to-r from-amber-400 to-amber-600 text-black font-bold px-12 py-4 rounded-xl text-xl flex items-center gap-3 disabled:opacity-50"
-              >
-                {isPrinting ? (
-                  <>
-                    <Loader className="animate-spin" size={24} />
-                    Impression...
-                  </>
-                ) : (
-                  <>
-                    <Printer size={24} />
-                    Imprimer
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step: Upload Success */}
-        {step === "upload-success" && (
-          <div className="text-center max-w-2xl mx-auto">
-            <div className="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-8">
-              <Check size={64} className="text-white" />
-            </div>
-            
-            <h2 className="text-5xl font-bold mb-4 text-green-400">Impression lancée !</h2>
-            <p className="text-xl text-white/70 mb-12">
-              Votre photo est en cours d'impression.<br />
-              Récupérez-la auprès du photographe.
-            </p>
-            
-            <button
-              onClick={reset}
-              className="bg-white/10 hover:bg-white/20 px-12 py-4 rounded-xl text-xl"
-            >
-              Retour à l'accueil
             </button>
           </div>
         )}
