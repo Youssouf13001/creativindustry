@@ -8,7 +8,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 import uuid
 import logging
@@ -1378,7 +1378,9 @@ async def create_upload_session(event_id: str):
     
     session_id = str(uuid.uuid4())[:8].upper()  # Code court facile à lire
     now = datetime.now(timezone.utc)
-    expires = datetime(now.year, now.month, now.day, now.hour, now.minute + 30, tzinfo=timezone.utc)  # 30 min
+    
+    # Add 30 minutes using timedelta
+    expires = now + timedelta(minutes=30)
     
     session = {
         "session_id": session_id,
