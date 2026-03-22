@@ -353,6 +353,7 @@ export default function EquipmentPage() {
       {showDeploymentModal && (
         <DeploymentModal
           equipment={equipment}
+          categories={categories}
           onClose={() => setShowDeploymentModal(false)}
           onSave={() => {
             setShowDeploymentModal(false);
@@ -552,7 +553,7 @@ function EquipmentModal({ equipment, categories, onClose, onSave }) {
 }
 
 // Deployment Modal
-function DeploymentModal({ equipment, onClose, onSave }) {
+function DeploymentModal({ equipment, onClose, onSave, categories = [] }) {
   const [form, setForm] = useState({
     name: "",
     location: "",
@@ -562,6 +563,28 @@ function DeploymentModal({ equipment, onClose, onSave }) {
     equipment_ids: []
   });
   const [saving, setSaving] = useState(false);
+  const [filterCategory, setFilterCategory] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Filter equipment by category and search
+  const filteredEquipment = equipment.filter(item => {
+    const matchesCategory = !filterCategory || item.category_id === filterCategory;
+    const matchesSearch = !searchTerm || 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchesCategory && matchesSearch;
+  });
+
+  // Group by category for display
+  const groupedEquipment = filteredEquipment.reduce((acc, item) => {
+    const catId = item.category_id || "other";
+    const catName = item.category?.name || "Autre";
+    if (!acc[catId]) {
+      acc[catId] = { name: catName, icon: item.category?.icon || "📦", items: [] };
+    }
+    acc[catId].items.push(item);
+    return acc;
+  }, {});
 
   const toggleEquipment = (id) => {
     setForm(prev => ({
@@ -652,37 +675,59 @@ function DeploymentModal({ equipment, onClose, onSave }) {
             <label className="block text-white/60 text-sm mb-2">
               Équipements à emporter ({form.equipment_ids.length} sélectionnés)
             </label>
-            <div className="max-h-60 overflow-y-auto border border-white/10 rounded-lg">
-              {equipment.length === 0 ? (
-                <p className="p-4 text-white/50 text-center">Aucun équipement disponible</p>
+            
+            {/* Filtres */}
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1 bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              />
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm [&>option]:bg-zinc-900"
+              >
+                <option value="">Toutes catégories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="max-h-72 overflow-y-auto border border-white/10 rounded-lg">
+              {Object.keys(groupedEquipment).length === 0 ? (
+                <p className="p-4 text-white/50 text-center">Aucun équipement trouvé</p>
               ) : (
-                equipment.map(item => (
-                  <label
-                    key={item.id}
-                    className={`flex items-center gap-3 p-3 border-b border-white/5 cursor-pointer hover:bg-white/5 ${
-                      form.equipment_ids.includes(item.id) ? "bg-primary/10" : ""
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={form.equipment_ids.includes(item.id)}
-                      onChange={() => toggleEquipment(item.id)}
-                      className="w-5 h-5 rounded"
-                    />
-                    <div className="flex-1">
-                      <div className="text-white font-medium flex items-center gap-2">
-                        {item.name}
-                        {!item.is_available && (
-                          <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded">
-                            Déjà en déplacement
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-white/50 text-sm">
-                        {item.brand} {item.model} {item.serial_number && `• ${item.serial_number}`}
-                      </div>
+                Object.entries(groupedEquipment).map(([catId, category]) => (
+                  <div key={catId}>
+                    <div className="sticky top-0 bg-zinc-800 px-3 py-2 text-white/70 text-sm font-medium border-b border-white/10">
+                      {category.icon} {category.name} ({category.items.length})
                     </div>
-                  </label>
+                    {category.items.map(item => (
+                      <label
+                        key={item.id}
+                        className={`flex items-center gap-3 p-3 border-b border-white/5 cursor-pointer hover:bg-white/5 ${
+                          form.equipment_ids.includes(item.id) ? "bg-primary/10" : ""
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={form.equipment_ids.includes(item.id)}
+                          onChange={() => toggleEquipment(item.id)}
+                          className="w-5 h-5 rounded"
+                        />
+                        <div className="flex-1">
+                          <div className="text-white font-medium">{item.name}</div>
+                          <div className="text-white/50 text-sm">
+                            {item.brand} {item.model}
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
                 ))
               )}
             </div>
