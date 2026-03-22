@@ -2511,6 +2511,7 @@ const AdminDashboard = () => {
           {[
             { id: "overview", label: "Aperçu" },
             { id: "project-tracker", label: "📦 Suivi Projet" },
+            { id: "equipment", label: "🛠️ Matériel", isExternal: true },
             { id: "tasks", label: "📋 Tâches" },
             { id: "calendar", label: "📅 Calendrier" },
             { id: "galleries", label: "📸 Galeries" },
@@ -2546,7 +2547,13 @@ const AdminDashboard = () => {
           .map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                if (tab.isExternal) {
+                  navigate("/admin/equipment");
+                } else {
+                  setActiveTab(tab.id);
+                }
+              }}
               className={`font-primary text-sm uppercase tracking-wider pb-2 border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-white/60 hover:text-white"
               }`}
