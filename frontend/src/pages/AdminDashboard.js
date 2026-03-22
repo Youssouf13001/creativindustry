@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Calendar, Check, Camera, Mic, Tv, X, Clock, Users, FileText, Image, Video, Plus, Minus, User, LogOut, Upload, Loader, Download, Eye, Printer, ArrowLeft, Shield, Trash2, MessageSquare, FileArchive, AlertTriangle, CreditCard, Phone, ClipboardList, Heart, MessageCircle, Music, BookOpen, QrCode, Copy, HardDrive, Play, Settings, Maximize, Link, Mail } from "lucide-react";
+import { Calendar, Check, Camera, Mic, Tv, X, Clock, Users, FileText, Image, Video, Plus, Minus, User, LogOut, Upload, Loader, Download, Eye, Printer, ArrowLeft, Shield, Trash2, MessageSquare, FileArchive, AlertTriangle, CreditCard, Phone, ClipboardList, Heart, MessageCircle, Music, BookOpen, QrCode, Copy, HardDrive, Play, Settings, Maximize, Link, Mail, Package } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import TaskManager from "../components/admin/TaskManager";
 import ProjectTracker from "../components/admin/ProjectTracker";
@@ -2339,6 +2339,20 @@ const AdminDashboard = () => {
                       >
                         <Shield className="w-4 h-4" />
                         Sécurité
+                      </button>
+                    )}
+                    
+                    {currentAdmin?.role === "complet" && (
+                      <button
+                        onClick={() => {
+                          setShowProfileMenu(false);
+                          navigate("/admin/equipment");
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-sm"
+                        data-testid="admin-equipment-btn"
+                      >
+                        <Package className="w-4 h-4" />
+                        Gestion Matériel
                       </button>
                     )}
                   </div>

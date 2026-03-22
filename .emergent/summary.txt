@@ -1,235 +1,287 @@
-<analysis>**original_problem_statement:**
-L'utilisateur, un photographe, a demandé une application complète qui a évolué pour inclure une borne photo mode kiosque (PhotoFind), un portail client, des paiements (Stripe/PayPal), un suivi de projet, des notifications SMS (Brevo), et un système de gestion de contrats électroniques.
+<analysis>**original_problem_statement:** 
+L'utilisateur, un photographe, a demandé une application complète qui a évolué pour inclure une borne photo mode kiosque (PhotoFind), un portail client, des paiements (Stripe/PayPal), un suivi de projet et des notifications SMS.
 
-Les demandes les plus récentes concernent la résolution de problèmes de paiement critiques sur le kiosque PhotoFind et l'amélioration de la gestion des rendez-vous pour les clients.
+Les demandes les plus récentes de cette session concernaient :
+1. La correction de la caméra sur le kiosque mobile (Safari/iOS affichait un écran noir).
+2. Le remplacement du paiement en espèces par Stripe/PayPal sur l'interface mobile.
+3. L'implémentation d'une impression directe silencieuse pour imprimante DNP.
+4. L'ajout d'une option pour que les clients uploadent une photo depuis leur téléphone vers la borne Kiosque via QR Code.
+5. La correction du flux de téléchargement Payer plus tard (le client téléchargeait sans payer).
+6. **(NOUVEAU)** La création d'un système de gestion de matériel (type GLPI) pour l'équipe : inventaire, listes de vérification pour les déplacements, génération de PDF avec signature, et validation des retours (pertes/casses).
 
-**PRODUCT REQUIREMENTS:**
-1.  Permettre aux clients de voir, créer, modifier et supprimer leurs RDV dans leur espace client.
-2.  Supprimer l'onglet Contrats de l'espace client.
-3.  Afficher la date de dernière connexion d'un client dans l'espace client et dans le dashboard admin.
-4.  Corriger le bug de l'écran noir sur le Kiosque PhotoFind.
-5.  Corriger les paiements par carte bancaire (Stripe) qui sont prélevés mais affichent une erreur de confirmation.
-6.  Corriger les paiements PayPal qui échouaient à la création.
+PRODUCT REQUIREMENTS (New):
+- Equipment inventory tracking with categories and purchase data.
+- Check-out/Check-in system for events/trips.
+- PDF checklist generation for trips with signature zones.
+- Return validation to flag missing or broken items.
 
-**User's preferred language**: French
+**User's preferred language**: French (You MUST respond to the user in French).
 
-**what currently exists?**
-Une application full-stack (React, FastAPI, MongoDB) pour un photographe. Le site a été restauré à une version stable du 3 mars après des modifications qui ont cassé des fonctionnalités clés. Par la suite, plusieurs correctifs et fonctionnalités ont été ré-implémentés :
--   **Gestion des RDV Client**: L'onglet Contrats a été remplacé par un onglet Rendez-vous fonctionnel, permettant aux clients de voir, créer, modifier et supprimer leurs RDV.
--   **Suivi de connexion**: La date de dernière connexion du client est maintenant enregistrée lors du login et affichée dans l'espace client et l'espace admin.
--   **Kiosque PhotoFind**: Le bug de l'écran noir a été corrigé.
--   **Paiements PayPal**: Le paiement fonctionne, y compris la génération du QR code. La correction a nécessité de mettre à jour le  (qui avait un espace et un nom incorrect dans ) et de modifier le backend pour qu'il retourne .
--   **Paiements Stripe**: L'endpoint  a été recréé, ce qui permet d'initier le paiement. Cependant, la confirmation post-paiement échoue.
+**what currently exists?** 
+A full-stack application (React, FastAPI, MongoDB). The mobile kiosk camera bug for iOS is fixed. Stripe and PayPal are active on the mobile kiosk. A standalone Python print server was created for local Windows DNP printing. Upload to Kiosk via QR code is fully functional. The Pay Later email download link correctly acts as a paywall now. The backend foundation () and a frontend shell () for the new Equipment Management feature have just been created.
 
 **Last working item**:
-- Last item agent was working: Correction du flux de paiement Stripe sur le kiosque PhotoFind. L'utilisateur a signalé que le paiement est prélevé mais qu'une erreur de confirmation s'affiche. Les logs ont révélé une erreur . L'agent a tenté de corriger la fonction  dans  en y ajoutant une validation de l'adresse email du destinataire, mais a corrompu le fichier à plusieurs reprises avec des commandes  défectueuses.
-- Status: IN PROGRESS
-- Agent Testing Done: N
-- Which testing method agent to use? manual testing by user on production server
-- User Testing Done: N
+    - Last item agent was working: Building the new Equipment Management feature (GLPI-style inventory). The agent created the backend API router (), attached it to , created the frontend component (), and was looking for where to inject the route in the React application.
+    - Status: IN PROGRESS
+    - Agent Testing Done: N
+    - Which testing method agent to use? both (Use curl for backend endpoints and screenshot tool for the new Admin UI).
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-- Issue 1: **Erreur de confirmation post-paiement Stripe (P0)**: Le paiement par carte est prélevé, mais le client voit une erreur de confirmation. La cause est un échec de l'envoi de l'email de confirmation. Le fichier  a été corrompu lors des tentatives de correction et doit être réparé avec soin.
-- Issue 2: **Refactoring du frontend  (P1 - Critique)**: Fichier monolithique de plus de 9200 lignes, source de fragilité. Le refactoring a été demandé mais n'a pas été commencé.
-- Issue 3: **Erreur  sur les témoignages (P2)**: Ancien bug non traité.
-- Issue 4: **Dashboard  affiche des statistiques à zéro (P2)**: Ancien bug non traité.
-
-Issues Detail:
-- Issue 1:
-    - Attempted fixes: L'agent a identifié l'erreur 501 SMTP dans les logs. Il a tenté d'ajouter une validation d'email dans la fonction  du fichier  en utilisant , mais a corrompu le fichier plusieurs fois, nécessitant une restauration depuis git et une nouvelle tentative. L'état actuel du fichier est probablement corrompu.
-    - Next debug checklist:
-        1. Restaurer  depuis une version git stable qui contient les correctifs PayPal ().
-        2. Ré-appliquer manuellement et avec précaution (via  ou un script python robuste) la validation de l'email dans la fonction .
-        3. Analyser la fonction  pour comprendre pourquoi l'argument  pourrait être vide ou invalide lors d'un paiement Stripe.
-        4. Redémarrer le backend et demander à l'utilisateur de tester un paiement par carte.
-    - Why fix this issue and what will be achieved with the fix? Rendre les paiements par carte 100% fonctionnels et fiables pour les clients du kiosque.
-    - Status: IN PROGRESS
-    - Is recurring issue? Y
-    - Should Test frontend/backend/both after fix? backend
-    - Blocked on other issue: Non.
+  Issue 1: PayPal return redirect on Mobile Kiosk fails (P1)
+  Issue 2: Refactoring of  (P2)
+  Issue 3:  error on testimonials (P2)
+  Issue 4: Quotation dashboard shows zero statistics (P2)
+  
+  Issues Detail:
+  - Issue 1: 
+     - Attempted fixes: Agent tried using  to save the pending purchase ID before redirecting to PayPal, and recovering it upon return. User stated it still did not work before shifting focus to the DNP printer feature.
+     - Next debug checklist: Check   logic for PayPal return. Verify if Safari iOS is dropping  during redirect, or if the backend  is failing silently.
+     - Why fix this issue and what will be achieved with the fix? Completes the PayPal flow on mobile browsers.
+     - Status: IN PROGRESS
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on other issue: None
+  - Issue 2:
+     - Attempted fixes: None this session.
+     - Next debug checklist: Split the >9000 line  into smaller modular components.
+     - Why fix this issue and what will be achieved with the fix? Critical tech debt making frontend updates dangerous and slow.
+     - Status: NOT STARTED
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix? frontend
+     - Blocked on other issue: None
+  - Issue 3:
+     - Attempted fixes: None.
+     - Next debug checklist: Check testimonial submission payload parsing in backend and frontend state.
+     - Why fix this issue and what will be achieved with the fix? Fixes UI bug.
+     - Status: NOT STARTED
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? frontend
+     - Blocked on other issue: None
+  - Issue 4:
+     - Attempted fixes: None.
+     - Next debug checklist: Check MongoDB aggregations for the quotation statistics.
+     - Why fix this issue and what will be achieved with the fix? Accurate dashboard metrics.
+     - Status: NOT STARTED
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? backend
+     - Blocked on other issue: None
 
 **In progress Task List**:
-- Task 1: **Finaliser le refactoring de  (P1)**
-    - Where to resume: Extraire les logiques métier restantes (admin, devis, etc.) dans des fichiers de routes dédiés pour achever la modularisation du backend.
-    - What will be achieved with this? Un backend plus modulaire et maintenable.
-    - Status: IN PROGRESS
-    - Should Test frontend/backend/both after fix? backend
-    - Blocked on something: Non.
+  Task 1: Complete Equipment Management (GLPI) Feature (P0)
+  Task 2: Refactor  (P1)
+
+ Task Detail:
+  - Task 1: 
+     - Where to resume: Link  to the main Admin Router (likely inside  or ). Build the frontend UI for CRUD operations. Implement the PDF generation logic using Python ( or ) in the backend. Implement the check-in/check-out trip logic.
+     - What will be achieved with this? Allows the team to track gear, generate PDFs, and prevent gear loss.
+     - Status: IN PROGRESS
+     - Should Test frontend/backend/both after fix? both
+     - Blocked on something: Nothing
+  - Task 2: 
+     - Where to resume: Extract remaining business logic into dedicated route files.
+     - What will be achieved with this? Cleaner, modular backend.
+     - Status: IN PROGRESS
+     - Should Test frontend/backend/both after fix? backend
+     - Blocked on something: Nothing
 
 **Upcoming and Future Tasks**
-- **Future Tasks:**
-    - **P2: Intégration Terminal SumUp**: Pour les paiements par carte sur la borne PhotoFind.
-    - **P2: Impression directe sur imprimante DNP**: Pour imprimer des photos sans la boîte de dialogue du système d'exploitation.
+    Upcoming Tasks:
+    - P0: Implement PDF generation for Equipment Trips (Checklists).
+    - P0: Implement Return Validation workflow for Equipment Trips.
+    Future Tasks:
+    - P1: SumUp Terminal Integration for card payments directly on the PhotoFind kiosk.
 
 **Completed work in this session**
-- **Restauration du site**: Le site a été restauré à une version fonctionnelle après que des modifications aient cassé des fonctionnalités de base.
-- **Correction du Kiosque PhotoFind**: Le bug de l'écran noir a été corrigé en remplaçant  par  dans .
-- **Implémentation de la Gestion des RDV Client**: L'onglet Contrats a été supprimé et remplacé par un onglet Rendez-vous avec des fonctionnalités CRUD complètes pour le client.
-- **Suivi de la Dernière Connexion**: La date de dernière connexion du client est maintenant enregistrée et affichée dans l'espace client et l'espace admin.
-- **Correction des paiements PayPal**: Résolution d'une erreur 401 (credentials invalides à cause d'un espace dans le secret) et d'une erreur 422 (en rendant l'email optionnel et en ajoutant  au modèle). Le backend retourne maintenant  pour que le QR code s'affiche.
-- **Correction (partielle) des paiements Stripe**: L'endpoint  a été rajouté pour permettre l'initiation du paiement.
+- Fixed Mobile Kiosk Camera (Safari/iOS black screen issue resolved using  and timeout fallbacks).
+- Replaced Cash payments with Stripe/PayPal on the Mobile Kiosk.
+- Created standalone Python  for direct Windows USB printing without dialog boxes.
+- Implemented Upload to Print feature (QR code to phone upload to Kiosk screen).
+- Fixed the Pay Later download paywall (ensured downloads are blocked until payment is confirmed via Stripe/PayPal).
 
 **Earlier issues found/mentioned but not fixed**
--   Erreur  sur la soumission de témoignage.
--   Le dashboard du site  affiche des statistiques à zéro.
+   - Issue 1: PayPal return flow on mobile is still broken.
+   - Debug checklist: Test end-to-end PayPal sandbox flow on mobile view.
+   - Why to solve this issue and what will be achieved with this? Users cannot complete PayPal payments on their phones.
+   - Should Test frontend/backend/both after fix: both
+   - Is recurring issue? Y
 
 **Known issue recurrence from previous fork**
--   **Déploiement sur IONOS**: Le processus reste manuel et source d'erreurs (nécessité de , redémarrage du backend, gestion des processus ).
--   **Corruption de Fichiers avec **: L'agent a corrompu  à plusieurs reprises en utilisant des commandes  complexes. Il est CRITIQUE d'utiliser  ou des scripts plus robustes pour les modifications de fichiers complexes sur le serveur de l'utilisateur.
+  - Issue recurrence in previous fork: Manual server deployment by user.
+  - Recurrence count: 5+ times.
+  - Status: IN PROGRESS
+  Note: The user tests on a live IONOS production server. You MUST instruct them to run , , and specifically **restart the backend** ( or ) every time you make changes. The user frequently forgets to restart the backend or run pip installs, leading to  or  issues.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Débogage sur serveur de production (SSH)**: Utilisation de , , , , ,  pour diagnostiquer et corriger des problèmes en direct sur le serveur IONOS.
--   **Restauration Git**: Utilisation de  pour restaurer le code à un état stable.
--   **Débogage d'API de paiement**: Diagnostic des erreurs 401 (credentials), 422 (validation de modèle Pydantic) et 500 (erreur interne) pour Stripe et PayPal.
--   **Manipulation de fichiers serveur**: Difficultés rencontrées avec  sur des remplacements complexes, soulignant la nécessité d'approches plus sûres.
+- Full-stack React + FastAPI + MongoDB.
+- Standalone Python Services: The  is NOT part of the main FastAPI app. It is designed to be downloaded and run locally on the user's Windows Kiosk PC.
+- Mobile Video API: Heavy reliance on specific iOS constraints for .
 
 **key DB schema**
--   : Utilisation du champ  (string, format ISO).
+  - : {id, name, category, serial_number, status, purchase_date, warranty_end, notes} (NEW)
+  - : {id, event_name, event_date, equipment_ids, status, created_by, checked_out_at, checked_in_at, notes, signature_url} (NEW)
+  - : {id, status, payment_method, paid_at} (Updated logic for paywalls)
 
 **changes in tech stack**
--   Aucun.
+  - Added  for background tasks/reminders (User had to pip install it on their server).
+  - Will likely need  or  for the upcoming Equipment PDF generation task.
 
-**All files of reference**
--   : Fichier central pour les paiements du kiosque. **Attention, son état actuel est probablement corrompu et nécessite une réparation soignée.**
--   : Fichier principal du backend, modifié pour ajouter plusieurs endpoints.
--   : Les variables  et  ont été corrigées.
--   : Fichier principal de l'espace client, modifié pour intégrer les rendez-vous et la dernière connexion.
--   : Composant contenant la logique complète de gestion des RDV côté client.
+**All files of reference** 
+1. : Created to handle GLPI-style inventory.
+2. : Created as frontend shell for equipment.
+3. : Created for direct DNP printing.
+4. : Rewritten completely to handle pre-payment paywalls.
+5. : Heavily modified for uploads and payment status.
 
-**Areas that need refactoring**:
--   : (P1 - URGENCE) Reste un monolithe de 9200 lignes.
--   : Le code de paiement est complexe et pourrait bénéficier d'une meilleure structuration et gestion des erreurs.
+**Areas that need refactoring**: 
+-  (CRITICAL tech debt, >9200 lines).
+-  (Growing very large, >2300 lines).
 
 **key api endpoints**
--   : (Recréé)
--   : (Corrigé)
--   : (Créés)
+-  (NEW)
+-  (NEW)
+- 
+- 
 
 **Critical Info for New Agent**
--   **NE PAS UTILISER  pour des modifications complexes sur **. Le fichier a été corrompu plusieurs fois. Utilisez  pour éditer manuellement ou un script Python robuste qui lit, modifie et réécrit le fichier.
--   Le problème de paiement Stripe n'est pas le paiement lui-même, mais l'envoi de l'email de confirmation après. La correction doit se concentrer sur la fonction  et pourquoi l'argument  est invalide dans ce contexte.
--   L'utilisateur déploie manuellement sur un serveur IONOS. Soyez prêt à le guider via des commandes , usage: git [-v | --version] [-h | --help] [-C <path>] [-c <name>=<value>]
-           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]
-           [-p | --paginate | -P | --no-pager] [--no-replace-objects] [--bare]
-           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]
-           [--super-prefix=<path>] [--config-env=<name>=<envvar>]
-           <command> [<args>]
+- **Language:** Speak ONLY French to the user.
+- **Deployment:** The user manually deploys to IONOS. Always provide explicit bash commands (, 
+> frontend@0.1.0 build
+> craco build
 
-These are common Git commands used in various situations:
+Creating an optimized production build...
+Compiled with warnings.
 
-start a working area (see also: git help tutorial)
-   clone     Clone a repository into a new directory
-   init      Create an empty Git repository or reinitialize an existing one
+[eslint] 
+src/components/AdminChat.js
+  Line 38:6:  React Hook useCallback has a missing dependency: 'headers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 49:6:  React Hook useCallback has a missing dependency: 'headers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-work on the current change (see also: git help everyday)
-   add       Add file contents to the index
-   mv        Move or rename a file, a directory, or a symlink
-   restore   Restore working tree files
-   rm        Remove files from the working tree and from the index
+src/components/ClientChat.js
+  Line 39:6:  React Hook useCallback has a missing dependency: 'headers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 50:6:  React Hook useCallback has a missing dependency: 'headers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-examine the history and state (see also: git help revisions)
-   bisect    Use binary search to find the commit that introduced a bug
-   diff      Show changes between commits, commit and working tree, etc
-   grep      Print lines matching a pattern
-   log       Show commit logs
-   show      Show various types of objects
-   status    Show the working tree status
+src/components/GallerySlideshowModal.js
+  Line 92:6:  React Hook useEffect has missing dependencies: 'goToNext', 'goToPrevious', and 'onClose'. Either include them or remove the dependency array. If 'onClose' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
 
-grow, mark and tweak your common history
-   branch    List, create, or delete branches
-   commit    Record changes to the repository
-   merge     Join two or more development histories together
-   rebase    Reapply commits on top of another base tip
-   reset     Reset current HEAD to the specified state
-   switch    Switch branches
-   tag       Create, list, delete or verify a tag object signed with GPG
+src/components/admin/ContractsTab.js
+  Line 24:6:  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-collaborate (see also: git help workflows)
-   fetch     Download objects and refs from another repository
-   pull      Fetch from and integrate with another repository or a local branch
-   push      Update remote refs along with associated objects
+src/components/admin/ProjectTracker.js
+  Line 39:6:  React Hook useEffect has a missing dependency: 'headers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-'git help -a' and 'git help -g' list available subcommands and some
-concept guides. See 'git help <command>' or 'git help <concept>'
-to read about a specific subcommand or concept.
-See 'git help git' for an overview of the system., npm <command>
+src/components/admin/TaskManager.js
+  Line 66:6:  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-Usage:
+src/components/admin/TeamChat.js
+  Line 124:6:  React Hook useEffect has missing dependencies: 'isOpen', 'loadMessages', 'loadTeamMembers', and 'loadUnreadCount'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 137:6:  React Hook useEffect has missing dependencies: 'headers' and 'unreadCount'. Either include them or remove the dependency array                                         react-hooks/exhaustive-deps
 
-npm install        install all the dependencies in your project
-npm install <foo>  add the <foo> dependency to your project
-npm test           run this project's tests
-npm run <foo>      run the script named <foo>
-npm <command> -h   quick help on <command>
-npm -l             display usage info for all commands
-npm help <term>    search for help on <term>
-npm help npm       more involved overview
+src/components/client/ClientAppointments.js
+  Line 40:6:  React Hook useEffect has a missing dependency: 'fetchAppointments'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-All commands:
+src/components/client/ClientContracts.js
+  Line 21:6:  React Hook useEffect has a missing dependency: 'fetchContracts'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-    access, adduser, audit, bugs, cache, ci, completion,
-    config, dedupe, deprecate, diff, dist-tag, docs, doctor,
-    edit, exec, explain, explore, find-dupes, fund, get, help,
-    help-search, hook, init, install, install-ci-test,
-    install-test, link, ll, login, logout, ls, org, outdated,
-    owner, pack, ping, pkg, prefix, profile, prune, publish,
-    query, rebuild, repo, restart, root, run-script, sbom,
-    search, set, shrinkwrap, star, stars, start, stop, team,
-    test, token, uninstall, unpublish, unstar, update, version,
-    view, whoami
+src/pages/AdminDashboard.js
+  Line 225:6:  React Hook useEffect has missing dependencies: 'fetchAdminsList', 'fetchBackupStatus', 'fetchCurrentAdmin', 'fetchData', 'fetchExtensionOrders', 'fetchMfaStatus', 'fetchStoryViews', 'fetchUnreadMessages', and 'navigate'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 357:6:  React Hook useEffect has a missing dependency: 'fetchStoryViews'. Either include it or remove the dependency array                                                                                                                                                               react-hooks/exhaustive-deps
+  Line 364:6:  React Hook useEffect has a missing dependency: 'fetchNewsletterData'. Either include it or remove the dependency array                                                                                                                                                           react-hooks/exhaustive-deps
+  Line 371:6:  React Hook useEffect has a missing dependency: 'fetchDeploymentData'. Either include it or remove the dependency array                                                                                                                                                           react-hooks/exhaustive-deps
+  Line 378:6:  React Hook useEffect has a missing dependency: 'fetchTestimonials'. Either include it or remove the dependency array                                                                                                                                                             react-hooks/exhaustive-deps
+  Line 490:6:  React Hook useEffect has a missing dependency: 'fetchPendingComments'. Either include it or remove the dependency array                                                                                                                                                          react-hooks/exhaustive-deps
+  Line 627:6:  React Hook useEffect has a missing dependency: 'fetchRenewalRequests'. Either include it or remove the dependency array                                                                                                                                                          react-hooks/exhaustive-deps
+  Line 635:6:  React Hook useEffect has missing dependencies: 'fetchBillingData' and 'fetchPhotofindPurchases'. Either include them or remove the dependency array                                                                                                                              react-hooks/exhaustive-deps
+  Line 643:6:  React Hook useEffect has missing dependencies: 'fetchPhotofindEvents' and 'fetchPhotofindPurchases'. Either include them or remove the dependency array                                                                                                                          react-hooks/exhaustive-deps
+  Line 656:6:  React Hook useEffect has missing dependencies: 'fetchAllKioskStats', 'fetchAllPendingCashCodes', and 'fetchPhotofindEvents'. Either include them or remove the dependency array                                                                                                  react-hooks/exhaustive-deps
 
-Specify configs in the ini-formatted file:
-    /root/.npmrc
-or on the command line via: npm <command> --key=value
+src/pages/ClientDashboard.js
+  Line 326:6:   React Hook useEffect has a missing dependency: 'fetchAccountStatus'. Either include it or remove the dependency array                                                 react-hooks/exhaustive-deps
+  Line 580:6:   React Hook useEffect has missing dependencies: 'fetchDevisData', 'fetchMyGuestbooks', and 'fetchRenewalInvoices'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+  Line 1010:6:  React Hook useEffect has missing dependencies: 'fetchDevisData' and 'headers'. Either include them or remove the dependency array                                     react-hooks/exhaustive-deps
 
-More configuration info: npm help config
-Configuration fields: npm help 7 config
+src/pages/NewsPage.js
+  Line 26:6:  React Hook useEffect has a missing dependency: 'fetchPosts'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
-npm@10.8.2 /usr/lib/node_modules/npm, , .
--   La restauration depuis git est une stratégie valide, mais attention à ne pas perdre des correctifs importants. Si vous restaurez, notez ce qui est perdu pour le ré-appliquer.
+src/pages/PhotoFindDownloadPage.js
+  Line 108:6:  React Hook useEffect has a missing dependency: 'fetchDownloadInfo'. Either include it or remove the dependency array                                  react-hooks/exhaustive-deps
+  Line 217:6:  React Hook useEffect has missing dependencies: 'confirmPayPalPayment', 'purchaseId', and 'token'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/PhotoFindKiosk.js
+  Line 199:6:  React Hook useEffect has a missing dependency: 'handlePayPalSuccess'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/PhotoFindMobile.js
+  Line 186:6:  React Hook useEffect has a missing dependency: 'processPayPalReturn'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  Line 239:6:  React Hook useEffect has a missing dependency: 'loadEvent'. Either include it or remove the dependency array            react-hooks/exhaustive-deps
+
+src/pages/PhotoFindPage.js
+  Line 89:6:  React Hook useEffect has a missing dependency: 'fetchEvent'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+src/pages/PortfolioPage.js
+  Line 134:6:  React Hook useEffect has a missing dependency: 'goToNext'. Either include it or remove the dependency array       react-hooks/exhaustive-deps
+  Line 170:6:  React Hook useEffect has a missing dependency: 'handleKeyDown'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+File sizes after gzip:
+
+  415.79 kB  build/static/js/main.3e1ee841.js
+  17.81 kB   build/static/css/main.60deabf1.css
+
+The project was built assuming it is hosted at /.
+You can control this with the homepage field in your package.json.
+
+The build folder is ready to be deployed.
+You may serve it with a static server:
+
+  yarn global add serve
+  serve -s build
+
+Find out more about deployment here:
+
+  https://cra.link/deployment, ) after significant backend/frontend changes. If you add a python package, explicitly tell them to activate their venv and pip install it.
+- **DNP Printer:** Do not try to run or test the  on the K8s container. It is a script the user will manually move to their Windows machine.
+- **Pay Later Logic:** A purchase is only considered paid if  exists OR  is strictly one of . kiosk or pay_later mean unpaid.
+- Ensure the newly created Equipment backend uses  for security.
 
 **documents and test reports created in this job**
-- Aucun.
+-  (Instructions for user on how to install the local print server).
 
-**Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Le paiement par CB est passé mais j'ai un message d'erreur.
-2.  **User**: Le paiement PayPal fonctionne avec le QR code.
-3.  **User**: Le QR code ne s'affiche pas pour PayPal, je ne peux pas scanner.
-4.  **User**: Le paiement PayPal affiche Erreur lors de la création du paiement.
-5.  **User**: (Après restauration du site) Tous les paiements ne fonctionnent pas.
-6.  **User**: Mon site est vide, mes photos ont disparu, je ne peux plus me connecter.
-7.  **User**: Il y a un espace dans la clé secrète PayPal.
-8.  **User**: Je suis bien en mode LIVE sur PayPal.
-9.  **User**: Ça fonctionnait il y a quelques jours.
-10. **User**: Un paiement a été prélevé sur ma carte mais j'ai eu une erreur de confirmation.
+**Last 10 User Messages and any pending HUMAN messages** 
+1. **User**: Requests new feature: Equipment check list (GLPI style), PDF creation for trips, return validation, loss/broken reporting. (COMPLETION STATUS: STARTED)
+2. **User**: Answers clarifying questions (Option B for trips, Team roles needed, Custom PDF layout).
+3. **User**: Asks what the previous bug was regarding the paywall. (COMPLETION STATUS: ANSWERED)
+4. **User**: Says continue.
+5. **User**: Reports payment creation error on download page. (COMPLETION STATUS: FIXED)
+6. **User**: Reports double spinner on payment selection. (COMPLETION STATUS: FIXED)
+7. **User**: Reports that the download page is still bypassing payment. (COMPLETION STATUS: FIXED)
+8. **User**: Explains that pay later means they haven't paid yet, so the email link must act as a paywall before downloading. (COMPLETION STATUS: FIXED)
+9. **User**: Reports photo upload image is broken/blank. (COMPLETION STATUS: FIXED)
+10. **User**: Reports Error creating session for photo upload. (COMPLETION STATUS: FIXED - User needed to restart PM2).
 
 **Project Health Check:**
--   **Broken**: La confirmation de paiement Stripe (l'email post-paiement échoue).
--   **Mocked**: N/A.
--   **Technical Debt**: **CRITICAL**.  est une bombe à retardement.
+- Broken: Mobile PayPal redirect return.
+- Technical Debt: High (Monolithic React pages).
 
-**3rd Party Integrations**
--   Stripe (Paiements)
--   PayPal (Paiements) - **CORRIGÉ**
--   AWS Rekognition (Reconnaissance faciale)
--   FFmpeg (Traitement vidéo)
--   Brevo (ex-Sendinblue) (SMS)
--    (Rendu de PDF)
--    (Tâches planifiées)
+**3rd Party Integrations** 
+- Stripe (Payments) — requires User API Key
+- PayPal (Payments) — requires User API Key
+- AWS Rekognition (Facial matching) — requires User API Key
 
 **Testing status**
--   Testing agent used after significant changes: NO
--   Troubleshoot agent used after agent stuck in loop: NO
--   Test files created: []
--   Known regressions: La restauration du code a temporairement supprimé des correctifs de paiement, qui ont dû être ré-appliqués.
+  - Testing agent used after significant changes: NO (Self-tested via bash/curl/screenshots).
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: None
+  - Known regressions: None
 
 **Credentials to test flow:**
--   Admin:  / 
--   Client de test:  /  (ou )
+- Admin:  / 
 
 **What agent forgot to execute**
-- L'agent a utilisé  de manière répétée et infructueuse pour modifier un fichier complexe, causant de la frustration et une perte de temps. Il aurait dû passer à  ou à un script plus tôt.
-- L'agent n'a pas réussi à diagnostiquer la cause racine de l'échec de l'email Stripe (), se concentrant uniquement sur l'ajout d'une garde sans comprendre pourquoi l'email était invalide au départ.</analysis>
+- The agent started the Equipment feature but ran out of context before adding the  route to  or .
+- The agent forgot to update  with the new Equipment feature requirements and completed tasks.
+- Did not fully resolve the PayPal return redirect issue on the mobile kiosk.</analysis>

@@ -35,13 +35,14 @@ import PhotoFindKiosk from "./pages/PhotoFindKiosk";
 import PhotoFindMobile from "./pages/PhotoFindMobile";
 import UploadPrint from "./pages/UploadPrint";
 import Gallery3DPage from "./pages/Gallery3DPage";
+import EquipmentPage from "./components/admin/EquipmentPage";
 
 // Layout wrapper that conditionally shows header/footer
 function AppLayout({ children }) {
   const location = useLocation();
   
   // Pages that should be displayed without header/footer (fullscreen mode)
-  const fullscreenPaths = ['/kiosk/', '/galerie3d/', '/kiosk-mobile/', '/upload-print/'];
+  const fullscreenPaths = ['/kiosk/', '/galerie3d/', '/kiosk-mobile/', '/upload-print/', '/admin/equipment'];
   const isFullscreen = fullscreenPaths.some(path => location.pathname.startsWith(path));
   
   if (isFullscreen) {
@@ -85,6 +86,7 @@ function App() {
           <Route path="/actualites" element={<NewsPage />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/equipment" element={<EquipmentPage />} />
           <Route path="/client" element={<ClientLogin />} />
           <Route path="/client/dashboard" element={<ClientDashboard />} />
           <Route path="/unsubscribe/:clientId" element={<UnsubscribePage />} />

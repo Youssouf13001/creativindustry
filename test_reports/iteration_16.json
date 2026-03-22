@@ -84,7 +84,7 @@
     "severity": "CRITICAL",
     "description": "All admin endpoints in /app/backend/routes/photofind.py are accessible without authentication",
     "root_cause": "Depends(lambda: _get_current_admin) returns function reference instead of executing auth check",
-    "proof_of_concept": "curl -s 'https://photo-table-order.preview.emergentagent.com/api/admin/photofind/events/test-kiosk-demo/remote-orders' returns 200 with data",
+    "proof_of_concept": "curl -s 'https://asset-manager-302.preview.emergentagent.com/api/admin/photofind/events/test-kiosk-demo/remote-orders' returns 200 with data",
     "fix": "Replace Depends(lambda: _get_current_admin) with proper async wrapper or direct Depends(_get_current_admin) after ensuring _get_current_admin is set before router inclusion"
   }
 }
