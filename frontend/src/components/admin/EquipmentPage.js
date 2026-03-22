@@ -223,7 +223,7 @@ export default function EquipmentPage() {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+              className="bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-white appearance-none cursor-pointer [&>option]:bg-zinc-900 [&>option]:text-white"
             >
               <option value="">Toutes catégories</option>
               {categories.map(cat => (
@@ -233,7 +233,7 @@ export default function EquipmentPage() {
             <select
               value={selectedCondition}
               onChange={(e) => setSelectedCondition(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+              className="bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-white appearance-none cursor-pointer [&>option]:bg-zinc-900 [&>option]:text-white"
             >
               <option value="">Tous états</option>
               {Object.entries(CONDITION_LABELS).map(([key, label]) => (
@@ -466,7 +466,7 @@ function EquipmentModal({ equipment, categories, onClose, onSave }) {
               <select
                 value={form.category_id}
                 onChange={(e) => setForm({...form, category_id: e.target.value})}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-zinc-900 [&>option]:text-white"
               >
                 <option value="">Sélectionner...</option>
                 {categories.map(cat => (
@@ -481,7 +481,7 @@ function EquipmentModal({ equipment, categories, onClose, onSave }) {
                 type="date"
                 value={form.purchase_date}
                 onChange={(e) => setForm({...form, purchase_date: e.target.value})}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-white [color-scheme:dark]"
               />
             </div>
             
@@ -491,7 +491,7 @@ function EquipmentModal({ equipment, categories, onClose, onSave }) {
                 type="number"
                 value={form.purchase_price}
                 onChange={(e) => setForm({...form, purchase_price: parseFloat(e.target.value) || ""})}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-white"
               />
             </div>
             
@@ -501,7 +501,7 @@ function EquipmentModal({ equipment, categories, onClose, onSave }) {
                 type="date"
                 value={form.warranty_end_date}
                 onChange={(e) => setForm({...form, warranty_end_date: e.target.value})}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-white [color-scheme:dark]"
               />
             </div>
             
@@ -510,7 +510,7 @@ function EquipmentModal({ equipment, categories, onClose, onSave }) {
               <select
                 value={form.condition}
                 onChange={(e) => setForm({...form, condition: e.target.value})}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-zinc-900 [&>option]:text-white"
               >
                 {Object.entries(CONDITION_LABELS).map(([key, label]) => (
                   <option key={key} value={key}>{label}</option>
@@ -940,7 +940,7 @@ function DeploymentDetailsModal({ deployment, showReturn, onClose, onSave }) {
                         ...prev,
                         [item.equipment_id]: e.target.value
                       }))}
-                      className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
+                      className="bg-zinc-900 border border-white/20 rounded-lg px-3 py-2 text-white [&>option]:bg-zinc-900 [&>option]:text-white"
                     >
                       {RETURN_OPTIONS.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>
