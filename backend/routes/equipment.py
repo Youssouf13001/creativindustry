@@ -415,11 +415,8 @@ async def create_deployment(data: Deployment, current_user: dict = Depends(get_c
     
     await db.deployments.insert_one(deployment)
     
-    # Mark equipment as unavailable
-    await db.equipment.update_many(
-        {"id": {"$in": data.equipment_ids}},
-        {"$set": {"is_available": False, "current_deployment_id": deployment_id}}
-    )
+    # Note: On ne bloque plus les équipements car l'utilisateur peut avoir plusieurs exemplaires
+    # L'indicateur "déjà en déplacement" est affiché dans le frontend
     
     return {"id": deployment_id, "message": "Déplacement créé"}
 
@@ -477,22 +474,17 @@ async def validate_deployment_return(
             }}
         )
         
-        # Update equipment availability
-        if item_status.status == "returned":
+        # Update equipment condition based on return status
+        if item_status.status in ["lost", "stolen"]:
             await db.equipment.update_one(
                 {"id": item_status.equipment_id},
-                {"$set": {"is_available": True, "current_deployment_id": None}}
-            )
-        elif item_status.status in ["lost", "stolen"]:
-            await db.equipment.update_one(
-                {"id": item_status.equipment_id},
-                {"$set": {"condition": "hors_service", "is_available": False}}
+                {"$set": {"condition": "hors_service"}}
             )
             items_to_remind.append(item_status)
         elif item_status.status == "damaged":
             await db.equipment.update_one(
                 {"id": item_status.equipment_id},
-                {"$set": {"condition": "à_réparer", "is_available": True, "current_deployment_id": None}}
+                {"$set": {"condition": "à_réparer"}}
             )
             items_to_remind.append(item_status)
         elif item_status.status == "forgotten":
@@ -535,13 +527,6 @@ async def delete_deployment(deployment_id: str, current_user: dict = Depends(req
     deployment = await db.deployments.find_one({"id": deployment_id})
     if not deployment:
         raise HTTPException(status_code=404, detail="Déplacement non trouvé")
-    
-    # Release equipment
-    equipment_ids = [item["equipment_id"] for item in deployment.get("items", [])]
-    await db.equipment.update_many(
-        {"id": {"$in": equipment_ids}},
-        {"$set": {"is_available": True, "current_deployment_id": None}}
-    )
     
     await db.deployments.delete_one({"id": deployment_id})
     return {"message": "Déplacement supprimé"}

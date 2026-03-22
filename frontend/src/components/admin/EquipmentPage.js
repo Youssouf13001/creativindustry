@@ -352,7 +352,7 @@ export default function EquipmentPage() {
       {/* New Deployment Modal */}
       {showDeploymentModal && (
         <DeploymentModal
-          equipment={equipment.filter(e => e.is_available)}
+          equipment={equipment}
           onClose={() => setShowDeploymentModal(false)}
           onSave={() => {
             setShowDeploymentModal(false);
@@ -670,7 +670,14 @@ function DeploymentModal({ equipment, onClose, onSave }) {
                       className="w-5 h-5 rounded"
                     />
                     <div className="flex-1">
-                      <div className="text-white font-medium">{item.name}</div>
+                      <div className="text-white font-medium flex items-center gap-2">
+                        {item.name}
+                        {!item.is_available && (
+                          <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded">
+                            Déjà en déplacement
+                          </span>
+                        )}
+                      </div>
                       <div className="text-white/50 text-sm">
                         {item.brand} {item.model} {item.serial_number && `• ${item.serial_number}`}
                       </div>
@@ -749,6 +756,20 @@ function DeploymentsTab({ onRefresh }) {
     }
   };
 
+  const startDeployment = async (id) => {
+    try {
+      const token = localStorage.getItem("admin_token");
+      await axios.post(`${API}/deployments/${id}/start`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Déplacement démarré");
+      fetchDeployments();
+      onRefresh();
+    } catch (e) {
+      toast.error("Erreur lors du démarrage");
+    }
+  };
+
   const STATUS_COLORS = {
     planned: "bg-blue-500",
     in_progress: "bg-yellow-500",
@@ -800,7 +821,7 @@ function DeploymentsTab({ onRefresh }) {
               </span>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => downloadPDF(dep.id)}
                 className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm"
@@ -813,7 +834,15 @@ function DeploymentsTab({ onRefresh }) {
               >
                 <Eye size={16} /> Détails
               </button>
-              {dep.status === "in_progress" && (
+              {dep.status === "planned" && (
+                <button
+                  onClick={() => startDeployment(dep.id)}
+                  className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm"
+                >
+                  <Truck size={16} /> Démarrer
+                </button>
+              )}
+              {(dep.status === "planned" || dep.status === "in_progress") && (
                 <button
                   onClick={() => setSelectedDeployment({...dep, showReturn: true})}
                   className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm"
