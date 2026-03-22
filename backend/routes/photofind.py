@@ -835,7 +835,7 @@ async def download_photos_as_zip(purchase_id: str, token: str):
 async def create_download_payment(purchase_id: str, data: dict = Body(...)):
     """Create a payment for a pending purchase from the download page"""
     token = data.get("token")
-    payment_method = data.get("payment_method")
+    payment_method_req = data.get("payment_method")
     return_url = data.get("return_url")
     
     # Find the purchase
@@ -853,13 +853,17 @@ async def create_download_payment(purchase_id: str, data: dict = Body(...)):
     if not purchase:
         raise HTTPException(status_code=404, detail="Achat non trouvé")
     
-    # Check if already paid
-    if purchase.get("status") == "completed" or purchase.get("status") == "paid":
+    # Check if already actually paid (same logic as download info)
+    stored_payment_method = purchase.get("payment_method", "")
+    paid_at = purchase.get("paid_at")
+    actual_paid_methods = ["stripe", "paypal", "cash_confirmed", "card"]
+    
+    if paid_at or stored_payment_method in actual_paid_methods:
         raise HTTPException(status_code=400, detail="Cet achat a déjà été payé")
     
     amount = purchase.get("amount", 0)
     
-    if payment_method == "stripe":
+    if payment_method_req == "stripe":
         # Create Stripe payment intent
         import stripe
         stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
@@ -881,7 +885,7 @@ async def create_download_payment(purchase_id: str, data: dict = Body(...)):
             "payment_intent_id": intent.id
         }
         
-    elif payment_method == "paypal":
+    elif payment_method_req == "paypal":
         # Create PayPal order
         paypal_client_id = os.environ.get("PAYPAL_CLIENT_ID")
         paypal_secret = os.environ.get("PAYPAL_SECRET")
