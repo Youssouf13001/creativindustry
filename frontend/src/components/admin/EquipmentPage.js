@@ -11,9 +11,11 @@ import {
   Plus, Search, Filter, Package, Truck, AlertTriangle,
   Edit, Trash2, Download, Eye, CheckCircle, XCircle,
   Calendar, FileText, ChevronRight, RefreshCw, Upload,
-  Camera, Mic, Lightbulb, Monitor, Briefcase, Box, ArrowLeft
+  Camera, Mic, Lightbulb, Monitor, Briefcase, Box, ArrowLeft, PenTool
 } from "lucide-react";
 import { API, BACKEND_URL } from "../../config/api";
+import SignaturePad from "../SignaturePad";
+import { OfflineIndicator } from "../../hooks/useOfflineEquipment";
 
 // Category icons map
 const CATEGORY_ICONS = {
@@ -362,6 +364,9 @@ export default function EquipmentPage() {
           }}
         />
       )}
+      
+      {/* Offline Indicator */}
+      <OfflineIndicator />
     </div>
   );
 }
@@ -923,12 +928,20 @@ function DeploymentsTab({ onRefresh }) {
                 <Eye size={16} /> Détails
               </button>
               {dep.status === "planned" && (
-                <button
-                  onClick={() => startDeployment(dep.id)}
-                  className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm"
-                >
-                  <Truck size={16} /> Démarrer
-                </button>
+                <>
+                  <button
+                    onClick={() => setSelectedDeployment({...dep, showSignature: true, signatureType: "departure"})}
+                    className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm"
+                  >
+                    <PenTool size={16} /> Signer départ
+                  </button>
+                  <button
+                    onClick={() => startDeployment(dep.id)}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm"
+                  >
+                    <Truck size={16} /> Démarrer
+                  </button>
+                </>
               )}
               {(dep.status === "planned" || dep.status === "in_progress") && (
                 <button
@@ -938,13 +951,23 @@ function DeploymentsTab({ onRefresh }) {
                   <CheckCircle size={16} /> Valider retour
                 </button>
               )}
+              {dep.signature_departure && (
+                <span className="flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">
+                  ✓ Signé (départ)
+                </span>
+              )}
+              {dep.signature_return && (
+                <span className="flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">
+                  ✓ Signé (retour)
+                </span>
+              )}
             </div>
           </div>
         ))
       )}
 
       {/* Deployment Details Modal */}
-      {selectedDeployment && (
+      {selectedDeployment && !selectedDeployment.showSignature && (
         <DeploymentDetailsModal
           deployment={selectedDeployment}
           showReturn={selectedDeployment.showReturn}
@@ -953,6 +976,34 @@ function DeploymentsTab({ onRefresh }) {
             setSelectedDeployment(null);
             fetchDeployments();
             onRefresh();
+          }}
+        />
+      )}
+      
+      {/* Signature Modal */}
+      {selectedDeployment && selectedDeployment.showSignature && (
+        <SignaturePad
+          signerName=""
+          onCancel={() => setSelectedDeployment(null)}
+          onSave={async (signatureData, signerName) => {
+            try {
+              const token = localStorage.getItem("admin_token");
+              await axios.post(
+                `${API}/deployments/${selectedDeployment.id}/signature`,
+                {
+                  signature_data: signatureData,
+                  signer_name: signerName,
+                  signature_type: selectedDeployment.signatureType || "departure"
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              toast.success("Signature enregistrée");
+              setSelectedDeployment(null);
+              fetchDeployments();
+              onRefresh();
+            } catch (e) {
+              toast.error("Erreur lors de l'enregistrement");
+            }
           }}
         />
       )}

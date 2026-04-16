@@ -550,6 +550,142 @@ async def delete_deployment(deployment_id: str, current_user: dict = Depends(req
     await db.deployments.delete_one({"id": deployment_id})
     return {"message": "Déplacement supprimé"}
 
+# ==================== SIGNATURE ====================
+
+class SignatureData(BaseModel):
+    signature_data: str  # Base64 encoded image
+    signer_name: str
+    signature_type: str = "departure"  # departure or return
+
+@router.post("/deployments/{deployment_id}/signature")
+async def save_signature(deployment_id: str, data: SignatureData, current_user: dict = Depends(get_current_user)):
+    """Save signature for deployment (departure or return)"""
+    import base64
+    
+    deployment = await db.deployments.find_one({"id": deployment_id})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Déplacement non trouvé")
+    
+    # Save signature image
+    signature_filename = f"{deployment_id}_{data.signature_type}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}.png"
+    signature_path = EQUIPMENT_DIR / "signatures"
+    signature_path.mkdir(parents=True, exist_ok=True)
+    
+    # Decode and save base64 image
+    try:
+        # Remove data URL prefix if present
+        img_data = data.signature_data
+        if "base64," in img_data:
+            img_data = img_data.split("base64,")[1]
+        
+        with open(signature_path / signature_filename, "wb") as f:
+            f.write(base64.b64decode(img_data))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Erreur de signature: {str(e)}")
+    
+    # Update deployment with signature info
+    signature_field = f"signature_{data.signature_type}"
+    update_data = {
+        signature_field: {
+            "filename": signature_filename,
+            "signer_name": data.signer_name,
+            "signed_at": datetime.now(timezone.utc).isoformat(),
+            "signed_by": current_user.get("id")
+        }
+    }
+    
+    await db.deployments.update_one(
+        {"id": deployment_id},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Signature enregistrée", "filename": signature_filename}
+
+# ==================== NOTIFICATIONS ====================
+
+@router.post("/deployments/check-reminders")
+async def check_deployment_reminders(current_user: dict = Depends(require_admin)):
+    """Check for deployments needing reminders and send notifications"""
+    from services.email_service import send_email
+    
+    today = datetime.now(timezone.utc).date()
+    tomorrow = today + timedelta(days=1)
+    
+    # Find deployments ending tomorrow (reminder)
+    deployments_ending = await db.deployments.find({
+        "status": {"$in": ["planned", "in_progress"]},
+        "end_date": tomorrow.isoformat()
+    }, {"_id": 0}).to_list(100)
+    
+    # Find overdue deployments (past end_date, not completed)
+    deployments_overdue = await db.deployments.find({
+        "status": {"$in": ["planned", "in_progress"]},
+        "end_date": {"$lt": today.isoformat()}
+    }, {"_id": 0}).to_list(100)
+    
+    reminders_sent = 0
+    
+    # Get admin emails
+    admins = await db.admins.find({"role": "complet"}, {"_id": 0, "email": 1}).to_list(10)
+    admin_emails = [a["email"] for a in admins if a.get("email")]
+    
+    # Send reminder for deployments ending tomorrow
+    for dep in deployments_ending:
+        for email in admin_emails:
+            try:
+                await send_email(
+                    to_email=email,
+                    subject=f"📦 Rappel: Retour matériel demain - {dep.get('name')}",
+                    html_content=f"""
+                    <h2>Rappel de retour matériel</h2>
+                    <p>Le déplacement <strong>{dep.get('name')}</strong> se termine demain ({dep.get('end_date')}).</p>
+                    <p>Lieu: {dep.get('location', 'Non spécifié')}</p>
+                    <p>Pensez à valider le retour du matériel sur l'application.</p>
+                    <p><a href="{SITE_URL}/admin/equipment">Accéder à la gestion du matériel</a></p>
+                    """
+                )
+                reminders_sent += 1
+            except Exception as e:
+                logging.error(f"Erreur envoi email: {e}")
+    
+    # Send alert for overdue deployments
+    for dep in deployments_overdue:
+        # Check if already alerted today
+        last_alert = dep.get("last_overdue_alert")
+        if last_alert and last_alert[:10] == today.isoformat():
+            continue
+            
+        for email in admin_emails:
+            try:
+                await send_email(
+                    to_email=email,
+                    subject=f"⚠️ ALERTE: Matériel non retourné - {dep.get('name')}",
+                    html_content=f"""
+                    <h2 style="color: red;">⚠️ Matériel non retourné</h2>
+                    <p>Le déplacement <strong>{dep.get('name')}</strong> devait se terminer le {dep.get('end_date')}.</p>
+                    <p>Le matériel n'a pas encore été retourné.</p>
+                    <p>Lieu: {dep.get('location', 'Non spécifié')}</p>
+                    <p><strong>Veuillez vérifier le statut du matériel immédiatement.</strong></p>
+                    <p><a href="{SITE_URL}/admin/equipment">Accéder à la gestion du matériel</a></p>
+                    """
+                )
+                reminders_sent += 1
+            except Exception as e:
+                logging.error(f"Erreur envoi email: {e}")
+        
+        # Mark as alerted today
+        await db.deployments.update_one(
+            {"id": dep["id"]},
+            {"$set": {"last_overdue_alert": today.isoformat()}}
+        )
+    
+    return {
+        "message": "Vérification terminée",
+        "reminders_sent": reminders_sent,
+        "ending_tomorrow": len(deployments_ending),
+        "overdue": len(deployments_overdue)
+    }
+
 # ==================== PDF GENERATION ====================
 
 @router.get("/deployments/{deployment_id}/pdf")

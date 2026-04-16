@@ -1,6 +1,7 @@
 """
 Scheduler automatique pour les tâches planifiées
 - Rappels SMS 24h avant les RDV (tous les jours à 10h)
+- Rappels équipement retour (tous les jours à 9h)
 """
 
 import logging
@@ -13,6 +14,7 @@ import os
 # Configuration
 MONGO_URL = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 DB_NAME = os.environ.get('DB_NAME', 'test_database')
+SITE_URL = os.environ.get("SITE_URL", "https://creativindustry.com")
 
 # Scheduler instance
 scheduler = AsyncIOScheduler()
@@ -81,10 +83,123 @@ async def send_daily_appointment_reminders():
     except Exception as e:
         logging.error(f"❌ Erreur scheduler rappels SMS: {e}")
 
+async def send_equipment_return_reminders():
+    """
+    Envoie les rappels email pour les retours de matériel.
+    - Rappel 1 jour avant la date de retour
+    - Alerte si matériel non retourné (overdue)
+    Exécuté automatiquement tous les jours à 9h.
+    """
+    from services.email_service import send_email
+    
+    logging.info("📦 Vérification des rappels de retour matériel...")
+    
+    try:
+        client = AsyncIOMotorClient(MONGO_URL)
+        db = client[DB_NAME]
+        
+        today = datetime.now(timezone.utc).date()
+        tomorrow = today + timedelta(days=1)
+        
+        # Find deployments ending tomorrow
+        deployments_ending = await db.deployments.find({
+            "status": {"$in": ["planned", "in_progress"]},
+            "end_date": tomorrow.isoformat(),
+            "reminder_sent": {"$ne": True}
+        }, {"_id": 0}).to_list(100)
+        
+        # Find overdue deployments
+        deployments_overdue = await db.deployments.find({
+            "status": {"$in": ["planned", "in_progress"]},
+            "end_date": {"$lt": today.isoformat()}
+        }, {"_id": 0}).to_list(100)
+        
+        reminders_sent = 0
+        
+        # Get admin emails
+        admins = await db.admins.find({"role": "complet"}, {"_id": 0, "email": 1}).to_list(10)
+        admin_emails = [a["email"] for a in admins if a.get("email")]
+        
+        if not admin_emails:
+            logging.warning("⚠️ Aucun email admin trouvé pour les rappels")
+            client.close()
+            return
+        
+        # Send reminder for deployments ending tomorrow
+        for dep in deployments_ending:
+            for email in admin_emails:
+                try:
+                    await send_email(
+                        to_email=email,
+                        subject=f"📦 Rappel: Retour matériel demain - {dep.get('name')}",
+                        html_content=f"""
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #f59e0b;">📦 Rappel de retour matériel</h2>
+                            <p>Le déplacement <strong>{dep.get('name')}</strong> se termine <strong>demain ({dep.get('end_date')})</strong>.</p>
+                            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Lieu:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">{dep.get('location', 'Non spécifié')}</td></tr>
+                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Équipements:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">{len(dep.get('items', []))} articles</td></tr>
+                            </table>
+                            <p>Pensez à valider le retour du matériel sur l'application.</p>
+                            <a href="{SITE_URL}/admin/equipment" style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">Gérer le retour</a>
+                        </div>
+                        """
+                    )
+                    reminders_sent += 1
+                except Exception as e:
+                    logging.error(f"❌ Erreur envoi email rappel: {e}")
+            
+            # Mark as reminded
+            await db.deployments.update_one(
+                {"id": dep["id"]},
+                {"$set": {"reminder_sent": True, "reminder_sent_at": datetime.now(timezone.utc).isoformat()}}
+            )
+        
+        # Send alert for overdue deployments
+        for dep in deployments_overdue:
+            last_alert = dep.get("last_overdue_alert")
+            if last_alert and last_alert[:10] == today.isoformat():
+                continue
+                
+            for email in admin_emails:
+                try:
+                    await send_email(
+                        to_email=email,
+                        subject=f"⚠️ ALERTE: Matériel non retourné - {dep.get('name')}",
+                        html_content=f"""
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #ef4444;">⚠️ Matériel non retourné</h2>
+                            <p>Le déplacement <strong>{dep.get('name')}</strong> devait se terminer le <strong>{dep.get('end_date')}</strong>.</p>
+                            <p style="color: #ef4444; font-weight: bold;">Le matériel n'a pas encore été retourné.</p>
+                            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Lieu:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">{dep.get('location', 'Non spécifié')}</td></tr>
+                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>Équipements:</strong></td><td style="padding: 8px; border-bottom: 1px solid #eee;">{len(dep.get('items', []))} articles</td></tr>
+                            </table>
+                            <p><strong>Veuillez vérifier le statut du matériel immédiatement.</strong></p>
+                            <a href="{SITE_URL}/admin/equipment" style="display: inline-block; background: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">Vérifier maintenant</a>
+                        </div>
+                        """
+                    )
+                    reminders_sent += 1
+                except Exception as e:
+                    logging.error(f"❌ Erreur envoi email alerte: {e}")
+            
+            await db.deployments.update_one(
+                {"id": dep["id"]},
+                {"$set": {"last_overdue_alert": today.isoformat()}}
+            )
+        
+        logging.info(f"📦 Rappels équipement: {reminders_sent} envoyés, {len(deployments_ending)} à retourner demain, {len(deployments_overdue)} en retard")
+        
+        client.close()
+        
+    except Exception as e:
+        logging.error(f"❌ Erreur scheduler rappels équipement: {e}")
+
 def start_scheduler():
     """Démarre le scheduler avec toutes les tâches planifiées"""
     
-    # Rappels SMS tous les jours à 10h (heure de Paris)
+    # Rappels SMS RDV tous les jours à 10h
     scheduler.add_job(
         send_daily_appointment_reminders,
         CronTrigger(hour=10, minute=0, timezone='Europe/Paris'),
@@ -93,8 +208,17 @@ def start_scheduler():
         replace_existing=True
     )
     
+    # Rappels équipement tous les jours à 9h
+    scheduler.add_job(
+        send_equipment_return_reminders,
+        CronTrigger(hour=9, minute=0, timezone='Europe/Paris'),
+        id='daily_equipment_reminders',
+        name='Rappels retour matériel',
+        replace_existing=True
+    )
+    
     scheduler.start()
-    logging.info("📅 Scheduler démarré - Rappels SMS programmés à 10h chaque jour")
+    logging.info("📅 Scheduler démarré - Rappels SMS à 10h, Rappels équipement à 9h")
 
 def stop_scheduler():
     """Arrête le scheduler proprement"""
