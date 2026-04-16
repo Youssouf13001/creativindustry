@@ -317,7 +317,7 @@ async def update_equipment(equipment_id: str, data: Equipment, current_user: dic
     return {"message": "Équipement mis à jour"}
 
 @router.delete("/equipment/{equipment_id}")
-async def delete_equipment(equipment_id: str, current_user: dict = Depends(require_admin)):
+async def delete_equipment(equipment_id: str, current_user: dict = Depends(get_current_user)):
     """Delete an equipment item"""
     result = await db.equipment.delete_one({"id": equipment_id})
     if result.deleted_count == 0:

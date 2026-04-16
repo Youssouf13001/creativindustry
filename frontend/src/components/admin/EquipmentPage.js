@@ -112,7 +112,9 @@ export default function EquipmentPage() {
       toast.success("Équipement supprimé");
       fetchData();
     } catch (e) {
-      toast.error("Erreur lors de la suppression");
+      const detail = e.response?.data?.detail || e.message || "Erreur inconnue";
+      toast.error(`Erreur: ${detail}`);
+      console.error("Delete error:", e.response?.status, detail);
     }
   };
 
