@@ -8,166 +8,116 @@ Application complète pour photographe incluant :
 - Paiements (Stripe, PayPal)
 - Contrats électroniques avec signature
 - Gestion de projets et suivi client
-- **NOUVEAU** : Gestion de matériel (style GLPI) avec inventaire, déplacements et PDF
+- Gestion de matériel (style GLPI) avec inventaire, déplacements, PDF, signatures et tickets pertes/vols
 
 ## Test Credentials
 - **Admin**: test@admin.com / admin123
 - **Client test**: test-client@example.com / Test1234
 
-## Architecture après Refactoring (Mars 2026)
+## Architecture
 
 ### Backend Structure
 ```
 /backend/
 ├── server.py              (12 400+ lignes)
 ├── routes/
-│   ├── appointments.py    (657 lignes) - RDV + Rappels SMS
-│   ├── photofind.py       (1 784 lignes) - Kiosque + Upload mobile
-│   ├── galleries.py       (535 lignes) - Galeries
-│   ├── contracts.py       (380 lignes) - Contrats
-│   ├── guestbook.py       (632 lignes) - Livre d'or
-│   ├── auth.py            (372 lignes) - Auth
-│   ├── clients.py         (286 lignes) - Clients
-│   ├── paypal.py          (467 lignes) - PayPal
-│   └── equipment.py       (650 lignes) - **NOUVEAU** Inventaire & Déplacements
-├── print_service/
-│   └── dnp_print_service.py - Service d'impression DNP local
+│   ├── appointments.py    - RDV + Rappels SMS
+│   ├── photofind.py       - Kiosque + Upload mobile
+│   ├── galleries.py       - Galeries
+│   ├── contracts.py       - Contrats
+│   ├── guestbook.py       - Livre d'or
+│   ├── auth.py            - Auth
+│   ├── clients.py         - Clients
+│   ├── paypal.py          - PayPal
+│   └── equipment.py       (1133 lignes) - Inventaire, Déplacements, Tickets
 ├── services/
 │   ├── sms_service.py     - SMS Brevo
-│   ├── scheduler_service.py - Rappels automatiques
+│   ├── scheduler_service.py - Rappels auto (déploiements + tickets)
 │   └── email_service.py   - Emails SMTP
-└── models/
-    └── schemas.py         - Modèles Pydantic
+└── scripts/
+    └── import_equipment.py - Import bulk DB
 ```
 
 ### Frontend Structure
 ```
 /frontend/src/
-├── pages/
-│   ├── AdminDashboard.js  (9 500 lignes) - À refactoriser
-│   ├── ClientDashboard.js (3 500+ lignes)
-│   ├── PhotoFindKiosk.js  (2 300 lignes)
-│   ├── PhotoFindMobile.js - Kiosque mobile Safari/iOS compatible
-│   ├── UploadPrint.js     - Upload photo depuis téléphone vers kiosque
-│   └── PhotoFindDownloadPage.js - Page de téléchargement avec paywall
-└── components/
-    ├── admin/
-    │   └── EquipmentPage.js (1 064 lignes) - **NOUVEAU** Gestion matériel
-    └── client/
-        └── ClientAppointments.js
+├── components/
+│   ├── admin/
+│   │   └── EquipmentPage.js (1700+ lignes) - Gestion matériel complète
+│   ├── SignaturePad.js     - Canvas API signature digitale
+│   └── client/
+├── hooks/
+│   └── useOfflineEquipment.js - PWA offline mode
+└── public/
+    └── sw-equipment.js     - Service Worker offline
 ```
 
-## Session du 22 Mars 2026
+## Fonctionnalités Matériel (Complet)
 
-### ✅ IMPLÉMENTÉ: Gestion de Matériel (style GLPI)
-- **Fonctionnalité complète** pour gérer l'inventaire photographique
-- **Backend** : `/app/backend/routes/equipment.py`
-  - `GET/POST /api/equipment` - CRUD équipements
-  - `GET /api/equipment/categories` - Catégories (8 par défaut)
-  - `GET /api/equipment/stats` - Statistiques (total, disponible, en déplacement)
-  - `GET/POST /api/deployments` - Gestion des déplacements
-  - `GET /api/deployments/{id}/pdf` - **Génération PDF checklist** (ReportLab)
-  - `POST /api/deployments/{id}/start` - Démarrer un déplacement
-  - `POST /api/deployments/{id}/return` - Valider le retour avec signalement pertes/casses
-  - `GET /api/equipment/reminders` - Alertes (garantie expirante, équipement perdu)
-- **Frontend** : `/app/frontend/src/components/admin/EquipmentPage.js`
-  - Page fullscreen accessible via `/admin/equipment`
-  - 3 onglets : Inventaire, Déplacements, Alertes
-  - Statistiques en temps réel (Total, Disponibles, En déplacement, Alertes)
-  - Filtres par catégorie, état, recherche
-  - Modals pour création équipement et déplacement
-  - Téléchargement PDF des checklists
-  - **Lien ajouté dans le menu profil admin** (Gestion Matériel)
-- **Tests** : 100% passés (16 tests backend, tous tests UI)
+### Backend API Endpoints
+- `GET/POST /api/equipment` - CRUD équipements avec quantités
+- `GET/POST /api/equipment/categories` - Catégories
+- `GET /api/equipment/stats` - Statistiques
+- `GET/POST/PUT/DELETE /api/deployments` - Déplacements avec quantités
+- `POST /api/deployments/{id}/start` - Démarrer un déplacement
+- `POST /api/deployments/{id}/return` - Valider retour avec signalement
+- `POST /api/deployments/{id}/signature` - Signature digitale (départ/retour)
+- `GET /api/deployments/{id}/pdf` - Génération PDF checklist (ReportLab)
+- `GET/POST /api/loss-tickets` - Tickets pertes/vols/casses
+- `PUT /api/loss-tickets/{id}` - Mise à jour statut ticket
+- `POST /api/loss-tickets/{id}/remind` - Relance email
+- `DELETE /api/loss-tickets/{id}` - Suppression ticket
 
-### Collections MongoDB ajoutées
-- `equipment` : {id, name, brand, model, serial_number, category_id, purchase_date, purchase_price, warranty_end_date, condition, is_available, notes, created_at, created_by}
+### Frontend UI (EquipmentPage.js)
+- 3 onglets : Inventaire, Déplacements, Alertes
+- Statistiques temps réel
+- Modals : Ajout/Édition équipement, Nouveau déplacement, Édition déplacement, Détails/Retour, Signature
+- Onglet Alertes : Tickets pertes/vols/casses + Alertes équipement
+- Mise à jour statut ticket (En attente, Commande en cours, Assurance, Résolu, Obsolète)
+
+### Collections MongoDB
+- `equipment` : {id, name, brand, model, serial_number, category_id, purchase_date, purchase_price, warranty_end_date, condition, quantity, is_available, notes}
 - `equipment_categories` : {id, name, icon, color}
-- `deployments` : {id, name, location, start_date, end_date, equipment_ids, status, notes, checked_out_at, checked_in_at, return_notes, issues}
-- `equipment_reminders` : {id, type, equipment_id, message, resolved, created_at}
+- `deployments` : {id, name, location, start_date, end_date, items: [{equipment_id, quantity, status, return_status}], signature_departure, signature_return, status}
+- `equipment_reminders` : {id, type, equipment_id, equipment_name, issue, notes, resolved}
+- `loss_tickets` : {id, equipment_id, equipment_name, equipment_details, issue_type, deployment_id, deployment_name, status, messages: [{id, status, message, estimated_date, created_at}], created_at, resolved_at}
 
-## Session du 3 Mars 2026 (matin)
+## Tâches
 
-### ✅ RÉSOLU: Vue des RDV côté client
-- **Problème**: Les clients ne voyaient pas leurs RDV dans leur espace
-- **Solution**:
-  1. Créé endpoint `GET /api/client/appointments` dans `server.py`
-  2. Créé endpoint `PUT /api/client/appointments/{id}/respond-reschedule`
-  3. Intégré composant `ClientAppointments.js` dans `ClientDashboard.js`
-  4. Ajouté onglet "Rendez-vous" avec icône CalendarDays
-- **Testé**: ✅ Fonctionnel
-
-### Sessions précédentes ✅
-- **Écran noir Kiosque PhotoFind** - Variable `eventDetails` → `event`
-- **SMS Brevo non envoyés** - `load_dotenv()` déplacé avant imports
-- **Actions admin sur RDV confirmés** (proposer nouvelle date, annuler, supprimer)
-- **Rappels SMS 100% automatiques** - APScheduler tous les jours à 10h
-
-## Instructions de déploiement IONOS
-
-Pour appliquer les changements sur votre serveur de production:
-
-```bash
-# Se connecter au serveur
-ssh user@votre-serveur-ionos
-
-# Aller dans le dossier du projet
-cd /var/www/creativindustry
-
-# Sauvegarder les modifications locales
-git stash
-
-# Récupérer les dernières modifications
-git pull origin main
-
-# Réappliquer les modifications locales
-git stash pop
-
-# IMPORTANT: Reconstruire le frontend
-cd frontend
-npm run build
-
-# Redémarrer le backend
-cd ..
-pkill -f uvicorn
-nohup python -m uvicorn backend.server:app --host 0.0.0.0 --port 8000 &
-```
-
-## Prochaines Tâches
-
-### P0 - Urgent
-- [x] ~~Gestion de Matériel (GLPI)~~ ✅ Terminé le 22 Mars 2026
+### Terminé
+- [x] Gestion Matériel CRUD complet
+- [x] Catégories avec icônes
+- [x] Import bulk 57 équipements
+- [x] Déploiements avec quantités
+- [x] Signatures digitales (Canvas API)
+- [x] Génération PDF checklists (ReportLab)
+- [x] Mode offline PWA (Service Worker)
+- [x] APScheduler rappels automatiques
+- [x] Édition/Suppression déploiements
+- [x] Tickets pertes/vols/casses (backend + frontend)
+- [x] UI tickets dans onglet Alertes
+- [x] Bug fix: Backend crashé (SyntaxError f-string)
 
 ### P1 - Important
 - [ ] Bug retour PayPal sur mobile kiosque (Safari/iOS)
-- [ ] Prise de RDV depuis l'espace client
-- [ ] Refactoring AdminDashboard.js (9 500 lignes)
-- [ ] Continuer refactoring server.py (admin, bookings, quotes)
+- [ ] Refactoring EquipmentPage.js (extraction modales)
+- [ ] Refactoring AdminDashboard.js (9500+ lignes)
+- [ ] Refactoring server.py
 
 ### P2 - Backlog
+- [ ] Enregistrement global Service Worker PWA
 - [ ] Bug témoignages `[object Object]`
 - [ ] Dashboard devis statistiques à zéro
 - [ ] Intégration Terminal SumUp
-- [ ] Impression directe DNP (service local créé, à tester sur Windows)
+- [ ] Impression directe DNP
+
+## Instructions Déploiement IONOS
+```bash
+cd /var/www/creativindustry && git pull origin main && source venv/bin/activate && pip install -r requirements.txt && cd frontend && npm run build && cd .. && sudo systemctl restart creativindustry
+```
 
 ## Intégrations 3rd Party
-- AWS Rekognition (reconnaissance faciale)
-- Brevo/Sendinblue (SMS) ✅ Fonctionnel
-- Stripe (paiements) ✅ Fonctionnel
-- PayPal (paiements) ✅ Fonctionnel (bug retour mobile en cours)
-- FFmpeg (traitement vidéo)
-- react-pdf (affichage PDF)
-- APScheduler (tâches planifiées)
-- **ReportLab** (génération PDF pour checklists équipement)
-
-## Notes Techniques
-- MongoDB avec DB_NAME='test_database'
-- SMTP via IONOS (smtp.ionos.fr)
-- Déploiement manuel sur IONOS via SSH
-- Backend: FastAPI + uvicorn
-- Frontend: React + Tailwind
-- **IMPORTANT**: Tout changement frontend nécessite `npm run build` sur le serveur
-- **IMPORTANT**: Tout changement backend nécessite redémarrage de PM2/systemd
+- AWS Rekognition, Brevo SMS, Stripe, PayPal, FFmpeg, ReportLab, APScheduler
 
 ## Dernière mise à jour
-22 Mars 2026 - 19:55 UTC
+16 Avril 2026
