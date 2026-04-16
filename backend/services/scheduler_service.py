@@ -196,6 +196,90 @@ async def send_equipment_return_reminders():
     except Exception as e:
         logging.error(f"❌ Erreur scheduler rappels équipement: {e}")
 
+async def send_loss_ticket_reminders():
+    """
+    Envoie des rappels pour les tickets de perte/vol non résolus.
+    Rappel tous les 3 jours si pas de mise à jour.
+    Exécuté automatiquement tous les jours à 9h30.
+    """
+    from services.email_service import send_email
+    
+    logging.info("🎫 Vérification des tickets de perte/vol...")
+    
+    try:
+        client = AsyncIOMotorClient(MONGO_URL)
+        db = client[DB_NAME]
+        
+        today = datetime.now(timezone.utc)
+        three_days_ago = (today - timedelta(days=3)).isoformat()
+        
+        # Find unresolved tickets that haven't been updated or reminded in 3 days
+        tickets = await db.loss_tickets.find({
+            "status": {"$nin": ["resolved", "obsolete"]},
+            "$or": [
+                {"last_reminder_at": None},
+                {"last_reminder_at": {"$lt": three_days_ago}}
+            ]
+        }, {"_id": 0}).to_list(50)
+        
+        if not tickets:
+            logging.info("🎫 Aucun ticket nécessitant un rappel")
+            client.close()
+            return
+        
+        notification_email = "communication@creativindustry.com"
+        reminders_sent = 0
+        
+        for ticket in tickets:
+            issue_labels = {"lost": "PERDU", "stolen": "VOLÉ", "damaged": "ENDOMMAGÉ"}
+            status_labels = {
+                "pending": "En attente",
+                "ordering": "Commande en cours",
+                "insurance": "Assurance en cours"
+            }
+            
+            try:
+                await send_email(
+                    to_email=notification_email,
+                    subject=f"🔔 RAPPEL #{reminders_sent+1} - Matériel {issue_labels.get(ticket.get('issue_type'), '')}: {ticket.get('equipment_name')}",
+                    html_content=f"""
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <h2 style="color: #ef4444;">🔔 Rappel automatique - Ticket non résolu</h2>
+                        
+                        <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+                            <p><strong>Équipement:</strong> {ticket.get('equipment_name')}</p>
+                            <p><strong>Problème:</strong> {issue_labels.get(ticket.get('issue_type'), ticket.get('issue_type'))}</p>
+                            <p><strong>Statut:</strong> {status_labels.get(ticket.get('status'), ticket.get('status'))}</p>
+                            <p><strong>Ouvert depuis:</strong> {ticket.get('created_at', '')[:10]}</p>
+                        </div>
+                        
+                        <p><strong>Action requise :</strong> Merci de mettre à jour ce ticket.</p>
+                        
+                        <p>
+                            <a href="{SITE_URL}/admin/equipment" 
+                               style="display: inline-block; background: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
+                                Mettre à jour
+                            </a>
+                        </p>
+                    </div>
+                    """
+                )
+                
+                await db.loss_tickets.update_one(
+                    {"id": ticket["id"]},
+                    {"$set": {"last_reminder_at": today.isoformat()}}
+                )
+                reminders_sent += 1
+                
+            except Exception as e:
+                logging.error(f"❌ Erreur rappel ticket {ticket.get('id')}: {e}")
+        
+        logging.info(f"🎫 Rappels tickets: {reminders_sent} envoyés sur {len(tickets)} tickets en attente")
+        client.close()
+        
+    except Exception as e:
+        logging.error(f"❌ Erreur scheduler rappels tickets: {e}")
+
 def start_scheduler():
     """Démarre le scheduler avec toutes les tâches planifiées"""
     
@@ -217,8 +301,17 @@ def start_scheduler():
         replace_existing=True
     )
     
+    # Rappels tickets perte/vol tous les jours à 9h30
+    scheduler.add_job(
+        send_loss_ticket_reminders,
+        CronTrigger(hour=9, minute=30, timezone='Europe/Paris'),
+        id='daily_loss_ticket_reminders',
+        name='Rappels tickets perte/vol',
+        replace_existing=True
+    )
+    
     scheduler.start()
-    logging.info("📅 Scheduler démarré - Rappels SMS à 10h, Rappels équipement à 9h")
+    logging.info("📅 Scheduler démarré - SMS 10h, Équipement 9h, Tickets perte/vol 9h30")
 
 def stop_scheduler():
     """Arrête le scheduler proprement"""

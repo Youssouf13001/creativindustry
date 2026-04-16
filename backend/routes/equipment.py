@@ -861,3 +861,272 @@ async def generate_deployment_pdf(deployment_id: str, current_user: dict = Depen
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+# ==================== LOSS/THEFT TICKETS ====================
+
+class LossTicketCreate(BaseModel):
+    equipment_id: str
+    equipment_name: str
+    issue_type: str  # lost, stolen, damaged
+    deployment_id: Optional[str] = None
+    deployment_name: Optional[str] = None
+    notes: Optional[str] = None
+
+class LossTicketUpdate(BaseModel):
+    status: str  # pending, ordering, insurance, resolved, obsolete
+    response_message: str
+    estimated_date: Optional[str] = None
+
+NOTIFICATION_EMAIL = "communication@creativindustry.com"
+
+@router.post("/loss-tickets")
+async def create_loss_ticket(data: LossTicketCreate, current_user: dict = Depends(get_current_user)):
+    """Create a loss/theft ticket and send notification email"""
+    from services.email_service import send_email
+    
+    ticket_id = str(uuid.uuid4())
+    
+    # Get equipment details
+    equipment = await db.equipment.find_one({"id": data.equipment_id}, {"_id": 0})
+    
+    ticket = {
+        "id": ticket_id,
+        "equipment_id": data.equipment_id,
+        "equipment_name": data.equipment_name,
+        "equipment_details": equipment,
+        "issue_type": data.issue_type,
+        "deployment_id": data.deployment_id,
+        "deployment_name": data.deployment_name,
+        "notes": data.notes,
+        "status": "pending",  # pending, ordering, insurance, resolved, obsolete
+        "messages": [],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": current_user.get("id"),
+        "created_by_name": current_user.get("name", "Admin"),
+        "last_reminder_at": None,
+        "resolved_at": None
+    }
+    
+    await db.loss_tickets.insert_one(ticket)
+    
+    # Send notification email
+    issue_labels = {
+        "lost": "PERDU",
+        "stolen": "VOLÉ",
+        "damaged": "ENDOMMAGÉ"
+    }
+    
+    issue_label = issue_labels.get(data.issue_type, data.issue_type.upper())
+    
+    email_html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: {'#ef4444' if data.issue_type == 'stolen' else '#f59e0b'};">
+            ⚠️ ALERTE MATÉRIEL {issue_label}
+        </h2>
+        
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Équipement concerné</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #ddd;"><strong>Nom:</strong></td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #ddd;">{data.equipment_name}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #ddd;"><strong>Marque:</strong></td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #ddd;">{equipment.get('brand', '-') if equipment else '-'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #ddd;"><strong>Modèle:</strong></td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #ddd;">{equipment.get('model', '-') if equipment else '-'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #ddd;"><strong>N° Série:</strong></td>
+                    <td style="padding: 8px 0; border-bottom: 1px solid #ddd;">{equipment.get('serial_number', '-') if equipment else '-'}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;"><strong>Prix d'achat:</strong></td>
+                    <td style="padding: 8px 0;">{equipment.get('purchase_price', '-')}€ </td>
+                </tr>
+            </table>
+        </div>
+        
+        {f'<p><strong>Déplacement:</strong> {data.deployment_name}</p>' if data.deployment_name else ''}
+        {f'<p><strong>Notes:</strong> {data.notes}</p>' if data.notes else ''}
+        
+        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <h4 style="margin-top: 0; color: #856404;">Action requise</h4>
+            {"<p>Veuillez contacter l'assurance pour déclarer le vol et obtenir un remplacement.</p>" if data.issue_type == 'stolen' else '<p>Veuillez commander un remplacement ou indiquer si le matériel est obsolète.</p>'}
+        </div>
+        
+        <p style="margin-top: 30px;">
+            <a href="{SITE_URL}/admin/equipment" 
+               style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
+                Gérer ce ticket
+            </a>
+        </p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+        <p style="color: #666; font-size: 12px;">
+            Ticket #{ticket_id[:8]}<br>
+            Signalé par: {current_user.get('name', 'Admin')}<br>
+            Date: {datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M')}
+        </p>
+    </div>
+    """
+    
+    try:
+        await send_email(
+            to_email=NOTIFICATION_EMAIL,
+            subject=f"⚠️ MATÉRIEL {issue_label}: {data.equipment_name}",
+            html_content=email_html
+        )
+    except Exception as e:
+        logging.error(f"Erreur envoi email ticket perte: {e}")
+    
+    return {"id": ticket_id, "message": "Ticket créé et notification envoyée"}
+
+@router.get("/loss-tickets")
+async def get_loss_tickets(status: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """Get all loss/theft tickets"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    tickets = await db.loss_tickets.find(query, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return tickets
+
+@router.get("/loss-tickets/{ticket_id}")
+async def get_loss_ticket(ticket_id: str, current_user: dict = Depends(get_current_user)):
+    """Get a specific loss ticket"""
+    ticket = await db.loss_tickets.find_one({"id": ticket_id}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket non trouvé")
+    return ticket
+
+@router.put("/loss-tickets/{ticket_id}")
+async def update_loss_ticket(ticket_id: str, data: LossTicketUpdate, current_user: dict = Depends(get_current_user)):
+    """Update a loss ticket with response"""
+    from services.email_service import send_email
+    
+    ticket = await db.loss_tickets.find_one({"id": ticket_id})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket non trouvé")
+    
+    # Add message to history
+    message = {
+        "id": str(uuid.uuid4()),
+        "status": data.status,
+        "message": data.response_message,
+        "estimated_date": data.estimated_date,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": current_user.get("id"),
+        "created_by_name": current_user.get("name", "Admin")
+    }
+    
+    update_data = {
+        "status": data.status,
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    if data.status == "resolved":
+        update_data["resolved_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.loss_tickets.update_one(
+        {"id": ticket_id},
+        {
+            "$set": update_data,
+            "$push": {"messages": message}
+        }
+    )
+    
+    # If resolved, update equipment status
+    if data.status == "resolved":
+        # Could mark as replaced or remove from inventory
+        pass
+    
+    return {"message": "Ticket mis à jour"}
+
+@router.post("/loss-tickets/{ticket_id}/remind")
+async def send_ticket_reminder(ticket_id: str, current_user: dict = Depends(require_admin)):
+    """Send a reminder email for an unresolved ticket"""
+    from services.email_service import send_email
+    
+    ticket = await db.loss_tickets.find_one({"id": ticket_id}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket non trouvé")
+    
+    if ticket.get("status") == "resolved":
+        return {"message": "Ticket déjà résolu"}
+    
+    status_labels = {
+        "pending": "En attente de traitement",
+        "ordering": "Commande en cours",
+        "insurance": "En cours avec l'assurance",
+        "obsolete": "Matériel obsolète"
+    }
+    
+    issue_labels = {
+        "lost": "PERDU",
+        "stolen": "VOLÉ",
+        "damaged": "ENDOMMAGÉ"
+    }
+    
+    last_message = ticket.get("messages", [])[-1] if ticket.get("messages") else None
+    
+    email_html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #ef4444;">🔔 RAPPEL - Ticket en attente de résolution</h2>
+        
+        <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+            <p style="margin: 0;"><strong>Équipement:</strong> {ticket.get('equipment_name')}</p>
+            <p style="margin: 5px 0 0 0;"><strong>Type:</strong> {issue_labels.get(ticket.get('issue_type'), ticket.get('issue_type'))}</p>
+            <p style="margin: 5px 0 0 0;"><strong>Statut actuel:</strong> {status_labels.get(ticket.get('status'), ticket.get('status'))}</p>
+        </div>
+        
+        {f'<p><strong>Dernière mise à jour:</strong> {last_message.get("message")}</p>' if last_message else '<p>Aucune mise à jour pour le moment.</p>'}
+        
+        <p><strong>Merci de mettre à jour ce ticket avec l'avancement :</strong></p>
+        <ul>
+            <li>Commande lancée ? Date d'arrivée estimée ?</li>
+            <li>Dossier assurance en cours ?</li>
+            <li>Matériel obsolète (ne pas remplacer) ?</li>
+            <li>Problème résolu ?</li>
+        </ul>
+        
+        <p style="margin-top: 30px;">
+            <a href="{SITE_URL}/admin/equipment" 
+               style="display: inline-block; background: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
+                Mettre à jour le ticket
+            </a>
+        </p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+        <p style="color: #666; font-size: 12px;">
+            Ticket #{ticket_id[:8]} - Ouvert le {ticket.get('created_at', '')[:10]}
+        </p>
+    </div>
+    """
+    
+    try:
+        await send_email(
+            to_email=NOTIFICATION_EMAIL,
+            subject=f"🔔 RAPPEL - Matériel {issue_labels.get(ticket.get('issue_type'), '')}: {ticket.get('equipment_name')}",
+            html_content=email_html
+        )
+        
+        await db.loss_tickets.update_one(
+            {"id": ticket_id},
+            {"$set": {"last_reminder_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        return {"message": "Rappel envoyé"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur envoi email: {str(e)}")
+
+@router.delete("/loss-tickets/{ticket_id}")
+async def delete_loss_ticket(ticket_id: str, current_user: dict = Depends(require_admin)):
+    """Delete a loss ticket"""
+    result = await db.loss_tickets.delete_one({"id": ticket_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Ticket non trouvé")
+    return {"message": "Ticket supprimé"}

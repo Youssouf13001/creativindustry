@@ -66,23 +66,27 @@ export default function EquipmentPage() {
   
   // Tab state
   const [activeTab, setActiveTab] = useState("inventory"); // inventory, deployments, reminders
+  const [ticketCount, setTicketCount] = useState(0);
 
   const fetchData = useCallback(async () => {
     try {
       const token = localStorage.getItem("admin_token");
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [eqRes, catRes, statsRes, remindersRes] = await Promise.all([
+      const [eqRes, catRes, statsRes, remindersRes, ticketsRes] = await Promise.all([
         axios.get(`${API}/equipment`, { headers, params: { search, category_id: selectedCategory, condition: selectedCondition } }),
         axios.get(`${API}/equipment/categories`, { headers }),
         axios.get(`${API}/equipment/stats`, { headers }),
-        axios.get(`${API}/equipment/reminders`, { headers })
+        axios.get(`${API}/equipment/reminders`, { headers }),
+        axios.get(`${API}/loss-tickets`, { headers })
       ]);
       
       setEquipment(eqRes.data);
       setCategories(catRes.data);
       setStats(statsRes.data);
       setReminders(remindersRes.data);
+      const openTickets = (ticketsRes.data || []).filter(t => t.status !== "resolved" && t.status !== "obsolete");
+      setTicketCount(openTickets.length);
     } catch (e) {
       console.error("Error fetching equipment:", e);
       if (e.response?.status === 401) {
@@ -182,7 +186,7 @@ export default function EquipmentPage() {
         {[
           { id: "inventory", label: "Inventaire", icon: Package },
           { id: "deployments", label: "Déplacements", icon: Truck },
-          { id: "reminders", label: "Alertes", icon: AlertTriangle, badge: reminders.length }
+          { id: "reminders", label: "Alertes", icon: AlertTriangle, badge: reminders.length + ticketCount }
         ].map(tab => {
           const Icon = tab.icon;
           return (
@@ -1365,7 +1369,34 @@ function DeploymentDetailsModal({ deployment, showReturn, onClose, onSave }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      toast.success("Retour validé");
+      // Create loss tickets for lost, stolen or damaged items
+      const issueItems = itemsData.filter(item => 
+        ["lost", "stolen", "damaged"].includes(item.status)
+      );
+      
+      for (const item of issueItems) {
+        const equipmentInfo = items.find(i => i.equipment_id === item.equipment_id);
+        try {
+          await axios.post(`${API}/loss-tickets`, {
+            equipment_id: item.equipment_id,
+            equipment_name: equipmentInfo?.equipment?.name || "Équipement inconnu",
+            issue_type: item.status,
+            deployment_id: deployment.id,
+            deployment_name: deployment.name,
+            notes: `Signalé lors du retour du déplacement "${deployment.name}"`
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch (e) {
+          console.error("Erreur création ticket:", e);
+        }
+      }
+      
+      if (issueItems.length > 0) {
+        toast.success(`Retour validé - ${issueItems.length} ticket(s) créé(s) et notification envoyée`);
+      } else {
+        toast.success("Retour validé");
+      }
       onSave();
     } catch (e) {
       toast.error("Erreur lors de la validation");
@@ -1458,8 +1489,31 @@ function DeploymentDetailsModal({ deployment, showReturn, onClose, onSave }) {
   );
 }
 
-// Reminders Tab
+// Reminders Tab with Loss Tickets
 function RemindersTab({ reminders, onRefresh }) {
+  const [tickets, setTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
+  const [updatingTicket, setUpdatingTicket] = useState(null);
+  const [ticketForm, setTicketForm] = useState({ status: "", response_message: "", estimated_date: "" });
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+  const fetchTickets = async () => {
+    try {
+      const token = localStorage.getItem("admin_token");
+      const res = await axios.get(`${API}/loss-tickets`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTickets(res.data);
+    } catch (e) {
+      console.error("Error fetching tickets:", e);
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
   const resolveReminder = async (id) => {
     try {
       const token = localStorage.getItem("admin_token");
@@ -1470,6 +1524,55 @@ function RemindersTab({ reminders, onRefresh }) {
       onRefresh();
     } catch (e) {
       toast.error("Erreur");
+    }
+  };
+
+  const openUpdateTicket = (ticket) => {
+    setUpdatingTicket(ticket);
+    setTicketForm({ status: ticket.status, response_message: "", estimated_date: "" });
+  };
+
+  const handleUpdateTicket = async () => {
+    if (!ticketForm.response_message.trim()) {
+      toast.error("Veuillez ajouter un message");
+      return;
+    }
+    try {
+      const token = localStorage.getItem("admin_token");
+      await axios.put(`${API}/loss-tickets/${updatingTicket.id}`, ticketForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Ticket mis à jour");
+      setUpdatingTicket(null);
+      fetchTickets();
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour");
+    }
+  };
+
+  const sendReminder = async (ticketId) => {
+    try {
+      const token = localStorage.getItem("admin_token");
+      await axios.post(`${API}/loss-tickets/${ticketId}/remind`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Rappel envoyé à communication@creativindustry.com");
+    } catch (e) {
+      toast.error("Erreur lors de l'envoi du rappel");
+    }
+  };
+
+  const deleteTicket = async (ticketId) => {
+    if (!window.confirm("Supprimer ce ticket ?")) return;
+    try {
+      const token = localStorage.getItem("admin_token");
+      await axios.delete(`${API}/loss-tickets/${ticketId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Ticket supprimé");
+      fetchTickets();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
     }
   };
 
@@ -1489,51 +1592,287 @@ function RemindersTab({ reminders, onRefresh }) {
     warranty_expiring: "border-blue-500 bg-blue-500/10"
   };
 
-  if (reminders.length === 0) {
+  const TICKET_STATUS_LABELS = {
+    pending: "En attente",
+    ordering: "Commande en cours",
+    insurance: "Assurance en cours",
+    resolved: "Résolu",
+    obsolete: "Obsolète"
+  };
+
+  const TICKET_STATUS_COLORS = {
+    pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
+    ordering: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+    insurance: "bg-purple-500/20 text-purple-400 border-purple-500/50",
+    resolved: "bg-green-500/20 text-green-400 border-green-500/50",
+    obsolete: "bg-gray-500/20 text-gray-400 border-gray-500/50"
+  };
+
+  const TICKET_TYPE_LABELS = {
+    lost: "PERDU",
+    stolen: "VOLÉ",
+    damaged: "ENDOMMAGÉ"
+  };
+
+  const TICKET_TYPE_COLORS = {
+    lost: "bg-red-500",
+    stolen: "bg-red-700",
+    damaged: "bg-orange-500"
+  };
+
+  const hasContent = reminders.length > 0 || tickets.length > 0;
+
+  if (!hasContent && !loadingTickets) {
     return (
       <div className="text-center py-12 text-white/50">
         <CheckCircle size={48} className="mx-auto mb-4 opacity-50 text-green-400" />
-        <p>Aucune alerte</p>
+        <p>Aucune alerte ni ticket en cours</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {reminders.map(reminder => (
-        <div
-          key={reminder.id}
-          className={`border-l-4 rounded-lg p-4 ${ISSUE_COLORS[reminder.issue || reminder.type]}`}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <AlertTriangle size={16} className="text-yellow-400" />
-                <span className="font-bold text-white">
-                  {ISSUE_LABELS[reminder.issue || reminder.type]}
-                </span>
-              </div>
-              <p className="text-white">{reminder.equipment_name}</p>
-              {reminder.notes && (
-                <p className="text-white/60 text-sm mt-1">{reminder.notes}</p>
-              )}
-              {reminder.warranty_end_date && (
-                <p className="text-white/60 text-sm mt-1">
-                  Expire le: {reminder.warranty_end_date}
-                </p>
-              )}
-            </div>
-            {!reminder.id.startsWith("warranty_") && (
-              <button
-                onClick={() => resolveReminder(reminder.id)}
-                className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-sm"
+    <div className="space-y-8">
+      {/* Loss/Theft/Damage Tickets */}
+      <div>
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2" data-testid="tickets-section-title">
+          <FileText size={20} className="text-red-400" />
+          Tickets Pertes / Vols / Casses
+          {tickets.filter(t => t.status !== "resolved" && t.status !== "obsolete").length > 0 && (
+            <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+              {tickets.filter(t => t.status !== "resolved" && t.status !== "obsolete").length}
+            </span>
+          )}
+        </h3>
+
+        {loadingTickets ? (
+          <div className="text-center py-6"><RefreshCw className="animate-spin mx-auto text-white/40" size={24} /></div>
+        ) : tickets.length === 0 ? (
+          <div className="text-center py-6 text-white/40 bg-white/5 rounded-lg">
+            <p>Aucun ticket de perte/vol/casse</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {tickets.map(ticket => (
+              <div
+                key={ticket.id}
+                className="bg-card border border-white/10 rounded-xl overflow-hidden"
+                data-testid={`ticket-${ticket.id}`}
               >
-                Résolu
-              </button>
-            )}
+                {/* Ticket Header */}
+                <div className="p-4 flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    <span className={`px-2 py-1 rounded text-xs font-bold text-white shrink-0 ${TICKET_TYPE_COLORS[ticket.issue_type]}`}>
+                      {TICKET_TYPE_LABELS[ticket.issue_type]}
+                    </span>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-white">{ticket.equipment_name}</h4>
+                      {ticket.equipment_details && (
+                        <p className="text-white/50 text-sm">
+                          {ticket.equipment_details.brand} {ticket.equipment_details.model}
+                          {ticket.equipment_details.serial_number && ` — S/N: ${ticket.equipment_details.serial_number}`}
+                        </p>
+                      )}
+                      {ticket.deployment_name && (
+                        <p className="text-white/40 text-xs mt-1">
+                          Déplacement : {ticket.deployment_name}
+                        </p>
+                      )}
+                      <p className="text-white/40 text-xs mt-1">
+                        Ouvert le {new Date(ticket.created_at).toLocaleDateString("fr-FR")}
+                        {ticket.equipment_details?.purchase_price && (
+                          <> — Valeur : {ticket.equipment_details.purchase_price}€</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium border shrink-0 ${TICKET_STATUS_COLORS[ticket.status]}`}>
+                    {TICKET_STATUS_LABELS[ticket.status]}
+                  </span>
+                </div>
+
+                {/* Message History */}
+                {ticket.messages && ticket.messages.length > 0 && (
+                  <div className="px-4 pb-2">
+                    <div className="border-t border-white/5 pt-3 space-y-2 max-h-40 overflow-y-auto">
+                      {ticket.messages.map((msg, idx) => (
+                        <div key={msg.id || idx} className="flex gap-2 text-sm">
+                          <span className={`px-1.5 py-0.5 rounded text-xs shrink-0 ${TICKET_STATUS_COLORS[msg.status]}`}>
+                            {TICKET_STATUS_LABELS[msg.status]}
+                          </span>
+                          <span className="text-white/70">{msg.message}</span>
+                          <span className="text-white/30 text-xs shrink-0 ml-auto">
+                            {new Date(msg.created_at).toLocaleDateString("fr-FR")}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                {ticket.status !== "resolved" && ticket.status !== "obsolete" && (
+                  <div className="px-4 pb-4 flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => openUpdateTicket(ticket)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded-lg text-sm text-white"
+                      data-testid={`update-ticket-${ticket.id}`}
+                    >
+                      <Edit size={14} /> Mettre à jour
+                    </button>
+                    <button
+                      onClick={() => sendReminder(ticket.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-sm text-white/70"
+                      data-testid={`remind-ticket-${ticket.id}`}
+                    >
+                      <RefreshCw size={14} /> Relancer
+                    </button>
+                    <button
+                      onClick={() => deleteTicket(ticket.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg text-sm transition-colors ml-auto"
+                      data-testid={`delete-ticket-${ticket.id}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Resolved badge */}
+                {(ticket.status === "resolved" || ticket.status === "obsolete") && (
+                  <div className="px-4 pb-4 flex gap-2">
+                    <span className="text-green-400 text-sm flex items-center gap-1">
+                      <CheckCircle size={14} />
+                      {ticket.status === "resolved" ? "Résolu" : "Marqué obsolète"}
+                      {ticket.resolved_at && ` le ${new Date(ticket.resolved_at).toLocaleDateString("fr-FR")}`}
+                    </span>
+                    <button
+                      onClick={() => deleteTicket(ticket.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg text-sm transition-colors ml-auto"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Equipment Reminders */}
+      {reminders.length > 0 && (
+        <div>
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <AlertTriangle size={20} className="text-yellow-400" />
+            Alertes équipement
+          </h3>
+          <div className="space-y-3">
+            {reminders.map(reminder => (
+              <div
+                key={reminder.id}
+                className={`border-l-4 rounded-lg p-4 ${ISSUE_COLORS[reminder.issue || reminder.type]}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <AlertTriangle size={16} className="text-yellow-400" />
+                      <span className="font-bold text-white">
+                        {ISSUE_LABELS[reminder.issue || reminder.type]}
+                      </span>
+                    </div>
+                    <p className="text-white">{reminder.equipment_name}</p>
+                    {reminder.notes && (
+                      <p className="text-white/60 text-sm mt-1">{reminder.notes}</p>
+                    )}
+                    {reminder.warranty_end_date && (
+                      <p className="text-white/60 text-sm mt-1">
+                        Expire le: {reminder.warranty_end_date}
+                      </p>
+                    )}
+                  </div>
+                  {!reminder.id.startsWith("warranty_") && (
+                    <button
+                      onClick={() => resolveReminder(reminder.id)}
+                      className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-sm"
+                    >
+                      Résolu
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      ))}
+      )}
+
+      {/* Update Ticket Modal */}
+      {updatingTicket && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-white/10 rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-white/10">
+              <h2 className="text-lg font-bold text-white">Mettre à jour le ticket</h2>
+              <p className="text-white/60 text-sm mt-1">
+                {TICKET_TYPE_LABELS[updatingTicket.issue_type]} — {updatingTicket.equipment_name}
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-white/60 text-sm mb-1">Statut</label>
+                <select
+                  value={ticketForm.status}
+                  onChange={(e) => setTicketForm({ ...ticketForm, status: e.target.value })}
+                  className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-white [&>option]:bg-zinc-900 [&>option]:text-white"
+                  data-testid="ticket-status-select"
+                >
+                  <option value="pending">En attente</option>
+                  <option value="ordering">Commande en cours</option>
+                  <option value="insurance">Assurance en cours</option>
+                  <option value="resolved">Résolu</option>
+                  <option value="obsolete">Obsolète (ne pas remplacer)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-white/60 text-sm mb-1">Message / Commentaire *</label>
+                <textarea
+                  value={ticketForm.response_message}
+                  onChange={(e) => setTicketForm({ ...ticketForm, response_message: e.target.value })}
+                  rows={3}
+                  placeholder="Ex: Commande passée chez Amazon, livraison prévue le..."
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                  data-testid="ticket-message-input"
+                />
+              </div>
+              {(ticketForm.status === "ordering" || ticketForm.status === "insurance") && (
+                <div>
+                  <label className="block text-white/60 text-sm mb-1">Date estimée</label>
+                  <input
+                    type="date"
+                    value={ticketForm.estimated_date}
+                    onChange={(e) => setTicketForm({ ...ticketForm, estimated_date: e.target.value })}
+                    className="w-full bg-zinc-900 border border-white/10 rounded-lg px-4 py-2 text-white [color-scheme:dark]"
+                    data-testid="ticket-date-input"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="p-6 border-t border-white/10 flex gap-3">
+              <button
+                onClick={() => setUpdatingTicket(null)}
+                className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleUpdateTicket}
+                className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg"
+                data-testid="ticket-update-submit"
+              >
+                Mettre à jour
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
