@@ -1123,6 +1123,24 @@ function DeploymentsTab({ onRefresh, equipment = [], categories = [] }) {
     }
   };
 
+  const deleteDeployment = async (id, name) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer le déplacement "${name}" ?\n\nCette action est irréversible.`)) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem("admin_token");
+      await axios.delete(`${API}/deployments/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Déplacement supprimé");
+      fetchDeployments();
+      onRefresh();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
   const STATUS_COLORS = {
     planned: "bg-blue-500",
     in_progress: "bg-yellow-500",
@@ -1219,6 +1237,13 @@ function DeploymentsTab({ onRefresh, equipment = [], categories = [] }) {
                   <CheckCircle size={16} /> Valider retour
                 </button>
               )}
+              <button
+                onClick={() => deleteDeployment(dep.id, dep.name)}
+                className="flex items-center gap-2 px-3 py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg text-sm transition-colors"
+                title="Supprimer ce déplacement"
+              >
+                <Trash2 size={16} />
+              </button>
               {dep.signature_departure && (
                 <span className="flex items-center gap-1 px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">
                   ✓ Signé (départ)
