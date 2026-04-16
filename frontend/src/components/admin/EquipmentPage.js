@@ -1219,21 +1219,29 @@ function DeploymentsTab({ onRefresh, equipment = [], categories = [] }) {
                   <Edit size={16} /> Modifier
                 </button>
               )}
-              {dep.status === "planned" && (
-                <>
-                  <button
-                    onClick={() => setSelectedDeployment({...dep, showSignature: true, signatureType: "departure"})}
-                    className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm"
-                  >
-                    <PenTool size={16} /> Signer départ
-                  </button>
-                  <button
-                    onClick={() => startDeployment(dep.id)}
-                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm"
-                  >
-                    <Truck size={16} /> Démarrer
-                  </button>
-                </>
+              {dep.status === "planned" && !dep.signature_departure && (
+                <button
+                  onClick={() => setSelectedDeployment({...dep, showSignature: true, signatureType: "departure"})}
+                  className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm"
+                >
+                  <PenTool size={16} /> Signer départ
+                </button>
+              )}
+              {dep.status === "planned" && dep.signature_departure && (
+                <button
+                  onClick={() => startDeployment(dep.id)}
+                  className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm"
+                >
+                  <Truck size={16} /> Démarrer
+                </button>
+              )}
+              {dep.status === "in_progress" && !dep.signature_return && (
+                <button
+                  onClick={() => setSelectedDeployment({...dep, showSignature: true, signatureType: "return"})}
+                  className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm"
+                >
+                  <PenTool size={16} /> Signer retour
+                </button>
               )}
               {(dep.status === "planned" || dep.status === "in_progress") && (
                 <button
