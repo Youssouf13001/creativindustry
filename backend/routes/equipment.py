@@ -945,7 +945,7 @@ async def create_loss_ticket(data: LossTicketCreate, current_user: dict = Depend
                 </tr>
                 <tr>
                     <td style="padding: 8px 0;"><strong>Prix d'achat:</strong></td>
-                    <td style="padding: 8px 0;">{equipment.get('purchase_price', '-')}€ </td>
+                    <td style="padding: 8px 0;">{str(equipment.get('purchase_price', '')) + '€' if equipment and equipment.get('purchase_price') else 'Non renseigné'}</td>
                 </tr>
             </table>
         </div>
@@ -959,7 +959,7 @@ async def create_loss_ticket(data: LossTicketCreate, current_user: dict = Depend
         </div>
         
         <p style="margin-top: 30px;">
-            <a href="{SITE_URL}/admin/equipment" 
+            <a href="{SITE_URL}/admin/equipment?tab=alertes" 
                style="display: inline-block; background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
                 Gérer ce ticket
             </a>
@@ -1094,7 +1094,7 @@ async def send_ticket_reminder(ticket_id: str, current_user: dict = Depends(requ
         </ul>
         
         <p style="margin-top: 30px;">
-            <a href="{SITE_URL}/admin/equipment" 
+            <a href="{SITE_URL}/admin/equipment?tab=alertes" 
                style="display: inline-block; background: #ef4444; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
                 Mettre à jour le ticket
             </a>

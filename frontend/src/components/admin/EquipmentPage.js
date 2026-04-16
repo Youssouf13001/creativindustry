@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
 import {
@@ -48,6 +48,7 @@ const CONDITION_LABELS = {
 
 export default function EquipmentPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [equipment, setEquipment] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -64,8 +65,11 @@ export default function EquipmentPage() {
   const [editingEquipment, setEditingEquipment] = useState(null);
   const [showDeploymentModal, setShowDeploymentModal] = useState(false);
   
-  // Tab state
-  const [activeTab, setActiveTab] = useState("inventory"); // inventory, deployments, reminders
+  // Tab state - read from URL param if present
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(
+    tabFromUrl === "alertes" ? "reminders" : "inventory"
+  );
   const [ticketCount, setTicketCount] = useState(0);
 
   const fetchData = useCallback(async () => {
