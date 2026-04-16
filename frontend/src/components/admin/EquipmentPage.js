@@ -553,21 +553,21 @@ function EquipmentModal({ equipment, categories, onClose, onSave }) {
 }
 
 // Deployment Modal
-function DeploymentModal({ equipment, onClose, onSave, categories = [] }) {
+function DeploymentModal({ equipment = [], onClose, onSave, categories = [] }) {
   const [form, setForm] = useState({
     name: "",
     location: "",
     start_date: new Date().toISOString().split('T')[0],
     end_date: "",
     notes: "",
-    equipment_ids: []
+    equipment_items: {} // { equipment_id: quantity }
   });
   const [saving, setSaving] = useState(false);
   const [filterCategory, setFilterCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   // Filter equipment by category and search
-  const filteredEquipment = equipment.filter(item => {
+  const filteredEquipment = (equipment || []).filter(item => {
     const matchesCategory = !filterCategory || item.category_id === filterCategory;
     const matchesSearch = !searchTerm || 
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -587,17 +587,31 @@ function DeploymentModal({ equipment, onClose, onSave, categories = [] }) {
   }, {});
 
   const toggleEquipment = (id) => {
+    setForm(prev => {
+      const newItems = { ...prev.equipment_items };
+      if (newItems[id]) {
+        delete newItems[id];
+      } else {
+        newItems[id] = 1; // Default quantity
+      }
+      return { ...prev, equipment_items: newItems };
+    });
+  };
+
+  const updateQuantity = (id, qty) => {
+    const quantity = Math.max(1, parseInt(qty) || 1);
     setForm(prev => ({
       ...prev,
-      equipment_ids: prev.equipment_ids.includes(id)
-        ? prev.equipment_ids.filter(e => e !== id)
-        : [...prev.equipment_ids, id]
+      equipment_items: { ...prev.equipment_items, [id]: quantity }
     }));
   };
 
+  const selectedCount = Object.keys(form.equipment_items).length;
+  const totalItems = Object.values(form.equipment_items).reduce((sum, qty) => sum + qty, 0);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name || form.equipment_ids.length === 0) {
+    if (!form.name || selectedCount === 0) {
       toast.error("Nom et au moins un équipement requis");
       return;
     }
@@ -605,7 +619,19 @@ function DeploymentModal({ equipment, onClose, onSave, categories = [] }) {
     setSaving(true);
     try {
       const token = localStorage.getItem("admin_token");
-      await axios.post(`${API}/deployments`, form, {
+      // Convert equipment_items to array format for backend
+      const payload = {
+        name: form.name,
+        location: form.location,
+        start_date: form.start_date,
+        end_date: form.end_date,
+        notes: form.notes,
+        equipment_items: Object.entries(form.equipment_items).map(([id, qty]) => ({
+          equipment_id: id,
+          quantity: qty
+        }))
+      };
+      await axios.post(`${API}/deployments`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Déplacement créé");
@@ -673,7 +699,7 @@ function DeploymentModal({ equipment, onClose, onSave, categories = [] }) {
           
           <div>
             <label className="block text-white/60 text-sm mb-2">
-              Équipements à emporter ({form.equipment_ids.length} sélectionnés)
+              Équipements à emporter ({selectedCount} types, {totalItems} articles)
             </label>
             
             {/* Filtres */}
@@ -706,27 +732,44 @@ function DeploymentModal({ equipment, onClose, onSave, categories = [] }) {
                     <div className="sticky top-0 bg-zinc-800 px-3 py-2 text-white/70 text-sm font-medium border-b border-white/10">
                       {category.icon} {category.name} ({category.items.length})
                     </div>
-                    {category.items.map(item => (
-                      <label
-                        key={item.id}
-                        className={`flex items-center gap-3 p-3 border-b border-white/5 cursor-pointer hover:bg-white/5 ${
-                          form.equipment_ids.includes(item.id) ? "bg-primary/10" : ""
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={form.equipment_ids.includes(item.id)}
-                          onChange={() => toggleEquipment(item.id)}
-                          className="w-5 h-5 rounded"
-                        />
-                        <div className="flex-1">
-                          <div className="text-white font-medium">{item.name}</div>
-                          <div className="text-white/50 text-sm">
-                            {item.brand} {item.model}
+                    {category.items.map(item => {
+                      const isSelected = form.equipment_items[item.id] !== undefined;
+                      const quantity = form.equipment_items[item.id] || 0;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex items-center gap-3 p-3 border-b border-white/5 ${
+                            isSelected ? "bg-primary/10" : "hover:bg-white/5"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleEquipment(item.id)}
+                            className="w-5 h-5 rounded cursor-pointer"
+                          />
+                          <div className="flex-1">
+                            <div className="text-white font-medium">{item.name}</div>
+                            <div className="text-white/50 text-sm">
+                              {item.brand} {item.model}
+                            </div>
                           </div>
+                          {isSelected && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-white/60 text-sm">Qté:</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={quantity}
+                                onChange={(e) => updateQuantity(item.id, e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-16 bg-zinc-800 border border-white/20 rounded px-2 py-1 text-white text-center"
+                              />
+                            </div>
+                          )}
                         </div>
-                      </label>
-                    ))}
+                      );
+                    })}
                   </div>
                 ))
               )}
@@ -743,7 +786,7 @@ function DeploymentModal({ equipment, onClose, onSave, categories = [] }) {
             </button>
             <button
               type="submit"
-              disabled={saving || form.equipment_ids.length === 0}
+              disabled={saving || selectedCount === 0}
               className="flex-1 px-4 py-2 bg-primary text-black font-bold rounded-lg disabled:opacity-50"
             >
               {saving ? "Création..." : "Créer le déplacement"}

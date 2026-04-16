@@ -78,13 +78,18 @@ class Equipment(BaseModel):
     notes: Optional[str] = None
     quantity: Optional[int] = 1
 
+class DeploymentItem(BaseModel):
+    equipment_id: str
+    quantity: int = 1
+
 class Deployment(BaseModel):
     name: str
     location: Optional[str] = None
     start_date: str
     end_date: Optional[str] = None
     notes: Optional[str] = None
-    equipment_ids: List[str] = []
+    equipment_ids: List[str] = []  # Legacy support
+    equipment_items: Optional[List[DeploymentItem]] = None  # New format with quantities
 
 class DeploymentItemStatus(BaseModel):
     equipment_id: str
@@ -387,18 +392,35 @@ async def create_deployment(data: Deployment, current_user: dict = Depends(get_c
     """Create a new deployment"""
     deployment_id = str(uuid.uuid4())
     
-    # Create items list with initial status
+    # Create items list with initial status and quantities
     items = []
-    for eq_id in data.equipment_ids:
-        items.append({
-            "equipment_id": eq_id,
-            "status": "checked_out",
-            "checked_out_at": datetime.now(timezone.utc).isoformat(),
-            "checked_out_by": current_user.get("id"),
-            "returned_at": None,
-            "return_status": None,
-            "notes": None
-        })
+    
+    # New format with quantities
+    if data.equipment_items:
+        for item in data.equipment_items:
+            items.append({
+                "equipment_id": item.equipment_id,
+                "quantity": item.quantity,
+                "status": "checked_out",
+                "checked_out_at": datetime.now(timezone.utc).isoformat(),
+                "checked_out_by": current_user.get("id"),
+                "returned_at": None,
+                "return_status": None,
+                "notes": None
+            })
+    # Legacy format (just IDs, quantity = 1)
+    elif data.equipment_ids:
+        for eq_id in data.equipment_ids:
+            items.append({
+                "equipment_id": eq_id,
+                "quantity": 1,
+                "status": "checked_out",
+                "checked_out_at": datetime.now(timezone.utc).isoformat(),
+                "checked_out_by": current_user.get("id"),
+                "returned_at": None,
+                "return_status": None,
+                "notes": None
+            })
     
     deployment = {
         "id": deployment_id,
@@ -414,9 +436,6 @@ async def create_deployment(data: Deployment, current_user: dict = Depends(get_c
     }
     
     await db.deployments.insert_one(deployment)
-    
-    # Note: On ne bloque plus les équipements car l'utilisateur peut avoir plusieurs exemplaires
-    # L'indicateur "déjà en déplacement" est affiché dans le frontend
     
     return {"id": deployment_id, "message": "Déplacement créé"}
 
@@ -591,27 +610,29 @@ async def generate_deployment_pdf(deployment_id: str, current_user: dict = Depen
     # Equipment table
     elements.append(Paragraph("Liste du Matériel", subtitle_style))
     
-    table_data = [["☐", "Équipement", "Marque/Modèle", "N° Série", "Catégorie"]]
+    table_data = [["☐", "Qté", "Équipement", "Marque/Modèle", "Catégorie"]]
     
     for item in deployment.get("items", []):
         eq = equipment_map.get(item["equipment_id"], {})
         cat = categories.get(eq.get("category_id"), {})
         
         brand_model = f"{eq.get('brand', '')} {eq.get('model', '')}".strip() or "-"
+        quantity = item.get("quantity", 1)
         
         table_data.append([
             "☐",
+            str(quantity),
             eq.get("name", "Unknown"),
             brand_model,
-            eq.get("serial_number", "-"),
             cat.get("name", "-")
         ])
     
-    eq_table = Table(table_data, colWidths=[1*cm, 5*cm, 4*cm, 3.5*cm, 3*cm])
+    eq_table = Table(table_data, colWidths=[1*cm, 1.2*cm, 5*cm, 4*cm, 3.5*cm])
     eq_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.2, 0.2, 0.2)),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'CENTER'),  # Center quantity column
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
