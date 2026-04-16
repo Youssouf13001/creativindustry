@@ -326,7 +326,7 @@ export default function EquipmentPage() {
 
       {/* Deployments Tab */}
       {activeTab === "deployments" && (
-        <DeploymentsTab onRefresh={fetchData} />
+        <DeploymentsTab onRefresh={fetchData} equipment={equipment} categories={categories} />
       )}
 
       {/* Reminders Tab */}
@@ -803,8 +803,268 @@ function DeploymentModal({ equipment = [], onClose, onSave, categories = [] }) {
   );
 }
 
+// Edit Deployment Modal
+function EditDeploymentModal({ deployment, equipment = [], categories = [], onClose, onSave }) {
+  const [form, setForm] = useState({
+    name: deployment.name || "",
+    location: deployment.location || "",
+    start_date: deployment.start_date || "",
+    end_date: deployment.end_date || "",
+    notes: deployment.notes || "",
+    equipment_items: {}
+  });
+  const [saving, setSaving] = useState(false);
+  const [filterCategory, setFilterCategory] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Initialize equipment_items from deployment
+  useEffect(() => {
+    const items = {};
+    (deployment.items || []).forEach(item => {
+      items[item.equipment_id] = item.quantity || 1;
+    });
+    setForm(prev => ({ ...prev, equipment_items: items }));
+  }, [deployment]);
+
+  // Filter equipment
+  const filteredEquipment = (equipment || []).filter(item => {
+    const matchesCategory = !filterCategory || item.category_id === filterCategory;
+    const matchesSearch = !searchTerm || 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.brand && item.brand.toLowerCase().includes(searchTerm.toLowerCase()));
+    return matchesCategory && matchesSearch;
+  });
+
+  // Group by category
+  const groupedEquipment = filteredEquipment.reduce((acc, item) => {
+    const catId = item.category_id || "other";
+    const catName = item.category?.name || "Autre";
+    if (!acc[catId]) {
+      acc[catId] = { name: catName, icon: item.category?.icon || "📦", items: [] };
+    }
+    acc[catId].items.push(item);
+    return acc;
+  }, {});
+
+  const toggleEquipment = (id) => {
+    setForm(prev => {
+      const newItems = { ...prev.equipment_items };
+      if (newItems[id]) {
+        delete newItems[id];
+      } else {
+        newItems[id] = 1;
+      }
+      return { ...prev, equipment_items: newItems };
+    });
+  };
+
+  const updateQuantity = (id, qty) => {
+    const quantity = Math.max(1, parseInt(qty) || 1);
+    setForm(prev => ({
+      ...prev,
+      equipment_items: { ...prev.equipment_items, [id]: quantity }
+    }));
+  };
+
+  const selectedCount = Object.keys(form.equipment_items).length;
+  const totalItems = Object.values(form.equipment_items).reduce((sum, qty) => sum + qty, 0);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name || selectedCount === 0) {
+      toast.error("Nom et au moins un équipement requis");
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      const token = localStorage.getItem("admin_token");
+      const payload = {
+        name: form.name,
+        location: form.location,
+        start_date: form.start_date,
+        end_date: form.end_date,
+        notes: form.notes,
+        equipment_items: Object.entries(form.equipment_items).map(([id, qty]) => ({
+          equipment_id: id,
+          quantity: qty
+        }))
+      };
+      await axios.put(`${API}/deployments/${deployment.id}`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Déplacement modifié");
+      onSave();
+    } catch (e) {
+      toast.error("Erreur lors de la modification");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <div className="bg-zinc-900 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-white/10">
+          <h2 className="text-xl font-bold text-white">Modifier le déplacement</h2>
+          <p className="text-white/60 text-sm mt-1">Modifiez les informations et les équipements</p>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-white/60 text-sm mb-1">Nom du déplacement *</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => setForm({...form, name: e.target.value})}
+                className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-2 text-white"
+                placeholder="Ex: Mariage Dupont"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-white/60 text-sm mb-1">Lieu</label>
+              <input
+                type="text"
+                value={form.location}
+                onChange={(e) => setForm({...form, location: e.target.value})}
+                className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-2 text-white"
+                placeholder="Ex: Château de Versailles"
+              />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-white/60 text-sm mb-1">Date de départ</label>
+              <input
+                type="date"
+                value={form.start_date}
+                onChange={(e) => setForm({...form, start_date: e.target.value})}
+                className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-2 text-white [color-scheme:dark]"
+              />
+            </div>
+            <div>
+              <label className="block text-white/60 text-sm mb-1">Date de retour</label>
+              <input
+                type="date"
+                value={form.end_date}
+                onChange={(e) => setForm({...form, end_date: e.target.value})}
+                className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-2 text-white [color-scheme:dark]"
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-white/60 text-sm mb-1">Notes</label>
+            <textarea
+              value={form.notes}
+              onChange={(e) => setForm({...form, notes: e.target.value})}
+              className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-2 text-white h-20 resize-none"
+              placeholder="Notes supplémentaires..."
+            />
+          </div>
+          
+          <div>
+            <label className="block text-white/60 text-sm mb-2">
+              Équipements ({selectedCount} types, {totalItems} articles)
+            </label>
+            
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1 bg-zinc-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
+              />
+              <select
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="bg-zinc-800 border border-white/10 rounded-lg px-3 py-2 text-white text-sm [&>option]:bg-zinc-900"
+              >
+                <option value="">Toutes catégories</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="max-h-64 overflow-y-auto border border-white/10 rounded-lg">
+              {Object.keys(groupedEquipment).length === 0 ? (
+                <p className="p-4 text-white/50 text-center">Aucun équipement trouvé</p>
+              ) : (
+                Object.entries(groupedEquipment).map(([catId, category]) => (
+                  <div key={catId}>
+                    <div className="sticky top-0 bg-zinc-800 px-3 py-2 text-white/70 text-sm font-medium border-b border-white/10">
+                      {category.icon} {category.name} ({category.items.length})
+                    </div>
+                    {category.items.map(item => {
+                      const isSelected = form.equipment_items[item.id] !== undefined;
+                      const quantity = form.equipment_items[item.id] || 0;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex items-center gap-3 p-3 border-b border-white/5 ${
+                            isSelected ? "bg-primary/10" : "hover:bg-white/5"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleEquipment(item.id)}
+                            className="w-5 h-5 rounded cursor-pointer"
+                          />
+                          <div className="flex-1">
+                            <div className="text-white font-medium">{item.name}</div>
+                            <div className="text-white/50 text-sm">{item.brand} {item.model}</div>
+                          </div>
+                          {isSelected && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-white/60 text-sm">Qté:</span>
+                              <input
+                                type="number"
+                                min="1"
+                                value={quantity}
+                                onChange={(e) => updateQuantity(item.id, e.target.value)}
+                                className="w-16 bg-zinc-800 border border-white/20 rounded px-2 py-1 text-white text-center"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          
+          <div className="flex gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={saving || selectedCount === 0}
+              className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg disabled:opacity-50"
+            >
+              {saving ? "Enregistrement..." : "Enregistrer les modifications"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // Deployments Tab Component
-function DeploymentsTab({ onRefresh }) {
+function DeploymentsTab({ onRefresh, equipment = [], categories = [] }) {
   const [deployments, setDeployments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDeployment, setSelectedDeployment] = useState(null);
@@ -927,6 +1187,14 @@ function DeploymentsTab({ onRefresh }) {
               >
                 <Eye size={16} /> Détails
               </button>
+              {(dep.status === "planned" || dep.status === "in_progress") && (
+                <button
+                  onClick={() => setSelectedDeployment({...dep, showEdit: true})}
+                  className="flex items-center gap-2 px-3 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg text-sm"
+                >
+                  <Edit size={16} /> Modifier
+                </button>
+              )}
               {dep.status === "planned" && (
                 <>
                   <button
@@ -966,8 +1234,23 @@ function DeploymentsTab({ onRefresh }) {
         ))
       )}
 
+      {/* Edit Deployment Modal */}
+      {selectedDeployment && selectedDeployment.showEdit && (
+        <EditDeploymentModal
+          deployment={selectedDeployment}
+          equipment={equipment}
+          categories={categories}
+          onClose={() => setSelectedDeployment(null)}
+          onSave={() => {
+            setSelectedDeployment(null);
+            fetchDeployments();
+            onRefresh();
+          }}
+        />
+      )}
+
       {/* Deployment Details Modal */}
-      {selectedDeployment && !selectedDeployment.showSignature && (
+      {selectedDeployment && !selectedDeployment.showSignature && !selectedDeployment.showEdit && (
         <DeploymentDetailsModal
           deployment={selectedDeployment}
           showReturn={selectedDeployment.showReturn}

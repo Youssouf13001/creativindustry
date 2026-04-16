@@ -439,16 +439,63 @@ async def create_deployment(data: Deployment, current_user: dict = Depends(get_c
     
     return {"id": deployment_id, "message": "Déplacement créé"}
 
+class DeploymentUpdate(BaseModel):
+    name: Optional[str] = None
+    location: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    notes: Optional[str] = None
+    equipment_items: Optional[List[DeploymentItem]] = None
+
 @router.put("/deployments/{deployment_id}")
-async def update_deployment(deployment_id: str, data: dict = Body(...), current_user: dict = Depends(get_current_user)):
-    """Update deployment info"""
-    allowed_fields = ["name", "location", "start_date", "end_date", "notes", "status"]
-    update_data = {k: v for k, v in data.items() if k in allowed_fields}
-    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    
-    result = await db.deployments.update_one({"id": deployment_id}, {"$set": update_data})
-    if result.matched_count == 0:
+async def update_deployment(deployment_id: str, data: DeploymentUpdate, current_user: dict = Depends(get_current_user)):
+    """Update deployment info and equipment list"""
+    deployment = await db.deployments.find_one({"id": deployment_id})
+    if not deployment:
         raise HTTPException(status_code=404, detail="Déplacement non trouvé")
+    
+    # Build update data
+    update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+    
+    if data.name is not None:
+        update_data["name"] = data.name
+    if data.location is not None:
+        update_data["location"] = data.location
+    if data.start_date is not None:
+        update_data["start_date"] = data.start_date
+    if data.end_date is not None:
+        update_data["end_date"] = data.end_date
+    if data.notes is not None:
+        update_data["notes"] = data.notes
+    
+    # Handle equipment items update
+    if data.equipment_items is not None:
+        # Keep existing item data (return status, etc.) for items that are still in the list
+        existing_items = {item["equipment_id"]: item for item in deployment.get("items", [])}
+        
+        new_items = []
+        for eq_item in data.equipment_items:
+            if eq_item.equipment_id in existing_items:
+                # Keep existing item data but update quantity
+                existing = existing_items[eq_item.equipment_id]
+                existing["quantity"] = eq_item.quantity
+                new_items.append(existing)
+            else:
+                # New item
+                new_items.append({
+                    "equipment_id": eq_item.equipment_id,
+                    "quantity": eq_item.quantity,
+                    "status": "checked_out",
+                    "checked_out_at": datetime.now(timezone.utc).isoformat(),
+                    "checked_out_by": current_user.get("id"),
+                    "returned_at": None,
+                    "return_status": None,
+                    "notes": None
+                })
+        
+        update_data["items"] = new_items
+    
+    await db.deployments.update_one({"id": deployment_id}, {"$set": update_data})
     
     return {"message": "Déplacement mis à jour"}
 
