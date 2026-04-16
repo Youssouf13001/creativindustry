@@ -588,7 +588,7 @@ async def validate_deployment_return(
     return {"message": "Retour validé", "all_returned": all_returned, "issues": len(items_to_remind)}
 
 @router.delete("/deployments/{deployment_id}")
-async def delete_deployment(deployment_id: str, current_user: dict = Depends(require_admin)):
+async def delete_deployment(deployment_id: str, current_user: dict = Depends(get_current_user)):
     """Delete a deployment"""
     deployment = await db.deployments.find_one({"id": deployment_id})
     if not deployment:

@@ -1143,7 +1143,8 @@ function DeploymentsTab({ onRefresh, equipment = [], categories = [] }) {
       fetchDeployments();
       onRefresh();
     } catch (e) {
-      toast.error("Erreur lors de la suppression");
+      const detail = e.response?.data?.detail || e.message || "Erreur inconnue";
+      toast.error(`Erreur: ${detail}`);
     }
   };
 
