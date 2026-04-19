@@ -180,9 +180,18 @@ function LoginScreen({ onLogin }) {
   };
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4"
-      style={{ backgroundImage: "radial-gradient(ellipse at center, rgba(120,0,0,0.15) 0%, transparent 70%)" }}>
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background image */}
+      <div className="absolute inset-0">
+        <img
+          src="https://images.unsplash.com/photo-1775250869743-d08c72844f6e?w=1920&q=80"
+          alt=""
+          className="w-full h-full object-cover opacity-40"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40" />
+      </div>
+
+      <div className="w-full max-w-sm relative z-10">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-red-600 tracking-tight mb-2">CREATIVINDUSTRY</h1>
           <p className="text-white/50">Espace VIP — Visionnage privé</p>
