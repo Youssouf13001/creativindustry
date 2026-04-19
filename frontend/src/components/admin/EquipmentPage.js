@@ -1088,6 +1088,9 @@ function DeploymentsTab({ onRefresh, equipment = [], categories = [] }) {
   const [deployments, setDeployments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDeployment, setSelectedDeployment] = useState(null);
+  const [emailModal, setEmailModal] = useState(null);
+  const [emailForm, setEmailForm] = useState({ email: "", message: "" });
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     fetchDeployments();
@@ -1162,6 +1165,27 @@ function DeploymentsTab({ onRefresh, equipment = [], categories = [] }) {
     }
   };
 
+  const sendPdfByEmail = async () => {
+    if (!emailForm.email.trim()) {
+      toast.error("Veuillez entrer une adresse email");
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      const token = localStorage.getItem("admin_token");
+      await axios.post(`${API}/deployments/${emailModal.id}/send-pdf`, emailForm, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(`PDF envoyé à ${emailForm.email}`);
+      setEmailModal(null);
+      setEmailForm({ email: "", message: "" });
+    } catch (e) {
+      toast.error("Erreur lors de l'envoi");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   const STATUS_COLORS = {
     planned: "bg-blue-500",
     in_progress: "bg-yellow-500",
@@ -1219,6 +1243,12 @@ function DeploymentsTab({ onRefresh, equipment = [], categories = [] }) {
                 className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm"
               >
                 <Download size={16} /> PDF
+              </button>
+              <button
+                onClick={() => { setEmailModal(dep); setEmailForm({ email: "", message: "" }); }}
+                className="flex items-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm"
+              >
+                <FileText size={16} /> Envoyer par email
               </button>
               <button
                 onClick={() => setSelectedDeployment(dep)}
@@ -1343,6 +1373,57 @@ function DeploymentsTab({ onRefresh, equipment = [], categories = [] }) {
             }
           }}
         />
+      )}
+
+      {/* Email PDF Modal */}
+      {emailModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-card border border-white/10 rounded-xl max-w-md w-full">
+            <div className="p-6 border-b border-white/10">
+              <h2 className="text-lg font-bold text-white">Envoyer la checklist par email</h2>
+              <p className="text-white/60 text-sm mt-1">{emailModal.name}</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-white/60 text-sm mb-1">Adresse email *</label>
+                <input
+                  type="email"
+                  value={emailForm.email}
+                  onChange={(e) => setEmailForm({ ...emailForm, email: e.target.value })}
+                  placeholder="destinataire@email.com"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                  data-testid="pdf-email-input"
+                />
+              </div>
+              <div>
+                <label className="block text-white/60 text-sm mb-1">Message (optionnel)</label>
+                <textarea
+                  value={emailForm.message}
+                  onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })}
+                  rows={2}
+                  placeholder="Un message à joindre à l'email..."
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-white/10 flex gap-3">
+              <button
+                onClick={() => setEmailModal(null)}
+                className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={sendPdfByEmail}
+                disabled={sendingEmail}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg disabled:opacity-50"
+                data-testid="pdf-email-send-btn"
+              >
+                {sendingEmail ? "Envoi..." : "Envoyer"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

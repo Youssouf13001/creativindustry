@@ -51,6 +51,7 @@ from routes.appointments import router as appointments_router, set_admin_depende
 from routes.photofind import router as photofind_router, set_admin_dependency as set_photofind_admin
 from routes.galleries import router as galleries_router, set_admin_dependency as set_galleries_admin, set_client_dependency as set_galleries_client
 from routes.equipment import router as equipment_router, set_admin_dependency as set_equipment_admin
+from routes.videos import router as videos_router, set_admin_dependency as set_videos_admin
 
 # Import SMS service
 from services.sms_service import (
@@ -12397,6 +12398,7 @@ app.include_router(appointments_router, prefix="/api")
 app.include_router(photofind_router, prefix="/api")
 app.include_router(galleries_router, prefix="/api")
 app.include_router(equipment_router, prefix="/api")
+app.include_router(videos_router, prefix="/api")
 
 # Set admin dependency for modular routers
 set_appointments_admin(get_current_admin)
@@ -12404,6 +12406,7 @@ set_photofind_admin(get_current_admin)
 set_galleries_admin(get_current_admin)
 set_galleries_client(get_current_client)
 set_equipment_admin(get_current_admin)
+set_videos_admin(get_current_admin)
 
 # Mount static files for uploads
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")

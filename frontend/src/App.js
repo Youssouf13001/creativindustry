@@ -36,13 +36,15 @@ import PhotoFindMobile from "./pages/PhotoFindMobile";
 import UploadPrint from "./pages/UploadPrint";
 import Gallery3DPage from "./pages/Gallery3DPage";
 import EquipmentPage from "./components/admin/EquipmentPage";
+import VIPVideosPage from "./components/admin/VIPVideosPage";
+import VIPClientPage from "./pages/VIPClientPage";
 
 // Layout wrapper that conditionally shows header/footer
 function AppLayout({ children }) {
   const location = useLocation();
   
   // Pages that should be displayed without header/footer (fullscreen mode)
-  const fullscreenPaths = ['/kiosk/', '/galerie3d/', '/kiosk-mobile/', '/upload-print/', '/admin/equipment'];
+  const fullscreenPaths = ['/kiosk/', '/galerie3d/', '/kiosk-mobile/', '/upload-print/', '/admin/equipment', '/admin/vip-videos', '/vip'];
   const isFullscreen = fullscreenPaths.some(path => location.pathname.startsWith(path));
   
   if (isFullscreen) {
@@ -87,6 +89,8 @@ function App() {
           <Route path="/admin" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/equipment" element={<EquipmentPage />} />
+          <Route path="/admin/vip-videos" element={<VIPVideosPage />} />
+          <Route path="/vip" element={<VIPClientPage />} />
           <Route path="/client" element={<ClientLogin />} />
           <Route path="/client/dashboard" element={<ClientDashboard />} />
           <Route path="/unsubscribe/:clientId" element={<UnsubscribePage />} />

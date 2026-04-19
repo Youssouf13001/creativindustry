@@ -901,7 +901,112 @@ async def generate_deployment_pdf(deployment_id: str, current_user: dict = Depen
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
 
-# ==================== LOSS/THEFT TICKETS ====================
+# ==================== SEND PDF BY EMAIL ====================
+
+class SendPdfEmail(BaseModel):
+    email: str
+    message: Optional[str] = None
+
+@router.post("/deployments/{deployment_id}/send-pdf")
+async def send_deployment_pdf_email(deployment_id: str, data: SendPdfEmail, current_user: dict = Depends(get_current_user)):
+    """Generate and send deployment PDF by email"""
+    from services.email_service import send_email_with_attachment
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import cm
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from io import BytesIO
+    
+    deployment = await db.deployments.find_one({"id": deployment_id}, {"_id": 0})
+    if not deployment:
+        raise HTTPException(status_code=404, detail="Déplacement non trouvé")
+    
+    # Get equipment details
+    equipment_ids = [item["equipment_id"] for item in deployment.get("items", [])]
+    equipment_list = await db.equipment.find({"id": {"$in": equipment_ids}}, {"_id": 0}).to_list(100)
+    equipment_map = {e["id"]: e for e in equipment_list}
+    categories = {c["id"]: c for c in await db.equipment_categories.find({}, {"_id": 0}).to_list(100)}
+    
+    # Build PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=1.5*cm, bottomMargin=1.5*cm)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=18, spaceAfter=20)
+    subtitle_style = ParagraphStyle('Subtitle', parent=styles['Heading2'], fontSize=14, spaceAfter=10)
+    elements = []
+    
+    elements.append(Paragraph("Fiche de Déplacement", title_style))
+    elements.append(Paragraph(f"<b>{deployment.get('name', 'Sans nom')}</b>", subtitle_style))
+    
+    info_data = [
+        ["Lieu:", deployment.get('location', '-')],
+        ["Date de départ:", deployment.get('start_date', '-')],
+        ["Date de retour:", deployment.get('end_date', '-')],
+    ]
+    if deployment.get('notes'):
+        info_data.append(["Notes:", deployment.get('notes')])
+    
+    info_table = Table(info_data, colWidths=[4*cm, 12*cm])
+    info_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+    ]))
+    elements.append(info_table)
+    elements.append(Spacer(1, 20))
+    
+    elements.append(Paragraph("Liste du Matériel", subtitle_style))
+    table_data = [["Qté", "Équipement", "Marque/Modèle", "Catégorie"]]
+    for item in deployment.get("items", []):
+        eq = equipment_map.get(item["equipment_id"], {})
+        cat = categories.get(eq.get("category_id"), {})
+        brand_model = f"{eq.get('brand', '')} {eq.get('model', '')}".strip() or "-"
+        table_data.append([str(item.get("quantity", 1)), eq.get("name", "?"), brand_model, cat.get("name", "-")])
+    
+    eq_table = Table(table_data, colWidths=[1.2*cm, 6*cm, 5*cm, 3.5*cm])
+    eq_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.2, 0.2, 0.2)),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('GRID', (0, 0), (-1, -1), 1, colors.Color(0.7, 0.7, 0.7)),
+        ('TOPPADDING', (0, 1), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+    ]))
+    elements.append(eq_table)
+    
+    doc.build(elements)
+    pdf_bytes = buffer.getvalue()
+    
+    filename = f"deplacement_{deployment.get('name', deployment_id)[:20]}_{deployment.get('start_date', '')}.pdf"
+    filename = filename.replace(' ', '_').replace('/', '-')
+    
+    custom_msg = data.message or ""
+    email_html = f"""
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2>Fiche de déplacement : {deployment.get('name')}</h2>
+        <p><strong>Lieu :</strong> {deployment.get('location', 'Non spécifié')}</p>
+        <p><strong>Dates :</strong> {deployment.get('start_date', '-')} → {deployment.get('end_date', '-')}</p>
+        <p><strong>Équipements :</strong> {len(deployment.get('items', []))} article(s)</p>
+        {f'<p style="margin-top:15px;padding:10px;background:#f5f5f5;border-radius:6px;">{custom_msg}</p>' if custom_msg else ''}
+        <p style="margin-top:20px;color:#666;">La checklist est en pièce jointe (PDF).</p>
+        <hr style="margin:20px 0;border:none;border-top:1px solid #ddd;">
+        <p style="color:#999;font-size:12px;">Envoyé depuis CREATIVINDUSTRY - Gestion du matériel</p>
+    </div>
+    """
+    
+    result = send_email_with_attachment(
+        to_email=data.email,
+        subject=f"Checklist matériel — {deployment.get('name')}",
+        html_content=email_html,
+        attachment_data=pdf_bytes,
+        attachment_filename=filename
+    )
+    
+    if result:
+        return {"message": f"PDF envoyé à {data.email}"}
+    else:
+        raise HTTPException(status_code=500, detail="Erreur lors de l'envoi de l'email")
 
 class LossTicketCreate(BaseModel):
     equipment_id: str
