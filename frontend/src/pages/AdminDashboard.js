@@ -2355,6 +2355,17 @@ const AdminDashboard = () => {
                         Gestion Matériel
                       </button>
                     )}
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        navigate("/admin/vip-videos");
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-sm"
+                      data-testid="admin-vip-btn"
+                    >
+                      <Play className="w-4 h-4 text-red-400" />
+                      Espace VIP Vidéo
+                    </button>
                   </div>
                   
                   {/* Logout */}

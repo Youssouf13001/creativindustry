@@ -212,6 +212,16 @@ const Header = () => {
             </div>
             
             <Link
+              to="/vip"
+              data-testid="nav-vip"
+              className={`font-primary text-sm tracking-wide transition-colors ${
+                location.pathname === "/vip" ? "text-red-500" : "text-red-400/70 hover:text-red-400"
+              }`}
+            >
+              Espace VIP
+            </Link>
+
+            <Link
               to="/devis-mariage"
               data-testid="nav-devis-btn"
               className="btn-primary px-5 py-2 text-sm"
@@ -352,6 +362,9 @@ const Header = () => {
               </Link>
               <Link to="/contact" onClick={() => setIsMenuOpen(false)} className="font-primary text-lg text-white/80 hover:text-primary transition-colors">
                 Contact
+              </Link>
+              <Link to="/vip" onClick={() => setIsMenuOpen(false)} className="font-primary text-lg text-red-400 hover:text-red-300 transition-colors">
+                Espace VIP
               </Link>
               
               {clientUser ? (
