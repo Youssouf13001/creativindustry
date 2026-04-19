@@ -2,89 +2,61 @@
 
 ## Description
 Application complète pour photographe incluant :
-- Borne photo "mode kiosque" (PhotoFind) avec reconnaissance faciale AWS
-- Portail client avec galeries et sélection de photos
-- Système de rendez-vous avec notifications SMS (Brevo)
+- Borne photo "mode kiosque" (PhotoFind)
+- Portail client avec galeries
+- Système de rendez-vous avec SMS
 - Paiements (Stripe, PayPal)
-- Contrats électroniques avec signature
-- Gestion de projets et suivi client
-- Gestion de matériel (style GLPI) avec inventaire, déplacements, PDF, signatures, tickets pertes/vols et corbeille
+- Gestion de matériel (GLPI) avec inventaire, déplacements, PDF, signatures, tickets, corbeille
+- **NOUVEAU** : Plateforme vidéo VIP (Netflix-style) pour clients à l'étranger
+- **NOUVEAU** : Envoi PDF checklist par email
 
-## Test Credentials
-- **Admin**: test@admin.com / admin123
-- **Client test**: test-client@example.com / Test1234
+## Routes principales
+- `/admin/dashboard` — Dashboard admin
+- `/admin/equipment` — Gestion matériel
+- `/admin/vip-videos` — Gestion vidéos VIP (admin)
+- `/vip` — Espace client VIP (Netflix-style)
 
-## Fonctionnalités Matériel (Complet)
+## Fonctionnalités VIP Vidéo
+- Upload chunké (5MB chunks, jusqu'à 50Go)
+- Streaming vidéo avec HTTP Range support (seeking)
+- Miniatures auto via ffmpeg
+- Gestion clients VIP (créer compte, activer/désactiver)
+- Interface Netflix : login, catégories, lecteur intégré
 
-### Backend API Endpoints
-- `GET/POST /api/equipment` - CRUD équipements avec quantités
-- `DELETE /api/equipment/{id}` - Suppression douce (corbeille)
-- `GET /api/equipment-trash` - Liste corbeille
-- `POST /api/equipment-trash/{id}/restore` - Restaurer depuis corbeille
-- `DELETE /api/equipment-trash/{id}` - Suppression définitive
-- `GET/POST /api/equipment/categories` - Catégories
-- `GET/POST/PUT/DELETE /api/deployments` - Déplacements avec quantités
-- `POST /api/deployments/{id}/signature` - Signature digitale
-- `GET /api/deployments/{id}/pdf` - Génération PDF checklist
-- `GET/POST /api/loss-tickets` - Tickets pertes/vols/casses
-- `PUT /api/loss-tickets/{id}` - Mise à jour statut ticket
-- `POST /api/loss-tickets/{id}/remind` - Relance email
-- `DELETE /api/loss-tickets/{id}` - Suppression ticket
+## Backend API
+### Matériel
+- CRUD équipements + corbeille (soft delete)
+- Déploiements avec quantités, signatures, PDF
+- Tickets pertes/vols (workflow complet)
+- Envoi PDF par email
 
-### Ticket Workflow Statuts
-- `pending` → En attente
-- `ordering` → Commande lancée
-- `delivering` → En cours de livraison
-- `insurance` → Assurance prend le relais
-- `replaced` → Matériel remplacé et inventorié (clôture)
-- `reimbursed` → Remboursement de l'assurance (clôture)
-- `obsolete` → Obsolète, pas de remplacement (clôture)
+### VIP Vidéo
+- `POST/GET /api/vip/clients` — Gestion clients VIP
+- `POST /api/vip/login` — Auth client VIP (bcrypt + JWT)
+- `POST /api/vip/videos/upload-chunk` — Upload chunké
+- `GET /api/vip/stream/{id}` — Streaming avec Range
+- `GET /api/vip/my-videos` — Vidéos du client connecté
 
-### Signature Workflow
-1. Planifié → "Signer départ" obligatoire
-2. Signé → "Démarrer" disponible
-3. En cours → "Signer retour" disponible
-4. Retour validé → Terminé
+## Tâches terminées
+- [x] Gestion Matériel complète
+- [x] Tickets pertes/vols avec workflow complet
+- [x] Corbeille équipement
+- [x] Workflow signature (départ/retour)
+- [x] Envoi PDF par email
+- [x] Plateforme vidéo VIP (backend + admin + client Netflix)
 
-### Collections MongoDB
-- `equipment` : inventaire actif
-- `equipment_trash` : équipements supprimés (soft delete)
-- `equipment_categories` : catégories
-- `deployments` : déplacements avec items, signatures
-- `equipment_reminders` : alertes
-- `loss_tickets` : tickets pertes/vols avec historique messages
+## P1 - Important
+- [ ] Bug retour PayPal mobile (Safari/iOS)
+- [ ] Refactoring EquipmentPage.js
+- [ ] Refactoring AdminDashboard.js
 
-## Tâches
-
-### Terminé
-- [x] Gestion Matériel CRUD complet
-- [x] Import bulk 57 équipements
-- [x] Déploiements avec quantités
-- [x] Signatures digitales (Canvas API)
-- [x] Génération PDF checklists (ReportLab)
-- [x] Mode offline PWA (Service Worker)
-- [x] APScheduler rappels automatiques
-- [x] Édition/Suppression déploiements
-- [x] Tickets pertes/vols/casses (backend + frontend)
-- [x] Workflow signature obligatoire (départ avant démarrage, retour en cours)
-- [x] Workflow ticket complet (commande/livraison/assurance + clôture)
-- [x] Corbeille équipement (soft delete, restaurer, supprimer définitivement)
-- [x] Lien email ?tab=alertes pour redirection directe
-- [x] Fix "None€" dans emails quand prix non renseigné
-- [x] Fix permissions suppression (équipement + déploiement)
-
-### P1 - Important
-- [ ] Bug retour PayPal sur mobile kiosque (Safari/iOS)
-- [ ] Refactoring EquipmentPage.js (extraction modales)
-- [ ] Refactoring AdminDashboard.js (9500+ lignes)
-
-### P2 - Backlog
-- [ ] Enregistrement global Service Worker PWA
+## P2 - Backlog
+- [ ] Service Worker PWA
 - [ ] Bug témoignages `[object Object]`
-- [ ] Dashboard devis statistiques à zéro
-- [ ] Intégration Terminal SumUp
+- [ ] Stats devis à zéro
+- [ ] Terminal SumUp
 
-## Instructions Déploiement IONOS
+## Déploiement IONOS
 ```bash
 cd /var/www/creativindustry && git pull origin main && cd frontend && npm run build && cd .. && sudo systemctl restart creativindustry
 ```
