@@ -11,7 +11,8 @@ import {
   Plus, Search, Filter, Package, Truck, AlertTriangle,
   Edit, Trash2, Download, Eye, CheckCircle, XCircle,
   Calendar, FileText, ChevronRight, RefreshCw, Upload,
-  Camera, Mic, Lightbulb, Monitor, Briefcase, Box, ArrowLeft, PenTool
+  Camera, Mic, Lightbulb, Monitor, Briefcase, Box, ArrowLeft, PenTool,
+  ArchiveRestore, Trash
 } from "lucide-react";
 import { API, BACKEND_URL } from "../../config/api";
 import SignaturePad from "../SignaturePad";
@@ -68,29 +69,32 @@ export default function EquipmentPage() {
   // Tab state - read from URL param if present
   const tabFromUrl = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(
-    tabFromUrl === "alertes" ? "reminders" : "inventory"
+    tabFromUrl === "alertes" ? "reminders" : tabFromUrl === "corbeille" ? "trash" : "inventory"
   );
   const [ticketCount, setTicketCount] = useState(0);
+  const [trashCount, setTrashCount] = useState(0);
 
   const fetchData = useCallback(async () => {
     try {
       const token = localStorage.getItem("admin_token");
       const headers = { Authorization: `Bearer ${token}` };
       
-      const [eqRes, catRes, statsRes, remindersRes, ticketsRes] = await Promise.all([
+      const [eqRes, catRes, statsRes, remindersRes, ticketsRes, trashRes] = await Promise.all([
         axios.get(`${API}/equipment`, { headers, params: { search, category_id: selectedCategory, condition: selectedCondition } }),
         axios.get(`${API}/equipment/categories`, { headers }),
         axios.get(`${API}/equipment/stats`, { headers }),
         axios.get(`${API}/equipment/reminders`, { headers }),
-        axios.get(`${API}/loss-tickets`, { headers })
+        axios.get(`${API}/loss-tickets`, { headers }),
+        axios.get(`${API}/equipment-trash`, { headers })
       ]);
       
       setEquipment(eqRes.data);
       setCategories(catRes.data);
       setStats(statsRes.data);
       setReminders(remindersRes.data);
-      const openTickets = (ticketsRes.data || []).filter(t => t.status !== "resolved" && t.status !== "obsolete");
+      const openTickets = (ticketsRes.data || []).filter(t => t.status !== "resolved" && t.status !== "replaced" && t.status !== "reimbursed" && t.status !== "obsolete");
       setTicketCount(openTickets.length);
+      setTrashCount((trashRes.data || []).length);
     } catch (e) {
       console.error("Error fetching equipment:", e);
       if (e.response?.status === 401) {
@@ -106,14 +110,14 @@ export default function EquipmentPage() {
   }, [fetchData]);
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Supprimer cet équipement ?")) return;
+    if (!window.confirm("Déplacer cet équipement dans la corbeille ?")) return;
     
     try {
       const token = localStorage.getItem("admin_token");
       await axios.delete(`${API}/equipment/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      toast.success("Équipement supprimé");
+      toast.success("Équipement déplacé dans la corbeille");
       fetchData();
     } catch (e) {
       const detail = e.response?.data?.detail || e.message || "Erreur inconnue";
@@ -192,7 +196,8 @@ export default function EquipmentPage() {
         {[
           { id: "inventory", label: "Inventaire", icon: Package },
           { id: "deployments", label: "Déplacements", icon: Truck },
-          { id: "reminders", label: "Alertes", icon: AlertTriangle, badge: reminders.length + ticketCount }
+          { id: "reminders", label: "Alertes", icon: AlertTriangle, badge: reminders.length + ticketCount },
+          { id: "trash", label: "Corbeille", icon: Trash, badge: trashCount }
         ].map(tab => {
           const Icon = tab.icon;
           return (
@@ -342,6 +347,11 @@ export default function EquipmentPage() {
       {/* Reminders Tab */}
       {activeTab === "reminders" && (
         <RemindersTab reminders={reminders} onRefresh={fetchData} />
+      )}
+
+      {/* Trash Tab */}
+      {activeTab === "trash" && (
+        <TrashTab onRefresh={fetchData} categories={categories} />
       )}
 
       {/* Add/Edit Equipment Modal */}
@@ -1547,19 +1557,21 @@ function RemindersTab({ reminders, onRefresh }) {
     setTicketForm({ status: ticket.status, response_message: "", estimated_date: "" });
   };
 
-  const handleUpdateTicket = async () => {
-    if (!ticketForm.response_message.trim()) {
+  const handleUpdateTicket = async (overrideData) => {
+    const data = overrideData || ticketForm;
+    if (!data.response_message.trim()) {
       toast.error("Veuillez ajouter un message");
       return;
     }
     try {
       const token = localStorage.getItem("admin_token");
-      await axios.put(`${API}/loss-tickets/${updatingTicket.id}`, ticketForm, {
+      await axios.put(`${API}/loss-tickets/${updatingTicket.id}`, data, {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success("Ticket mis à jour");
       setUpdatingTicket(null);
       fetchTickets();
+      onRefresh();
     } catch (e) {
       toast.error("Erreur lors de la mise à jour");
     }
@@ -1609,18 +1621,24 @@ function RemindersTab({ reminders, onRefresh }) {
 
   const TICKET_STATUS_LABELS = {
     pending: "En attente",
-    ordering: "Commande en cours",
+    ordering: "Commande lancée",
+    delivering: "En cours de livraison",
     insurance: "Assurance en cours",
-    resolved: "Résolu",
-    obsolete: "Obsolète"
+    replaced: "Matériel remplacé et inventorié",
+    reimbursed: "Remboursement assurance",
+    obsolete: "Obsolète",
+    resolved: "Résolu"
   };
 
   const TICKET_STATUS_COLORS = {
     pending: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50",
     ordering: "bg-blue-500/20 text-blue-400 border-blue-500/50",
+    delivering: "bg-cyan-500/20 text-cyan-400 border-cyan-500/50",
     insurance: "bg-purple-500/20 text-purple-400 border-purple-500/50",
-    resolved: "bg-green-500/20 text-green-400 border-green-500/50",
-    obsolete: "bg-gray-500/20 text-gray-400 border-gray-500/50"
+    replaced: "bg-green-500/20 text-green-400 border-green-500/50",
+    reimbursed: "bg-emerald-500/20 text-emerald-400 border-emerald-500/50",
+    obsolete: "bg-gray-500/20 text-gray-400 border-gray-500/50",
+    resolved: "bg-green-500/20 text-green-400 border-green-500/50"
   };
 
   const TICKET_TYPE_LABELS = {
@@ -1653,9 +1671,9 @@ function RemindersTab({ reminders, onRefresh }) {
         <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2" data-testid="tickets-section-title">
           <FileText size={20} className="text-red-400" />
           Tickets Pertes / Vols / Casses
-          {tickets.filter(t => t.status !== "resolved" && t.status !== "obsolete").length > 0 && (
+          {tickets.filter(t => !["replaced", "reimbursed", "obsolete", "resolved"].includes(t.status)).length > 0 && (
             <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-              {tickets.filter(t => t.status !== "resolved" && t.status !== "obsolete").length}
+              {tickets.filter(t => !["replaced", "reimbursed", "obsolete", "resolved"].includes(t.status)).length}
             </span>
           )}
         </h3>
@@ -1725,8 +1743,8 @@ function RemindersTab({ reminders, onRefresh }) {
                   </div>
                 )}
 
-                {/* Actions */}
-                {ticket.status !== "resolved" && ticket.status !== "obsolete" && (
+                {/* Actions - tickets actifs */}
+                {!["replaced", "reimbursed", "obsolete", "resolved"].includes(ticket.status) && (
                   <div className="px-4 pb-4 flex gap-2 flex-wrap">
                     <button
                       onClick={() => openUpdateTicket(ticket)}
@@ -1752,13 +1770,13 @@ function RemindersTab({ reminders, onRefresh }) {
                   </div>
                 )}
 
-                {/* Resolved badge */}
-                {(ticket.status === "resolved" || ticket.status === "obsolete") && (
-                  <div className="px-4 pb-4 flex gap-2">
-                    <span className="text-green-400 text-sm flex items-center gap-1">
+                {/* Ticket résolu/clôturé */}
+                {["replaced", "reimbursed", "obsolete", "resolved"].includes(ticket.status) && (
+                  <div className="px-4 pb-4 flex items-center gap-2 flex-wrap">
+                    <span className={`text-sm flex items-center gap-1 ${ticket.status === "obsolete" ? "text-gray-400" : "text-green-400"}`}>
                       <CheckCircle size={14} />
-                      {ticket.status === "resolved" ? "Résolu" : "Marqué obsolète"}
-                      {ticket.resolved_at && ` le ${new Date(ticket.resolved_at).toLocaleDateString("fr-FR")}`}
+                      {TICKET_STATUS_LABELS[ticket.status]}
+                      {ticket.resolved_at && ` — ${new Date(ticket.resolved_at).toLocaleDateString("fr-FR")}`}
                     </span>
                     <button
                       onClick={() => deleteTicket(ticket.id)}
@@ -1823,7 +1841,7 @@ function RemindersTab({ reminders, onRefresh }) {
       {/* Update Ticket Modal */}
       {updatingTicket && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-          <div className="bg-card border border-white/10 rounded-xl max-w-md w-full">
+          <div className="bg-card border border-white/10 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-white/10">
               <h2 className="text-lg font-bold text-white">Mettre à jour le ticket</h2>
               <p className="text-white/60 text-sm mt-1">
@@ -1831,8 +1849,9 @@ function RemindersTab({ reminders, onRefresh }) {
               </p>
             </div>
             <div className="p-6 space-y-4">
+              {/* Statut en cours */}
               <div>
-                <label className="block text-white/60 text-sm mb-1">Statut</label>
+                <label className="block text-white/60 text-sm mb-2">Avancement</label>
                 <select
                   value={ticketForm.status}
                   onChange={(e) => setTicketForm({ ...ticketForm, status: e.target.value })}
@@ -1840,12 +1859,12 @@ function RemindersTab({ reminders, onRefresh }) {
                   data-testid="ticket-status-select"
                 >
                   <option value="pending">En attente</option>
-                  <option value="ordering">Commande en cours</option>
-                  <option value="insurance">Assurance en cours</option>
-                  <option value="resolved">Résolu</option>
-                  <option value="obsolete">Obsolète (ne pas remplacer)</option>
+                  <option value="ordering">Commande lancée</option>
+                  <option value="delivering">En cours de livraison</option>
+                  <option value="insurance">Assurance prend le relais</option>
                 </select>
               </div>
+
               <div>
                 <label className="block text-white/60 text-sm mb-1">Message / Commentaire *</label>
                 <textarea
@@ -1857,7 +1876,8 @@ function RemindersTab({ reminders, onRefresh }) {
                   data-testid="ticket-message-input"
                 />
               </div>
-              {(ticketForm.status === "ordering" || ticketForm.status === "insurance") && (
+
+              {(ticketForm.status === "ordering" || ticketForm.status === "delivering" || ticketForm.status === "insurance") && (
                 <div>
                   <label className="block text-white/60 text-sm mb-1">Date estimée</label>
                   <input
@@ -1869,6 +1889,34 @@ function RemindersTab({ reminders, onRefresh }) {
                   />
                 </div>
               )}
+
+              {/* Boutons de clôture rapide */}
+              <div className="border-t border-white/10 pt-4">
+                <label className="block text-white/60 text-sm mb-2">Clôturer le ticket</label>
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    onClick={() => handleUpdateTicket({ status: "replaced", response_message: ticketForm.response_message || "Matériel remplacé et ajouté à l'inventaire", estimated_date: "" })}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-green-600/20 hover:bg-green-600 text-green-400 hover:text-white rounded-lg text-sm transition-colors border border-green-600/30"
+                    data-testid="ticket-resolve-replaced"
+                  >
+                    <CheckCircle size={16} /> Matériel remplacé et inventorié
+                  </button>
+                  <button
+                    onClick={() => handleUpdateTicket({ status: "reimbursed", response_message: ticketForm.response_message || "Remboursement reçu de l'assurance", estimated_date: "" })}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white rounded-lg text-sm transition-colors border border-emerald-600/30"
+                    data-testid="ticket-resolve-reimbursed"
+                  >
+                    <CheckCircle size={16} /> Remboursement de l'assurance
+                  </button>
+                  <button
+                    onClick={() => handleUpdateTicket({ status: "obsolete", response_message: ticketForm.response_message || "Matériel obsolète, pas de remplacement", estimated_date: "" })}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gray-600/20 hover:bg-gray-600 text-gray-400 hover:text-white rounded-lg text-sm transition-colors border border-gray-600/30"
+                    data-testid="ticket-resolve-obsolete"
+                  >
+                    <XCircle size={16} /> Obsolète (ne pas remplacer)
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="p-6 border-t border-white/10 flex gap-3">
               <button
@@ -1882,12 +1930,132 @@ function RemindersTab({ reminders, onRefresh }) {
                 className="flex-1 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg"
                 data-testid="ticket-update-submit"
               >
-                Mettre à jour
+                Mettre à jour le statut
               </button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+// Trash Tab Component
+function TrashTab({ onRefresh, categories = [] }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTrash();
+  }, []);
+
+  const fetchTrash = async () => {
+    try {
+      const token = localStorage.getItem("admin_token");
+      const res = await axios.get(`${API}/equipment-trash`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setItems(res.data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const restoreItem = async (id, name) => {
+    try {
+      const token = localStorage.getItem("admin_token");
+      await axios.post(`${API}/equipment-trash/${id}/restore`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(`${name} restauré dans l'inventaire`);
+      fetchTrash();
+      onRefresh();
+    } catch (e) {
+      toast.error("Erreur lors de la restauration");
+    }
+  };
+
+  const permanentDelete = async (id, name) => {
+    if (!window.confirm(`Supprimer définitivement "${name}" ?\n\nCette action est irréversible.`)) return;
+    try {
+      const token = localStorage.getItem("admin_token");
+      await axios.delete(`${API}/equipment-trash/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Supprimé définitivement");
+      fetchTrash();
+      onRefresh();
+    } catch (e) {
+      toast.error("Erreur lors de la suppression");
+    }
+  };
+
+  if (loading) {
+    return <div className="text-center py-12"><RefreshCw className="animate-spin mx-auto text-white/40" size={24} /></div>;
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-12 text-white/50">
+        <Trash size={48} className="mx-auto mb-4 opacity-50" />
+        <p>La corbeille est vide</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-white/50 text-sm">{items.length} équipement(s) dans la corbeille</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {items.map(item => (
+          <div
+            key={item.id}
+            className="bg-card border border-white/10 rounded-xl p-4 opacity-70 hover:opacity-100 transition-opacity"
+            data-testid={`trash-item-${item.id}`}
+          >
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="font-bold text-white">{item.name}</h3>
+                <p className="text-white/50 text-sm">
+                  {item.brand} {item.model}
+                </p>
+                {item.serial_number && (
+                  <p className="text-white/40 text-xs">S/N: {item.serial_number}</p>
+                )}
+              </div>
+              <span className={`w-3 h-3 rounded-full ${CONDITION_COLORS[item.condition]}`} title={CONDITION_LABELS[item.condition]} />
+            </div>
+
+            <p className="text-white/40 text-xs mb-3">
+              Supprimé le {new Date(item.deleted_at).toLocaleDateString("fr-FR")}
+              {item.deleted_by_name && ` par ${item.deleted_by_name}`}
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => restoreItem(item.id, item.name)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 rounded-lg text-sm text-white flex-1 justify-center"
+                data-testid={`restore-${item.id}`}
+              >
+                <ArchiveRestore size={14} /> Restaurer
+              </button>
+              <button
+                onClick={() => permanentDelete(item.id, item.name)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-lg text-sm transition-colors"
+                data-testid={`perm-delete-${item.id}`}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

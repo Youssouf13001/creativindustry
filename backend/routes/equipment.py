@@ -318,11 +318,50 @@ async def update_equipment(equipment_id: str, data: Equipment, current_user: dic
 
 @router.delete("/equipment/{equipment_id}")
 async def delete_equipment(equipment_id: str, current_user: dict = Depends(get_current_user)):
-    """Delete an equipment item"""
-    result = await db.equipment.delete_one({"id": equipment_id})
+    """Soft delete - move equipment to trash"""
+    equipment = await db.equipment.find_one({"id": equipment_id}, {"_id": 0})
+    if not equipment:
+        raise HTTPException(status_code=404, detail="Équipement non trouvé")
+    
+    # Move to trash
+    equipment["deleted_at"] = datetime.now(timezone.utc).isoformat()
+    equipment["deleted_by"] = current_user.get("id")
+    equipment["deleted_by_name"] = current_user.get("name", "Admin")
+    await db.equipment_trash.insert_one(equipment)
+    
+    # Remove from active inventory
+    await db.equipment.delete_one({"id": equipment_id})
+    return {"message": "Équipement déplacé dans la corbeille"}
+
+@router.get("/equipment-trash")
+async def get_equipment_trash(current_user: dict = Depends(get_current_user)):
+    """Get all trashed equipment"""
+    items = await db.equipment_trash.find({}, {"_id": 0}).sort("deleted_at", -1).to_list(500)
+    return items
+
+@router.post("/equipment-trash/{equipment_id}/restore")
+async def restore_equipment(equipment_id: str, current_user: dict = Depends(get_current_user)):
+    """Restore equipment from trash"""
+    item = await db.equipment_trash.find_one({"id": equipment_id}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Équipement non trouvé dans la corbeille")
+    
+    # Remove trash metadata
+    item.pop("deleted_at", None)
+    item.pop("deleted_by", None)
+    item.pop("deleted_by_name", None)
+    
+    await db.equipment.insert_one(item)
+    await db.equipment_trash.delete_one({"id": equipment_id})
+    return {"message": "Équipement restauré"}
+
+@router.delete("/equipment-trash/{equipment_id}")
+async def permanently_delete_equipment(equipment_id: str, current_user: dict = Depends(get_current_user)):
+    """Permanently delete equipment from trash"""
+    result = await db.equipment_trash.delete_one({"id": equipment_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Équipement non trouvé")
-    return {"message": "Équipement supprimé"}
+    return {"message": "Équipement supprimé définitivement"}
 
 @router.post("/equipment/{equipment_id}/invoice")
 async def upload_equipment_invoice(
@@ -873,7 +912,7 @@ class LossTicketCreate(BaseModel):
     notes: Optional[str] = None
 
 class LossTicketUpdate(BaseModel):
-    status: str  # pending, ordering, insurance, resolved, obsolete
+    status: str  # pending, ordering, delivering, insurance, replaced, reimbursed, obsolete, resolved
     response_message: str
     estimated_date: Optional[str] = None
 
@@ -1028,7 +1067,8 @@ async def update_loss_ticket(ticket_id: str, data: LossTicketUpdate, current_use
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
     
-    if data.status == "resolved":
+    # Mark resolved_at for all closing statuses
+    if data.status in ["resolved", "replaced", "reimbursed", "obsolete"]:
         update_data["resolved_at"] = datetime.now(timezone.utc).isoformat()
     
     await db.loss_tickets.update_one(
@@ -1039,15 +1079,10 @@ async def update_loss_ticket(ticket_id: str, data: LossTicketUpdate, current_use
         }
     )
     
-    # If resolved, update equipment status
-    if data.status == "resolved":
-        # Could mark as replaced or remove from inventory
-        pass
-    
     return {"message": "Ticket mis à jour"}
 
 @router.post("/loss-tickets/{ticket_id}/remind")
-async def send_ticket_reminder(ticket_id: str, current_user: dict = Depends(require_admin)):
+async def send_ticket_reminder(ticket_id: str, current_user: dict = Depends(get_current_user)):
     """Send a reminder email for an unresolved ticket"""
     from services.email_service import send_email
     
